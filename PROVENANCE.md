@@ -476,3 +476,14 @@ MolDesign es por API HTTP, no por copia de código.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/tools/test_catalog.py, tests/tools/test_moldesign.py,
   tests/test_bridge.py (bytes/SSE/query-POST)
+
+### tests/test_plan.py
+
+- Origen: código nuevo en este repositorio (sin porte desde MolDesign)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (tarea 3.2): esquema /2 con bindings
+  `{"$from": "sN.ruta"}` (forma, orden, cabeza declarada), resolución
+  tipada en runtime, digest sobre la forma sin resolver, /1 intacto
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/test_plan.py
