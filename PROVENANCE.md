@@ -510,3 +510,15 @@ MolDesign es por API HTTP, no por copia de código.
   explícita y reanudación sobre la misma fila
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/orchestration/test_jobs.py
+
+### src/molchat_agent/executor.py, tests/test_executor.py
+
+- Origen: evolución de `executor.py` del kit inicial (código nuevo Fase 0)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (tareas 3.2–3.5): resolución de bindings
+  con tipado en runtime, seguimiento de jobs en pasos write, store/budget
+  por inyección, bytes en reportes, `resume()` sin re-ejecución; sin
+  store/jobs el comportamiento previo se conserva intacto
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/test_executor.py
