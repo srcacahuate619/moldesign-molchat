@@ -41,8 +41,9 @@ def test_reject_untrusted_or_invalid_actions(tool, args):
 
 def test_route_is_fixed_and_parameters_encoded():
     tool = capability("evaluation_status")
-    method, path, params = tool.request({"task_id": "case_123-4"})
-    assert (method, path, params) == ("GET", "/evaluation/status/case_123-4", {})
+    method, path, query, body, response = tool.request({"task_id": "case_123-4"})
+    assert (method, path, query, body, response) == (
+        "GET", "/evaluation/status/case_123-4", {}, None, "json")
 
 
 def test_missing_fields_and_too_many_steps_rejected():

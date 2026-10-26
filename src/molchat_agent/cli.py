@@ -11,7 +11,7 @@ import sys
 import httpx
 
 from .bridge import MolDesignBridge, validate_base_url
-from .capabilities import CAPABILITIES
+from .tools import catalog
 from .config import load_config
 from .executor import AgentExecutor, save_report
 from .plan import Plan
@@ -75,7 +75,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 async def _dispatch(args: argparse.Namespace) -> int:
     if args.command == "catalog":
-        print(json.dumps([c.as_catalog_entry() for c in CAPABILITIES.values()],
+        print(json.dumps([c.as_catalog_entry() for c in catalog().values()],
                          ensure_ascii=False, indent=2))
         return 0
     if args.command == "plan":
@@ -100,7 +100,7 @@ async def _dispatch(args: argparse.Namespace) -> int:
         plan = _load_plan(args.plan_file)
         print(f"Objetivo: {plan.goal}\nPlan: {plan.digest}")
         for step in plan.steps:
-            cap = CAPABILITIES[step.capability]
+            cap = catalog()[step.capability]
             print(f"{step.id}: {step.capability} [{cap.risk}] {json.dumps(step.arguments, ensure_ascii=False)}")
         return 0
     if args.command == "execute":

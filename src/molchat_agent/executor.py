@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .bridge import MolDesignBridge
-from .capabilities import capability
+from .tools import capability
 from .plan import Plan
 
 

@@ -5,12 +5,13 @@ No filesystem, shell, or arbitrary HTTP endpoint is exposed as an agent tool.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 from urllib.parse import urlsplit
 
 import httpx
 
-from .capabilities import capability
+from .tools import capability
 from .config import load_config
 
 
@@ -64,26 +65,59 @@ class MolDesignBridge:
 
     async def call(self, name: str, arguments: dict[str, Any]) -> Any:
         tool = capability(name)
-        method, path, parameters = tool.request(arguments)
+        method, path, query, body, response_kind = tool.request(arguments)
         headers = {"Accept": "application/json"}
         if self._token:
             headers["Authorization"] = f"Bearer {self._token}"
         if tool.risk == "approval_required" and not self._token:
             raise BridgeError("Se requiere una sesión autenticada para aprobar")
+        if response_kind == "sse":
+            return await self._collect_sse(name, path, query, headers)
         try:
             if method == "GET":
-                response = await self._client.get(path, params=parameters, headers=headers)
+                response = await self._client.get(path, params=query, headers=headers)
             else:
-                response = await self._client.post(path, json=parameters, headers=headers)
+                kwargs: dict[str, Any] = {"params": query} if query else {}
+                if body is not None:
+                    kwargs["json"] = body
+                response = await self._client.post(path, headers=headers, **kwargs)
             if response.status_code >= 400:
                 raise BridgeError(f"MolDesign devolvió HTTP {response.status_code} en {name}")
             if response.is_redirect:
                 raise BridgeError("MolDesign respondió con una redirección inesperada")
             if len(response.content) > 5_000_000:
                 raise BridgeError("Respuesta superior al límite de 5 MB")
+            if response_kind == "bytes":
+                return response.content
             return response.json()
         except (httpx.RequestError, ValueError) as exc:
             raise BridgeError(f"No se pudo obtener una respuesta JSON de {name}") from exc
+
+    async def _collect_sse(self, name: str, path: str, query: dict[str, Any],
+                           headers: dict[str, str]) -> dict[str, Any]:
+        """Collect SSE data events, bounded (500 events / 5 MB total)."""
+        events: list[Any] = []
+        total = 0
+        try:
+            async with self._client.stream(
+                    "GET", path, params=query, headers=headers,
+                    timeout=30.0) as response:
+                if response.status_code >= 400:
+                    raise BridgeError(f"MolDesign devolvió HTTP {response.status_code} en {name}")
+                async for line in response.aiter_lines():
+                    if not line.startswith("data:"):
+                        continue
+                    payload = line[5:].strip()
+                    total += len(payload)
+                    if total > 5_000_000 or len(events) >= 500:
+                        break
+                    try:
+                        events.append(json.loads(payload))
+                    except ValueError:
+                        events.append({"text": payload})
+        except httpx.RequestError as exc:
+            raise BridgeError(f"No se pudo leer el stream de {name}") from exc
+        return {"events": events}
 
     async def transcribe_local(self, audio_bytes: bytes, *, lang: str = "es") -> str:
         """Use MolDesign's authenticated local Whisper endpoint."""

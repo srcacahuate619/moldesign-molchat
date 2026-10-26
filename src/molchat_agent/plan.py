@@ -13,7 +13,7 @@ from hashlib import sha256
 import json
 from typing import Any
 
-from .capabilities import capability, PlanValidationError
+from .tools import capability, PlanValidationError
 
 MAX_STEPS = 8
 

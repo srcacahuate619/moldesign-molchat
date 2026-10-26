@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, AsyncIterator, Literal, Protocol
 
-from ..capabilities import CAPABILITIES, PlanValidationError
+from ..tools import PlanValidationError, catalog as get_catalog
 from ..plan import MAX_STEPS, Plan
 
 CatalogEntry = dict[str, Any]
@@ -94,7 +94,7 @@ def read_only_catalog(catalog: list[CatalogEntry] | None) -> list[CatalogEntry]:
     ``"read"`` risk are excluded (fail closed).
     """
     entries = (catalog if catalog is not None
-               else [c.as_catalog_entry() for c in CAPABILITIES.values()])
+               else [c.as_catalog_entry() for c in get_catalog().values()])
     return [e for e in entries if e.get("risk") == "read"]
 
 

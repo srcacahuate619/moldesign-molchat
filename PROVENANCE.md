@@ -460,3 +460,19 @@ MolDesign es por API HTTP, no por copia de código.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/providers/test_consent.py, tests/test_executor.py,
   tests/providers/test_port.py (+ engine/doctor/chat)
+
+## Entradas de la Fase 3 (orquestación real)
+
+### src/molchat_agent/tools/catalog.py, src/molchat_agent/tools/moldesign.py, src/molchat_agent/tools/__init__.py, src/molchat_agent/capabilities.py, tests/tools/__init__.py, tests/tools/test_catalog.py, tests/tools/test_moldesign.py
+
+- Origen: código nuevo en este repositorio; endpoints verificados uno por uno
+  en `backend/api/routers/` (commit de referencia), sin copiar código
+- Commit de MolDesign: 66ff524334267c56558b7a3cce94cb919edbad2e
+- Autoría: Johan Amezcua (único titular; puede relicenciar bajo GPL-3.0-or-later)
+- Transformación: código nuevo (tarea 3.1): registro de capacidades con
+  riesgo/clase epistémica/procedencia/salidas, 23 capacidades MolDesign
+  verificadas, puente con query/body/bytes/SSE; `capabilities.py` queda
+  como shim; `create_docking_proposal` y `start_batch` excluidos con motivo
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/tools/test_catalog.py, tests/tools/test_moldesign.py,
+  tests/test_bridge.py (bytes/SSE/query-POST)

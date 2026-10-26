@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from typing import Any, AsyncIterator
 
-from ..capabilities import PlanValidationError
+from ..tools import PlanValidationError
 from ..plan import Plan
 from .base import (
     CatalogEntry,

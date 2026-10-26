@@ -81,3 +81,47 @@ async def test_voice_uses_local_endpoint_only_and_returns_transcript():
         bridge = MolDesignBridge(token="test", client=client)
         assert await bridge.transcribe_local(b"RIFF-valid-demo") == "Preparar el receptor"
 
+
+@pytest.mark.asyncio
+async def test_bytes_capability_returns_raw_content():
+    def handle(request):
+        assert request.url.path == "/evaluation/batch/b1/csv"
+        return httpx.Response(200, content=b"a,b\n1,2\n",
+                              headers={"Content-Type": "text/csv"})
+
+    async with httpx.AsyncClient(base_url="http://127.0.0.1:8000",
+                                 transport=httpx.MockTransport(handle)) as client:
+        bridge = MolDesignBridge(token="test", client=client)
+        assert await bridge.call("export_batch", {"batch_id": "b1", "format": "csv"}) == b"a,b\n1,2\n"
+
+
+@pytest.mark.asyncio
+async def test_sse_capability_collects_data_events():
+    def handle(request):
+        assert request.url.path == "/evaluation/stream/t1"
+        body = 'event: ping\ndata: {"type": "start"}\n\ndata: {"type": "final"}\n\n'
+        return httpx.Response(200, content=body.encode(),
+                              headers={"Content-Type": "text/event-stream"})
+
+    async with httpx.AsyncClient(base_url="http://127.0.0.1:8000",
+                                 transport=httpx.MockTransport(handle)) as client:
+        bridge = MolDesignBridge(token="test", client=client)
+        result = await bridge.call("stream_evaluation", {"task_id": "t1"})
+    assert result == {"events": [{"type": "start"}, {"type": "final"}]}
+
+
+@pytest.mark.asyncio
+async def test_post_with_query_params_sends_no_json_body():
+    def handle(request):
+        assert request.method == "POST"
+        assert request.url.params["name"] == "demo"
+        assert request.content == b""
+        return httpx.Response(200, json={"saved": True})
+
+    async with httpx.AsyncClient(base_url="http://127.0.0.1:8000",
+                                 transport=httpx.MockTransport(handle)) as client:
+        bridge = MolDesignBridge(token="test", client=client)
+        result = await bridge.call("save_molecule", {
+            "molecule_id": "12345678-1234-1234-1234-123456789012", "name": "demo"})
+    assert result == {"saved": True}
+

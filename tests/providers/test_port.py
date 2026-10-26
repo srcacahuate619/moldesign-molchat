@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from molchat_agent.capabilities import PlanValidationError
+from molchat_agent.tools import PlanValidationError
 from molchat_agent.plan import Plan
 from molchat_agent.providers.base import (
     HealthStatus,

@@ -14,7 +14,7 @@ from typing import Any, AsyncIterator
 
 import httpx
 
-from ..capabilities import PlanValidationError
+from ..tools import PlanValidationError
 from ..config import load_config
 from ..plan import Plan
 from .base import (
