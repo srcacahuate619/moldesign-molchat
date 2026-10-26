@@ -10,11 +10,16 @@
   `pyproject.toml` con `license = "GPL-3.0-or-later"`).
 - **Modo:** núcleo independiente, conectado por HTTP al backend FastAPI ya
   existente en MolDesign. No hay fork ni traslado del runtime científico.
-- **Fuente auditada:** `srcacahuate619/moldesign-app`, rama pública `main`,
-  código consultado el 2026-10-26. Commit de referencia fijado en la Fase 0:
-  `66ff524334267c56558b7a3cce94cb919edbad2e` (rama `codex/release-hygiene`,
-  verificado el 2026-10-26; asunto: `FEP-06-HUM: contacto para inscribirse y
-  entregar`). La matriz formal de compatibilidad usará este commit.
+- **Fuentes auditadas (dos referencias distintas, no confundir):**
+  - (a) Repo público `srcacahuate619/moldesign-app`, rama `main`, código
+    consultado el 2026-10-26: origen de la auditoría de extracción inicial
+    (contratos, licencias, documentos enlazados).
+  - (b) Repo interno de MolDesign, rama `codex/release-hygiene`: commit de
+    referencia fijado en la Fase 0,
+    `66ff524334267c56558b7a3cce94cb919edbad2e` (verificado el 2026-10-26;
+    asunto: `FEP-06-HUM: contacto para inscribirse y entregar`). Es la base
+    del porte por rebanadas y de la matriz de paridad. La Fase 1 revalida los
+    6 contratos actuales contra este commit interno fijado.
 - **Estado de validación:** revisión estática de endpoints, contratos y
   documentos. Las pruebas automatizadas de este repo usan dobles HTTP, no
   son una validación científica de Vina ni una integración con MolDesign real.

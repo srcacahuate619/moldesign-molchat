@@ -20,7 +20,10 @@ EXCLUDED_DIRS = {
     ".git", ".venv", "__pycache__", ".pytest_cache", ".tox",
     "node_modules", "dist", "build",
 }
-EXCLUDED_FILES = {"PLAN.md"}  # internal doc, git-ignored, never published
+# Root-relative paths excluded from scanning. Only the internal PLAN.md at
+# the root is excluded (git-ignored, never published); a PLAN.md anywhere
+# else would still be scanned.
+EXCLUDED_PATHS = {"PLAN.md"}
 EXCLUDED_SUFFIXES = (".egg-info",)
 
 # Files that must never be tracked by git (would be published).
@@ -33,18 +36,22 @@ SECRET_PATTERNS = [
      "known credential prefix"),
     (re.compile(r"-----BEGIN (?:RSA |OPENSSH |EC )?PRIVATE KEY-----"),
      "private key block"),
-    # Assignments naming a credential (e.g. token = "<value>"). Short or
-    # obviously dummy values (test fixtures) are skipped, not flagged.
+    # Assignments naming a credential (e.g. token = "test-fixture"). Only
+    # dummy-prefixed values (test fixtures) are skipped, not flagged.
     (re.compile(r"(?i)\b(api[_-]?key|secret|token|passwd|password)\b"
                 r"\s*[:=]\s*['\"]([^'\"]+)['\"]"),
      "credential-like assignment"),
 ]
 
-DUMMY_VALUES = re.compile(
-    r"(?i)test|secret|example|fake|dummy|changeme|placeholder|sample|mock|huel"
+DUMMY_PREFIX = re.compile(
+    r"(?i)^(test|secret|example|fake|dummy|changeme|placeholder|sample|mock|huel|fixture)"
 )
 
-MACHINE_PATH = re.compile(r"[A-Za-z]:\\|/(?:home|Users)/[\w.~-]+")
+# A drive path is a *single* letter (negative lookbehind excludes URI
+# schemes like https://); UNC shares and Unix home dirs are also covered.
+MACHINE_PATH = re.compile(
+    r"(?<![A-Za-z])[A-Za-z]:[/\\]|\\\\[\w.$-]+\\[\w.$-]+|/(?:home|Users)/[\w.~-]+"
+)
 
 
 def _safe_stdout() -> None:
@@ -61,7 +68,7 @@ def iter_files() -> list[Path]:
         if not path.is_file():
             continue
         rel = path.relative_to(ROOT)
-        if rel.name in EXCLUDED_FILES:
+        if rel.as_posix() in EXCLUDED_PATHS:
             continue
         if any(part in EXCLUDED_DIRS or part.endswith(EXCLUDED_SUFFIXES)
                for part in rel.parts):
@@ -71,10 +78,13 @@ def iter_files() -> list[Path]:
 
 
 def check_assignment(value: str) -> bool:
-    """True if a credential-like value looks real (not a test fixture)."""
-    if len(value) < 12:
-        return False
-    if DUMMY_VALUES.search(value):
+    """True if a credential-like value looks real (not a test fixture).
+
+    The dummy exemption is anchored: only values *starting* with a dummy
+    marker (``test-key``, ``secret_local``…) are skipped. A marker buried
+    mid-value (``a1b2c3secretvalue99``) is still flagged.
+    """
+    if DUMMY_PREFIX.match(value):
         return False
     return True
 
