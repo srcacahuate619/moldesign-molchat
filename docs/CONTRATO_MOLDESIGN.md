@@ -61,6 +61,6 @@ molchat-agent plan "¿Qué receptores tengo?" --out plan.json  # Meta (activo)
 
 ## Registro de corridas en vivo
 
-| Fecha | Commit MolChat | Commit MolDesign | Resultado |
-|---|---|---|---|
-| — | — | `66ff5243` (ref. Fase 0) | Pendiente: backend no disponible al cierre de Fase 1 |
+| Fecha | Commit MolChat | Backend MolDesign | Resultado |
+|---|---|---|---|---|
+| 2026-10-26 | cierre de Fase 1 (supervisor) | Instancia de escritorio en `127.0.0.1:18017` (app 1.0.4, modo DESKTOP, worktree `video-prep`; no el commit de referencia `66ff5243`) | **Contrato 10/10** con cuenta de pruebas registrada para la ocasión. Paridad en vivo: Meta (`muse-spark-1.3`, consentimiento otorgado) produjo el plan válido esperado de 1 paso; llama-server local con **Bonsai-8B-Q1_0** produjo un plan formalmente válido (con sobre-alcance semántico: pasos e identificadores inventados que la Fase 2 debe medir); Qwen2.5-1.5B fue **rechazado** por el validador en 3/3 intentos (argumentos fuera de contrato e ID inventados: la abstención correcta). Primera corrida sin sesión: 4/10 con fallos de arnés (pool de conexiones entre loops) y 401 en historial; corregido el arnés, 10/10 |
