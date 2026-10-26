@@ -263,3 +263,14 @@ MolDesign es por API HTTP, no por copia de código.
   sondeos concurrentes
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/test_doctor.py
+
+### tests/contract/test_live_moldesign.py
+
+- Origen: código nuevo en este repositorio (sin porte desde MolDesign)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (tarea 1.1): suite de contrato en vivo, 10
+  peticiones sobre las 6 capacidades, `@pytest.mark.contract`, excluida por
+  defecto vía `addopts`; salta sin fallar sin backend/token
+- Licencia resultante: GPL-3.0-or-later
+- Tests: son los tests (manuales, pre-release)
