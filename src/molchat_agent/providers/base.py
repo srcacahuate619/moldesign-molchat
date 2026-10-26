@@ -61,10 +61,15 @@ class ProviderInfo:
 
 @dataclass
 class TurnContext:
-    """Minimal turn for the Fase 2 streaming chat; kept forward-compatible."""
+    """Minimal turn for streaming chat.
+
+    ``messages`` carries full history when the caller has it (engine
+    conceptual path); otherwise providers synthesize ``[user: text]``.
+    """
 
     text: str
     catalog: list[CatalogEntry] | None = None
+    messages: list[dict[str, str]] | None = None
 
 
 @dataclass

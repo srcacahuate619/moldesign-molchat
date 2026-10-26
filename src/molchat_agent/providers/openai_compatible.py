@@ -178,5 +178,24 @@ class OpenAICompatibleProvider:
             raise ProviderError("El proveedor no entregó un plan válido.") from exc
 
     async def chat(self, turn: TurnContext) -> AsyncIterator[ChatEvent]:
-        raise NotImplementedError("chat en streaming llega en la Fase 2")
-        yield  # pragma: no cover - makes this an async generator function
+        if not self.config.base_url:
+            raise ValueError("Falta OPENAI_COMPAT_BASE_URL; nada que contactar.")
+        if self.locality == "remote" and not self.config.api_key:
+            raise ValueError("Falta OPENAI_COMPAT_API_KEY para el endpoint remoto.")
+        if not self.config.model:
+            raise ValueError("Falta OPENAI_COMPAT_MODEL; el endpoint no sabe qué servir.")
+        messages = turn.messages or [{"role": "user", "content": turn.text}]
+        try:
+            response = await self._http.post(
+                f"{self.config.base_url}/chat/completions",
+                json={"model": self.config.model, "messages": messages,
+                      "temperature": self.config.temperature},
+                headers=self._headers())
+            if response.status_code >= 400 or response.is_redirect:
+                raise ProviderError(
+                    f"El endpoint devolvió HTTP {response.status_code}.")
+            content = response.json()["choices"][0]["message"]["content"]
+        except (httpx.RequestError, KeyError, IndexError, TypeError, ValueError) as exc:
+            raise ProviderError("El proveedor no entregó respuesta de chat.") from exc
+        yield ChatEvent(type="token", text=content)
+        yield ChatEvent(type="done", done=True)

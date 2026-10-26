@@ -176,8 +176,23 @@ class MetaProvider:
             raise RuntimeError("Meta no entregó un plan válido; no se ejecutó nada") from exc
 
     async def chat(self, turn: TurnContext) -> AsyncIterator[ChatEvent]:
-        raise NotImplementedError("chat en streaming llega en la Fase 2")
-        yield  # pragma: no cover - makes this an async generator function
+        if not self.config.api_key:
+            raise ValueError("Falta MODEL_API_KEY; no se enviará nada a Meta")
+        messages = turn.messages or [{"role": "user", "content": turn.text}]
+        try:
+            response = await self._http.post(
+                META_URL,
+                json={"model": self.config.model, "messages": messages},
+                headers={"Authorization": f"Bearer {self.config.api_key}",
+                         "Content-Type": "application/json"},
+            )
+            if response.status_code >= 400 or response.is_redirect:
+                raise ProviderError(f"Meta Model API devolvió HTTP {response.status_code}")
+            content = response.json()["choices"][0]["message"]["content"]
+        except (httpx.RequestError, KeyError, IndexError, TypeError, ValueError) as exc:
+            raise ProviderError("Meta no entregó respuesta de chat.") from exc
+        yield ChatEvent(type="token", text=content)
+        yield ChatEvent(type="done", done=True)
 
 
 #: Backward-compatible alias: the class lived in ``molchat_agent.meta``.

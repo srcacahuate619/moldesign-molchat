@@ -351,3 +351,14 @@ MolDesign es por API HTTP, no por copia de código.
   dueño, compresión determinista; sin embeddings ni FTS (cuando una tool los pida)
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/conversation/test_memory.py (incluye aislamiento Alice/Mallory)
+
+### tests/providers/test_chat.py
+
+- Origen: código nuevo en este repositorio (sin porte desde MolDesign)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (tarea 2.6, base): `chat()` no-streaming en
+  los 5 proveedores para el camino conceptual verificado; `fake` responde
+  texto canned sin dígitos
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/providers/test_chat.py

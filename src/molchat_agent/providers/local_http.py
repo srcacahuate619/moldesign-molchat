@@ -156,8 +156,22 @@ class LlamaServerProvider:
             raise ProviderError("llama-server no entregó un plan válido.") from exc
 
     async def chat(self, turn: TurnContext) -> AsyncIterator[ChatEvent]:
-        raise NotImplementedError("chat en streaming llega en la Fase 2")
-        yield  # pragma: no cover - makes this an async generator function
+        if not self.config.model:
+            raise ValueError("Falta LLAMA_SERVER_MODEL; el servidor no sabe qué servir.")
+        messages = turn.messages or [{"role": "user", "content": turn.text}]
+        try:
+            response = await self._http.post(
+                f"{self.config.base_url}/chat/completions",
+                json={"model": self.config.model, "messages": messages,
+                      "temperature": self.config.temperature})
+            if response.status_code >= 400:
+                raise ProviderError(
+                    f"llama-server devolvió HTTP {response.status_code}.")
+            content = response.json()["choices"][0]["message"]["content"]
+        except (httpx.RequestError, KeyError, IndexError, TypeError, ValueError) as exc:
+            raise ProviderError("llama-server no entregó respuesta de chat.") from exc
+        yield ChatEvent(type="token", text=content)
+        yield ChatEvent(type="done", done=True)
 
 
 class OllamaProvider:
@@ -297,5 +311,19 @@ class OllamaProvider:
             raise ProviderError("Ollama no entregó un plan válido.") from exc
 
     async def chat(self, turn: TurnContext) -> AsyncIterator[ChatEvent]:
-        raise NotImplementedError("chat en streaming llega en la Fase 2")
-        yield  # pragma: no cover - makes this an async generator function
+        if not self.config.model:
+            raise ValueError("Falta OLLAMA_MODEL; nada que pedirle a Ollama.")
+        messages = turn.messages or [{"role": "user", "content": turn.text}]
+        try:
+            response = await self._http.post(
+                f"{self.config.base_url}/api/chat",
+                json={"model": self.config.model, "messages": messages,
+                      "stream": False,
+                      "options": {"temperature": self.config.temperature}})
+            if response.status_code != 200:
+                raise ProviderError(f"Ollama devolvió HTTP {response.status_code}.")
+            content = response.json()["message"]["content"]
+        except (httpx.RequestError, KeyError, TypeError, ValueError) as exc:
+            raise ProviderError("Ollama no entregó respuesta de chat.") from exc
+        yield ChatEvent(type="token", text=content)
+        yield ChatEvent(type="done", done=True)

@@ -73,5 +73,8 @@ class FakeProvider:
             goal, "fake:deterministic")
 
     async def chat(self, turn: TurnContext) -> AsyncIterator[ChatEvent]:
-        raise NotImplementedError("chat en streaming llega en la Fase 2")
-        yield  # pragma: no cover - makes this an async generator function
+        """Canned conceptual answer. No digits: nothing to verify, nothing to fake."""
+        yield ChatEvent(type="token", text=(
+            "Respuesta conceptual de demostración, sin valores numéricos: "
+            "los datos factuales siempre vienen de herramientas verificadas."))
+        yield ChatEvent(type="done", done=True)

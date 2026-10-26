@@ -65,10 +65,12 @@ async def test_fake_never_invents_identifiers():
 
 
 @pytest.mark.asyncio
-async def test_chat_is_an_explicit_fase_2_boundary():
-    with pytest.raises(NotImplementedError):
-        async for _ in FakeProvider().chat(TurnContext(text="hola")):
-            pass
+async def test_fake_chat_is_canned_text_without_digits():
+    events = [e async for e in FakeProvider().chat(TurnContext(text="qué es un fármaco?"))]
+    assert events[-1].done is True
+    body = "".join(e.text for e in events)
+    assert "demostración" in body
+    assert not any(ch.isdigit() for ch in body)
 
 
 @pytest.mark.asyncio
