@@ -162,3 +162,15 @@ MolDesign es por API HTTP, no por copia de código.
   entorno; sustituye el acceso disperso a `os.getenv` en `bridge.py` y `meta.py`)
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/test_config.py
+
+### src/molchat_agent/providers/base.py, src/molchat_agent/providers/fake.py, src/molchat_agent/providers/__init__.py, tests/providers/test_port.py
+
+- Origen: código nuevo en este repositorio; diseño del puerto inspirado en
+  `backend/services/ai/providers/base.py` (commit de referencia) sin copiar código
+- Commit de MolDesign: 66ff524334267c56558b7a3cce94cb919edbad2e
+- Autoría: Johan Amezcua (único titular; puede relicenciar bajo GPL-3.0-or-later)
+- Transformación: reimplementado (tareas 1.2/1.3 parciales: puerto
+  `LLMProvider`, estados de salud con `no_consent`, catálogo de solo lectura,
+  proveedor determinista `fake`); sin acoplamiento a cuentas ni a MolDesign
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/providers/test_port.py
