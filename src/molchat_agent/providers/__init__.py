@@ -21,17 +21,23 @@ from .meta import MetaProvider
 from .openai_compatible import OpenAICompatibleProvider
 from .registry import (
     HACKATHON_REMOTE_ALLOWLIST,
+    ConsentDenied,
+    ConsentStore,
+    Destination,
     ProviderRegistry,
+    ProviderStatus,
     UnknownProviderError,
     build_registry,
+    resolve_destination,
 )
 
 __all__ = [
-    "CatalogEntry", "ChatEvent", "FakeProvider", "HACKATHON_REMOTE_ALLOWLIST",
+    "CatalogEntry", "ChatEvent", "ConsentDenied", "ConsentStore", "Destination",
+    "FakeProvider", "HACKATHON_REMOTE_ALLOWLIST",
     "HealthCheckResult",
     "HealthStatus", "LLMProvider", "LlamaServerProvider", "MetaProvider",
     "OllamaProvider", "OpenAICompatibleProvider", "ProviderConfig", "ProviderDisabled",
-    "ProviderError", "ProviderInfo", "ProviderRegistry", "TurnContext",
+    "ProviderError", "ProviderInfo", "ProviderRegistry", "ProviderStatus", "TurnContext",
     "UnknownProviderError", "build_registry", "plan_from_content",
-    "read_only_catalog", "readonly_plan_schema",
+    "read_only_catalog", "readonly_plan_schema", "resolve_destination",
 ]

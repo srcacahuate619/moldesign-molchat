@@ -11,8 +11,8 @@ import sys
 from .bridge import MolDesignBridge
 from .capabilities import CAPABILITIES
 from .executor import AgentExecutor, save_report
-from .meta import MetaPlanner
 from .plan import Plan
+from .providers import build_registry
 
 
 def _load_plan(path: str) -> Plan:
@@ -35,10 +35,12 @@ def build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("catalog", help="Herramientas y riesgos permitidos")
 
-    propose = commands.add_parser("plan", help="Pedir a Muse Spark un plan de sólo lectura")
+    propose = commands.add_parser("plan", help="Pedir un plan de sólo lectura al proveedor activo")
     propose.add_argument("goal", help="Objetivo científico sin datos confidenciales")
     propose.add_argument("--out", default="plan.json")
     propose.add_argument("--force", action="store_true")
+    propose.add_argument("--provider", default=None,
+                         help="Proveedor a usar (por defecto, el activo del perfil)")
 
     inspect = commands.add_parser("inspect", help="Mostrar pasos, riesgos y SHA-256")
     inspect.add_argument("plan_file")
@@ -63,9 +65,14 @@ async def _dispatch(args: argparse.Namespace) -> int:
                          ensure_ascii=False, indent=2))
         return 0
     if args.command == "plan":
-        print("Aviso: el objetivo se enviará a Meta Model API; evita datos privados.", file=sys.stderr)
-        async with MetaPlanner() as planner:
-            plan = await planner.plan(args.goal)
+        registry = build_registry()
+        provider = registry.get(args.provider or registry.active_id)
+        destination = registry.destination(provider.id)
+        print(f"Proveedor: {provider.id} ({destination.url}). "
+              "El objetivo saldrá de esta máquina; evita datos privados."
+              if destination.is_remote else
+              f"Proveedor: {provider.id} (local, sin red).", file=sys.stderr)
+        plan = await registry.plan(args.goal, provider_id=args.provider)
         _write_new(args.out, plan.as_dict(), force=args.force)
         print(f"Plan escrito: {args.out}\nHuella: {plan.digest}\nRevisa con 'inspect' antes de ejecutarlo.")
         return 0

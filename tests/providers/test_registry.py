@@ -4,6 +4,7 @@ import pytest
 
 from molchat_agent.config import DEFAULT_PROFILE, HACKATHON_PROFILE, load_config
 from molchat_agent.providers import (
+    ConsentStore,
     FakeProvider,
     ProviderDisabled,
     ProviderRegistry,
@@ -44,8 +45,8 @@ class _StubMeta(_StubRemote):
     locality = "remote"
 
 
-def _registry_with_stubs(profile):
-    registry = ProviderRegistry(profile=profile)
+def _registry_with_stubs(profile, consents=None):
+    registry = ProviderRegistry(profile=profile, consents=consents)
     registry.register(FakeProvider())
     registry.register(_StubRemote())
     registry.register(_StubMeta())
@@ -88,8 +89,10 @@ def test_set_active_validates_known_and_enabled():
 
 
 @pytest.mark.asyncio
-async def test_plan_routes_to_active_or_named_provider():
-    registry = _registry_with_stubs(DEFAULT_PROFILE)
+async def test_plan_routes_to_active_or_named_provider(tmp_path):
+    registry = _registry_with_stubs(
+        DEFAULT_PROFILE, ConsentStore(tmp_path / "c.json"))
+    registry.grant("stub-remote")
     plan = await registry.plan("¿Qué receptores tengo?", provider_id="stub-remote")
     assert plan.steps[0].capability == "list_targets"
     assert registry.get("stub-remote").plans == 1

@@ -239,3 +239,15 @@ MolDesign es por API HTTP, no por copia de código.
   prueba de paridad fake/local/Meta sobre el mismo objetivo
 - Licencia resultante: GPL-3.0-or-later
 - Tests: son los tests
+
+### tests/providers/test_consent.py
+
+- Origen: código nuevo en este repositorio; diseño del gate inspirado en
+  `backend/services/ai/consent.py` (commit de referencia) sin copiar código
+- Commit de MolDesign: 66ff524334267c56558b7a3cce94cb919edbad2e
+- Autoría: Johan Amezcua (único titular; puede relicenciar bajo GPL-3.0-or-later)
+- Transformación: reimplementado (tarea 1.4): destino `proveedor@host`
+  calculado, desconocido→remoto, revocación por proveedor, offline manda,
+  `status()` sin sondear sin consentimiento; el CLI `plan` rutea por registro
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/providers/test_consent.py
