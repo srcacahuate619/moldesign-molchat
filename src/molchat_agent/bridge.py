@@ -1,0 +1,110 @@
+"""HTTP bridge to the *existing* MolDesign FastAPI contracts.
+
+No filesystem, shell, or arbitrary HTTP endpoint is exposed as an agent tool.
+"""
+
+from __future__ import annotations
+
+import os
+from typing import Any
+from urllib.parse import urlsplit
+
+import httpx
+
+from .capabilities import capability
+
+
+class BridgeError(RuntimeError):
+    """A MolDesign service call failed without exposing credentials."""
+
+
+def validate_base_url(value: str, *, allow_remote: bool = False) -> str:
+    url = urlsplit(value)
+    local = url.hostname in ("127.0.0.1", "localhost", "::1")
+    if (
+        url.scheme not in ("http", "https") or not url.hostname or
+        url.username or url.password or url.path not in ("", "/") or
+        url.query or url.fragment
+    ):
+        raise ValueError("URL base MolDesign no válida")
+    if not local and (not allow_remote or url.scheme != "https"):
+        raise ValueError("Sólo loopback; un servidor remoto exige HTTPS y autorización expresa")
+    return value.rstrip("/")
+
+
+class MolDesignBridge:
+    def __init__(
+        self, base_url: str = "http://127.0.0.1:8000", *,
+        token: str | None = None, allow_remote: bool = False,
+        client: httpx.AsyncClient | None = None,
+    ) -> None:
+        self.base_url = validate_base_url(base_url, allow_remote=allow_remote)
+        self._token = token
+        self._owns_client = client is None
+        self._client = client or httpx.AsyncClient(
+            base_url=self.base_url, timeout=30.0, follow_redirects=False,
+            trust_env=False,
+        )
+
+    @classmethod
+    def from_env(cls) -> "MolDesignBridge":
+        return cls(
+            base_url=os.getenv("MOLDESIGN_BASE_URL", "http://127.0.0.1:8000"),
+            token=os.getenv("MOLDESIGN_TOKEN") or None,
+            allow_remote=os.getenv("MOLDESIGN_ALLOW_REMOTE", "0") == "1",
+        )
+
+    async def __aenter__(self) -> "MolDesignBridge":
+        return self
+
+    async def __aexit__(self, *_: object) -> None:
+        if self._owns_client:
+            await self._client.aclose()
+
+    async def call(self, name: str, arguments: dict[str, Any]) -> Any:
+        tool = capability(name)
+        method, path, parameters = tool.request(arguments)
+        headers = {"Accept": "application/json"}
+        if self._token:
+            headers["Authorization"] = f"Bearer {self._token}"
+        if tool.risk == "approval_required" and not self._token:
+            raise BridgeError("Se requiere una sesión autenticada para aprobar")
+        try:
+            if method == "GET":
+                response = await self._client.get(path, params=parameters, headers=headers)
+            else:
+                response = await self._client.post(path, json=parameters, headers=headers)
+            if response.status_code >= 400:
+                raise BridgeError(f"MolDesign devolvió HTTP {response.status_code} en {name}")
+            if response.is_redirect:
+                raise BridgeError("MolDesign respondió con una redirección inesperada")
+            if len(response.content) > 5_000_000:
+                raise BridgeError("Respuesta superior al límite de 5 MB")
+            return response.json()
+        except (httpx.RequestError, ValueError) as exc:
+            raise BridgeError(f"No se pudo obtener una respuesta JSON de {name}") from exc
+
+    async def transcribe_local(self, audio_bytes: bytes, *, lang: str = "es") -> str:
+        """Use MolDesign's authenticated local Whisper endpoint."""
+        if not self._token:
+            raise BridgeError("La transcripción requiere una sesión MolDesign")
+        if not audio_bytes or len(audio_bytes) > 15_000_000:
+            raise ValueError("Audio vacío o superior al límite local de 15 MB")
+        if lang not in ("es", "en"):
+            raise ValueError("Esta primera integración admite es/en")
+        try:
+            response = await self._client.post(
+                "/ai/speech-to-text", params={"lang": lang}, content=audio_bytes,
+                headers={"Authorization": f"Bearer {self._token}",
+                         "Content-Type": "audio/wav", "Accept": "application/json"},
+                timeout=90.0,
+            )
+            if response.status_code >= 400 or response.is_redirect:
+                raise BridgeError(f"Transcripción local falló (HTTP {response.status_code})")
+            value = response.json().get("text", "")
+            if not isinstance(value, str):
+                raise BridgeError("Formato de transcripción inesperado")
+            return value
+        except (httpx.RequestError, ValueError) as exc:
+            raise BridgeError("No se pudo transcribir el audio local") from exc
+
