@@ -13,8 +13,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, AsyncIterator
 
-from ..providers.base import TurnContext
-from ..providers.registry import ProviderRegistry
+from ..providers.base import ProviderDisabled, TurnContext
+from ..providers.registry import ProviderRegistry, UnknownProviderError
 from . import deterministic as det
 from . import intents as intent_mod
 from .deterministic import MoleculeProps
@@ -24,7 +24,8 @@ from .evidence import (
     Evidence,
     block_for_flow,
     format_evidence,
-    verify_numbers,
+    numbers_in,
+    redact_unverified,
 )
 from .intents import Intent
 from .memory import ConversationNotFound, MemoryStore, PersistenciaFallida
@@ -189,8 +190,8 @@ class ConversationEngine:
         self._memory.set_molecule_context(
             conv_id, self._user_id, {"name": display, "smiles": smiles})
         answer = det.build_properties_response(display, self._to_props(display, record))
-        if answer is None:  # pragma: no cover - backend always returns typed props
-            return self._abstain("la herramienta no devolvió propiedades"), [], False
+        if answer is None:
+            return self._abstain("la herramienta no devolvió propiedades")
         evidence = [Evidence(tool="compute_properties", label=display,
                              epistemic_class=EpistemicClass.CALCULATION,
                              source=record.source,
@@ -224,7 +225,7 @@ class ConversationEngine:
         else:
             answer = det.build_multi_compare_response(molecules)
             if answer is None:
-                return self._abstain("alguna molécula falló; no armo tablas parciales"), [], False
+                return self._abstain("alguna molécula falló; no armo tablas parciales")
         label = (f"A={displays[0]} | B={displays[1]}" if len(displays) == 2
                  else ", ".join(displays))
         evidence = [Evidence(tool="compare_molecules", label=label,
@@ -245,8 +246,8 @@ class ConversationEngine:
             return answer
         if not molecules:
             return ("No hay moléculas registradas en esta conversación. "
-                    "Calculá propiedades de alguna molécula primero.")
-        return ("No entiendo qué métrica ordenar; pedí menor/mayor peso, "
+                    "Calcula propiedades de alguna molécula primero.")
+        return ("No entiendo qué métrica ordenar; pide menor/mayor peso, "
                 "lipofilicidad, TPSA, afinidad o score.")
 
     async def _history(self, conv_id: str) -> str:
@@ -270,7 +271,7 @@ class ConversationEngine:
         answer = det.build_druglikeness_response(
             display, self._to_props(display, record), pains)
         if answer is None:
-            return self._abstain("faltan descriptores para evaluar reglas"), [], False
+            return self._abstain("faltan descriptores para evaluar reglas")
         evidence = [Evidence(tool="check_druglikeness", label=display,
                              epistemic_class=EpistemicClass.CALCULATION,
                              source=record.source,
@@ -308,10 +309,13 @@ class ConversationEngine:
             return ("Hola. Puedo calcular propiedades, comparar y rankear "
                     "moléculas, o explicar conceptos de química computacional."), [], False
         provider_id = self._provider_id or self._registry.active_id
-        reason = self._registry.block_reason(provider_id)
+        try:
+            reason = self._registry.block_reason(provider_id)
+            provider = self._registry.get(provider_id)
+        except (ProviderDisabled, UnknownProviderError) as exc:
+            return self._abstain(f"proveedor no disponible: {exc}")
         if reason:
             return reason, [], False
-        provider = self._registry.get(provider_id)
         conv = self._memory.get_conversation(conv_id, self._user_id)
         recent, summary = ([], "")
         if conv is not None:
@@ -326,11 +330,11 @@ class ConversationEngine:
             events = [event async for event in provider.chat(
                 TurnContext(text=text, messages=messages))]
         except (ToolError, ValueError, RuntimeError) as exc:
-            return self._abstain(f"el proveedor conceptual falló: {exc}"), [], False
+            return self._abstain(f"el proveedor conceptual falló: {exc}")
         body = "".join(e.text for e in events if not e.done)
-        problems = verify_numbers(body, set())
+        redacted, problems = redact_unverified(
+            body, set(), quotable=frozenset(numbers_in(text)))
         if problems:
-            redacted = re.sub(r"-?\d+\.?\d*", "[dato no verificado]", body)
             return (f"{VERIFICATION_NOTE} el modelo emitió números sin "
                     f"herramienta ({len(problems)}); se retuvieron. {redacted}"), [], True
         return body, [], True

@@ -40,6 +40,7 @@ async def test_chat_sends_full_messages_when_given():
         [e async for e in MetaProvider(api_key="test-key", client=client).chat(
             TurnContext(text="q", messages=messages))]
     assert seen["messages"] == messages
+    assert seen["max_tokens"] == 4096
 
 
 @pytest.mark.asyncio

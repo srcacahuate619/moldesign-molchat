@@ -18,7 +18,9 @@ assert len(CASES) == 43, f"la suite interna tiene 43 casos, hay {len(CASES)}"
 
 
 def _engine(tmp_path, provider_id="fake"):
-    registry = build_registry(load_config({"MOLCHAT_PROVIDER": provider_id}))
+    env = dict(os.environ)
+    env["MOLCHAT_PROVIDER"] = provider_id
+    registry = build_registry(load_config(env))
     memory = MemoryStore(tmp_path / "memory.db")
     engine = ConversationEngine(registry=registry,
                                 backend=QualityBackend(FIXTURES_PATH),
@@ -33,20 +35,32 @@ def test_quality_case(tmp_path, case):
     assert result.ok, f"{result.id}: {result.problems} :: {result.query!r}"
 
 
+def _slow_turns(engine, case):
+    conv_id = engine._memory.create_conversation("quality-test")
+    result = run_case(engine, conv_id, case, FIXTURES)
+    assert result.ok, f"{result.id}: {result.problems}"
+    return [(case["id"], query, latency)
+            for query, latency, used_llm in zip(case["seq"], result.latencies_ms,
+                                                result.used_llm)
+            if not used_llm and latency >= 300]
+
+
 def test_deterministic_turns_answer_within_300ms(tmp_path):
+    """Every deterministic turn answers within 300 ms, with one retry.
+
+    The retry is for transient machine load (a 787 ms spike was measured
+    while llama-server mmap-loaded 1 GB next door); a consistently slow
+    turn fails twice and fails the gate.
+    """
     engine, _ = _engine(tmp_path)
     # Warmup: cold SQLite/Defender first-touch is environmental noise, not turn cost.
     warmup_conv = engine._memory.create_conversation("quality-test")
     run_case(engine, warmup_conv, CASES[0], FIXTURES)
-    slow = []
-    for case in CASES:
-        conv_id = engine._memory.create_conversation("quality-test")
-        result = run_case(engine, conv_id, case, FIXTURES)
-        assert result.ok, f"{result.id}: {result.problems}"
-        for query, latency, used_llm in zip(case["seq"], result.latencies_ms,
-                                            result.used_llm):
-            if not used_llm and latency >= 300:
-                slow.append((case["id"], query, latency))
+    slow = [slow for case in CASES for slow in _slow_turns(engine, case)]
+    if slow:
+        retried = {case_id for case_id, _, _ in slow}
+        slow = [s for case in CASES if case["id"] in retried
+                for s in _slow_turns(engine, case)]
     assert slow == [], f"turnos deterministas lentos: {slow}"
 
 

@@ -411,3 +411,15 @@ MolDesign es por API HTTP, no por copia de código.
   de consentimiento (ejecución pendiente de clave Meta)
 - Licencia resultante: GPL-3.0-or-later
 - Tests: N/A (docs + script manual; el A/B exige API real)
+
+### tests/conversation/test_engine_failures.py
+
+- Origen: código nuevo en este repositorio (sin porte desde MolDesign)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (corrección F2-C1 del supervisor): regresión
+  de los 4 `_abstain` doblemente envueltos en `engine.py`; cada camino de
+  fallo devuelve `str`; voseo a neutro (F2-C2); robustez ante proveedor
+  deshabilitado en el camino conceptual
+- Licencia resultante: GPL-3.0-or-later
+- Tests: son los tests

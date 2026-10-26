@@ -119,6 +119,15 @@ async def test_llm_numbers_without_tools_are_withheld(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_query_quotation_and_ordinals_pass_verification(tmp_path):
+    engine, conv_id = _meta_engine(tmp_path, "12345 es un número.\n1. Nota uno.")
+    engine._registry.grant("meta")
+    result = await engine.turn(conv_id, "que es 12345?")
+    assert VERIFICATION_NOTE not in result.text
+    assert "12345" in result.text
+
+
+@pytest.mark.asyncio
 async def test_persist_failure_is_declared_not_fatal(fake_engine, monkeypatch):
     engine, conv_id = fake_engine
 

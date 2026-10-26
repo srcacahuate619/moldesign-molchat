@@ -182,7 +182,8 @@ class MetaProvider:
         try:
             response = await self._http.post(
                 META_URL,
-                json={"model": self.config.model, "messages": messages},
+                json={"model": self.config.model, "messages": messages,
+                      "max_tokens": self.config.max_tokens},
                 headers={"Authorization": f"Bearer {self.config.api_key}",
                          "Content-Type": "application/json"},
             )

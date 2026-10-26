@@ -6,6 +6,8 @@ from molchat_agent.conversation.evidence import (
     Evidence,
     block_for_flow,
     format_evidence,
+    numbers_in,
+    redact_unverified,
     split_flow,
     verify_numbers,
 )
@@ -50,6 +52,25 @@ def test_verify_numbers_marks_unbacked_and_clears_backed():
     assert verify_numbers("MW: 180.2 Da.", set()) != []
     assert verify_numbers("sin números aquí", set()) == []
     assert verify_numbers("valor 151.19", {151.2}) == []  # tolerance
+
+
+def test_quotation_and_ordinals_are_not_fabrication():
+    assert numbers_in("que es 12345?") == ["12345"]
+    assert verify_numbers("12345 es un número.", set(),
+                          quotable=frozenset({"12345"})) == []
+    assert verify_numbers("12345 es un número.", set()) != []
+    assert verify_numbers("Usos:\n1. Identificar\n2. Comparar", set()) == []
+    assert verify_numbers("1.5 Da cuesta.", set()) != []  # decimals count
+
+
+def test_redact_keeps_quotable_and_verified():
+    redacted, problems = redact_unverified(
+        "MW 180.2 y 12345", {180.2}, quotable=frozenset({"12345"}))
+    assert problems == [] and redacted == "MW 180.2 y 12345"
+    redacted, problems = redact_unverified("MW 999.9 y 12345", set(),
+                                           quotable=frozenset({"12345"}))
+    assert problems != []
+    assert "999.9" not in redacted and "12345" in redacted
 
 
 def test_prompts_are_versioned_and_static():

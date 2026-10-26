@@ -189,7 +189,8 @@ class OpenAICompatibleProvider:
             response = await self._http.post(
                 f"{self.config.base_url}/chat/completions",
                 json={"model": self.config.model, "messages": messages,
-                      "temperature": self.config.temperature},
+                      "temperature": self.config.temperature,
+                      "max_tokens": self.config.max_tokens},
                 headers=self._headers())
             if response.status_code >= 400 or response.is_redirect:
                 raise ProviderError(

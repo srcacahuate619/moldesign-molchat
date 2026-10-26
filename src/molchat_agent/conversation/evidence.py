@@ -79,18 +79,72 @@ def split_flow(text: str) -> tuple[str, str]:
     return evidence.strip(), answer.strip()
 
 
-def verify_numbers(text: str, verified: set[float], tolerance: float = 0.25) -> list[str]:
+_NUMBER_RE = re.compile(r"-?\d+\.?\d*")
+_ORDINAL_RE = re.compile(r"(?:^|\n)\s*\d+(?:\.(?!\d)|[):])")
+
+
+def numbers_in(text: str) -> list[str]:
+    """Raw numeric tokens in a text (query quotation detection)."""
+    return [match.group(0) for match in _NUMBER_RE.finditer(text)]
+
+
+def _ordinal_starts(text: str) -> set[int]:
+    starts: set[int] = set()
+    for match in _ORDINAL_RE.finditer(text):
+        digits = re.search(r"\d+", match.group(0))
+        if digits:
+            starts.add(match.start(0) + digits.start(0))
+    return starts
+
+
+def redact_unverified(text: str, verified: set[float],
+                      quotable: frozenset[str] = frozenset(),
+                      tolerance: float = 0.25) -> tuple[str, list[str]]:
+    """Replace unbacked numbers with a marker; quotable/ordinals survive."""
+    problems = verify_numbers(text, verified, tolerance, quotable)
+    if not problems:
+        return text, []
+    ordinal_starts = _ordinal_starts(text)
+
+    def _sub(match: re.Match) -> str:
+        raw = match.group(0)
+        if raw in quotable or match.start(0) in ordinal_starts:
+            return raw
+        try:
+            claimed = float(raw)
+        except ValueError:
+            return raw
+        if any(abs(claimed - value) <= tolerance for value in verified):
+            return raw
+        return "[dato no verificado]"
+
+    return _NUMBER_RE.sub(_sub, text), problems
+
+
+def verify_numbers(text: str, verified: set[float], tolerance: float = 0.25,
+                   quotable: frozenset[str] = frozenset()) -> list[str]:
     """Every number in ``text`` must match a verified tool value.
 
+    Two principled exemptions (both observed against Qwen 1.5B):
+    - ``quotable``: numbers verbatim in the user query ("que es 12345?" ->
+      "12345 es un número") are quotation, not fabrication.
+    - list ordinals ("1. Identificar…"): enumeration markers, not claims.
+      A value smuggled AS an ordinal ("1802. …") is the accepted residual.
     Returns problem descriptions (empty = clean). Deterministic answers
     never fail this: they are built FROM the verified values.
     """
     problems: list[str] = []
+    ordinal_starts = _ordinal_starts(text)
     for match in _NUMBER_RE.finditer(text):
+        raw = match.group(0)
+        if raw in quotable:
+            continue
+        if match.start(0) in ordinal_starts:
+            continue
         try:
-            claimed = float(match.group(0))
+            claimed = float(raw)
         except ValueError:
             continue
         if not any(abs(claimed - value) <= tolerance for value in verified):
-            problems.append(f"número {match.group(0)} sin herramienta que lo respalde")
+            problems.append(f"número {raw} sin herramienta que lo respalde")
     return problems

@@ -163,7 +163,8 @@ class LlamaServerProvider:
             response = await self._http.post(
                 f"{self.config.base_url}/chat/completions",
                 json={"model": self.config.model, "messages": messages,
-                      "temperature": self.config.temperature})
+                      "temperature": self.config.temperature,
+                      "max_tokens": self.config.max_tokens})
             if response.status_code >= 400:
                 raise ProviderError(
                     f"llama-server devolvió HTTP {response.status_code}.")
@@ -319,7 +320,8 @@ class OllamaProvider:
                 f"{self.config.base_url}/api/chat",
                 json={"model": self.config.model, "messages": messages,
                       "stream": False,
-                      "options": {"temperature": self.config.temperature}})
+                      "options": {"temperature": self.config.temperature,
+                                  "num_predict": self.config.max_tokens}})
             if response.status_code != 200:
                 raise ProviderError(f"Ollama devolvió HTTP {response.status_code}.")
             content = response.json()["message"]["content"]
