@@ -99,4 +99,4 @@ def test_build_registry_from_config():
     registry = build_registry(load_config({"MOLCHAT_PROVIDER": "fake"}))
     assert registry.profile == HACKATHON_PROFILE
     assert registry.active_id == "fake"
-    assert registry.ids() == ["fake", "meta", "openai-compatible"]
+    assert registry.ids() == ["fake", "llama-server", "meta", "openai-compatible"]

@@ -17,6 +17,7 @@ from .base import (
 )
 from .base import CatalogEntry, LLMProvider, ProviderDisabled
 from .fake import FakeProvider
+from .local_http import LlamaServerProvider
 from .meta import MetaProvider
 from .openai_compatible import OpenAICompatibleProvider
 from .registry import (
@@ -29,8 +30,8 @@ from .registry import (
 __all__ = [
     "CatalogEntry", "ChatEvent", "FakeProvider", "HACKATHON_REMOTE_ALLOWLIST",
     "HealthCheckResult",
-    "HealthStatus", "LLMProvider", "MetaProvider", "OpenAICompatibleProvider",
-    "ProviderConfig", "ProviderDisabled",
+    "HealthStatus", "LLMProvider", "LlamaServerProvider", "MetaProvider",
+    "OpenAICompatibleProvider", "ProviderConfig", "ProviderDisabled",
     "ProviderError", "ProviderInfo", "ProviderRegistry", "TurnContext",
     "UnknownProviderError", "build_registry", "plan_from_content",
     "read_only_catalog", "readonly_plan_schema",

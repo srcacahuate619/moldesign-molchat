@@ -211,3 +211,17 @@ MolDesign es por API HTTP, no por copia de código.
   el nuevo `readonly_plan_schema` de `base.py`
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/providers/test_openai_compatible.py
+
+### src/molchat_agent/providers/local_http.py, tests/providers/test_local_http.py
+
+- Origen: código nuevo en este repositorio; diseño inspirado en
+  `backend/services/ai/local_llm.py` y
+  `backend/services/ai/providers/local_llm_provider.py` (commit de referencia)
+  sin copiar código
+- Commit de MolDesign: 66ff524334267c56558b7a3cce94cb919edbad2e
+- Autoría: Johan Amezcua (único titular; puede relicenciar bajo GPL-3.0-or-later)
+- Transformación: reimplementado (tarea 1.3): proveedor `llama-server`
+  loopback-only sobre `/v1` (Ollama se suma en el siguiente commit); sin
+  gestión del proceso servidor (Fase 5)
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/providers/test_local_http.py
