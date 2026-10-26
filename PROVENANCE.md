@@ -312,3 +312,15 @@ MolDesign es por API HTTP, no por copia de código.
   conceptual, "y la X?" es anáfora); validación SMILES estructural sin RDKit
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/conversation/test_intents.py (consultas quality + regresiones)
+
+### src/molchat_agent/conversation/deterministic.py, tests/conversation/test_deterministic.py
+
+- Origen: código nuevo en este repositorio; semántica reimplementada desde
+  `backend/services/ai/deterministic_responder.py` (commit de referencia) sin copiar código
+- Commit de MolDesign: 66ff524334267c56558b7a3cce94cb919edbad2e
+- Autoría: Johan Amezcua (único titular; puede relicenciar bajo GPL-3.0-or-later)
+- Transformación: reimplementado (tarea 2.3, ranking/comparación): entradas
+  tipadas en vez de parsear texto de tools; fixes vs original ("mejor/peor
+  afinidad" por calidad, default MW solo con comparativos); tests de inversión
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/conversation/test_deterministic.py
