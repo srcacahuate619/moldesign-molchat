@@ -487,3 +487,14 @@ MolDesign es por API HTTP, no por copia de código.
   tipada en runtime, digest sobre la forma sin resolver, /1 intacto
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/test_plan.py
+
+### src/molchat_agent/orchestration/store.py, src/molchat_agent/orchestration/budget.py, src/molchat_agent/orchestration/__init__.py, tests/orchestration/__init__.py, tests/orchestration/test_store.py
+
+- Origen: código nuevo en este repositorio (sin porte desde MolDesign)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (tareas 3.3/3.5): estados persistentes con
+  transiciones auditadas, outcomes y jobs reanudables, presupuestos que
+  bloquean con motivo en vez de excepciones crudas
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/orchestration/test_store.py
