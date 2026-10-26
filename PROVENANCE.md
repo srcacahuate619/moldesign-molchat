@@ -150,3 +150,15 @@ MolDesign es por API HTTP, no por copia de código.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: se verifican a sí mismos en verde sobre el árbol actual
   (`python scripts/check_provenance.py`, `python scripts/check_secrets.py`)
+
+## Entradas de la Fase 1 (fundación verificada e híbrido real)
+
+### src/molchat_agent/config.py, tests/test_config.py
+
+- Origen: código nuevo en este repositorio (sin porte desde MolDesign)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (tarea 1.6: configuración centralizada por
+  entorno; sustituye el acceso disperso a `os.getenv` en `bridge.py` y `meta.py`)
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/test_config.py

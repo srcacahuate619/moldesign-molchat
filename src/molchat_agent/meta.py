@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import json
-import os
 
 import httpx
 
 from .capabilities import CAPABILITIES, PlanValidationError
+from .config import load_config
 from .plan import MAX_STEPS, Plan
 
 
@@ -17,7 +17,7 @@ _META_URL = "https://api.meta.ai/v1/chat/completions"
 class MetaPlanner:
     def __init__(self, *, api_key: str | None = None, model: str = "muse-spark-1.3",
                  client: httpx.AsyncClient | None = None) -> None:
-        self._key = api_key or os.getenv("MODEL_API_KEY")
+        self._key = api_key or load_config().model_api_key
         if not self._key:
             raise ValueError("Falta MODEL_API_KEY; no se enviará el objetivo a Meta")
         self.model = model

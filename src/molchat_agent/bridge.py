@@ -5,13 +5,13 @@ No filesystem, shell, or arbitrary HTTP endpoint is exposed as an agent tool.
 
 from __future__ import annotations
 
-import os
 from typing import Any
 from urllib.parse import urlsplit
 
 import httpx
 
 from .capabilities import capability
+from .config import load_config
 
 
 class BridgeError(RuntimeError):
@@ -48,10 +48,11 @@ class MolDesignBridge:
 
     @classmethod
     def from_env(cls) -> "MolDesignBridge":
+        config = load_config()
         return cls(
-            base_url=os.getenv("MOLDESIGN_BASE_URL", "http://127.0.0.1:8000"),
-            token=os.getenv("MOLDESIGN_TOKEN") or None,
-            allow_remote=os.getenv("MOLDESIGN_ALLOW_REMOTE", "0") == "1",
+            base_url=config.moldesign_base_url,
+            token=config.moldesign_token,
+            allow_remote=config.moldesign_allow_remote,
         )
 
     async def __aenter__(self) -> "MolDesignBridge":
