@@ -130,6 +130,17 @@ MolDesign es por API HTTP, no por copia de código.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: `scripts/check_provenance.py`, `scripts/check_secrets.py`
 
+### tests/test_check_scripts.py
+
+- Origen: código nuevo en este repositorio (pruebas de los checkers de la
+  Fase 0, añadidas por el supervisor en la revisión de cierre de la fase)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (las sondas negativas de supervisión como
+  tests permanentes de `scripts/check_secrets.py` y `check_provenance.py`)
+- Licencia resultante: GPL-3.0-or-later
+- Tests: es el test (`python -m pytest tests/test_check_scripts.py`)
+
 ### scripts/check_provenance.py, scripts/check_secrets.py
 
 - Origen: código nuevo en este repositorio (sin porte desde MolDesign)

@@ -49,8 +49,11 @@ DUMMY_PREFIX = re.compile(
 
 # A drive path is a *single* letter (negative lookbehind excludes URI
 # schemes like https://); UNC shares and Unix home dirs are also covered.
+# A UNC path appears in source text raw or escaped, so 2-4 leading
+# backslashes are accepted. (Examples are not written literally here:
+# this file is scanned by this very checker.)
 MACHINE_PATH = re.compile(
-    r"(?<![A-Za-z])[A-Za-z]:[/\\]|\\\\[\w.$-]+\\[\w.$-]+|/(?:home|Users)/[\w.~-]+"
+    r"(?<![A-Za-z])[A-Za-z]:[/\\]|\\{2,4}[\w.$-]+\\+[\w.$-]+|/(?:home|Users)/[\w.~-]+"
 )
 
 
