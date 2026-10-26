@@ -399,3 +399,15 @@ MolDesign es por API HTTP, no por copia de código.
   (sidecar monousuario) y se documenta en `docs/PARIDAD.md`
 - Licencia resultante: GPL-3.0-or-later
 - Tests: son los tests
+
+### scripts/ab_reasoning.py, docs/PARIDAD.md, docs/SEGURIDAD.md
+
+- Origen: código y documentos nuevos (sin porte); matriz levantada sobre
+  `backend/services/ai/tools/*.py` y `docs/34_MOLCHAT_V3.md`, `docs/67_GATE_MOLCHAT.md`
+- Commit de MolDesign: 66ff524334267c56558b7a3cce94cb919edbad2e
+- Autoría: Johan Amezcua (único titular; puede relicenciar bajo GPL-3.0-or-later)
+- Transformación: nuevo (tareas 2.1/2.8/2.9): matriz de paridad viva con
+  veredictos de inventario, modelo de amenazas, corredor A/B por el gate
+  de consentimiento (ejecución pendiente de clave Meta)
+- Licencia resultante: GPL-3.0-or-later
+- Tests: N/A (docs + script manual; el A/B exige API real)
