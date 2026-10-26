@@ -23,6 +23,13 @@
 - **Red**: loopback por defecto; remoto solo HTTPS + consentimiento por
   destino `proveedor@host` (otorgado antes del primer byte, revocable,
   sin herencia); `MOLCHAT_OFFLINE=1` manda sobre todo permiso.
+- **Datos por llamada** (consentimiento de destino ≠ de contenido):
+  - `plan()` remoto: objetivo + catálogo. Nunca resultados ni historial.
+  - `chat()` remoto: sistema + consulta. Historial, resúmenes y resultados
+    científicos solo con consentimiento de contenido (`huella+history`,
+    `doctor --grant-content`, revocable con `--revoke`). Sin él, el motor
+    los omite; el modo offline bloquea igual con ambos otorgados.
+  - Proveedores locales: contexto completo (nada sale de la máquina).
 - **Secretos**: solo entorno/memoria; redactados en `doctor`, planes y
   reportes; `check_secrets.py` en cada fase y (Fase 7) en CI.
 - **Datos científicos**: el planificador remoto recibe objetivo+catálogo,

@@ -67,6 +67,23 @@ async def test_grant_rejects_wrong_fingerprint(clean_env):
 
 
 @pytest.mark.asyncio
+async def test_grant_content_requires_destination_first(clean_env, capsys):
+    with pytest.raises(ValueError, match="Autoriza primero el destino"):
+        await _dispatch(_args("doctor", "--grant-content", "meta@api.meta.ai"))
+    assert await _dispatch(_args("doctor", "--grant-consent", "meta@api.meta.ai")) == 0
+    capsys.readouterr()
+    assert await _dispatch(_args("doctor", "--grant-content", "meta@api.meta.ai")) == 0
+    out = capsys.readouterr().out
+    assert "Autorizado contenido científico a meta@api.meta.ai" in out
+    assert "Revócalo con --revoke meta" in out
+    assert await _dispatch(_args("doctor", "--consents")) == 0
+    out = capsys.readouterr().out
+    assert "meta@api.meta.ai+history [+history]" in out
+    assert await _dispatch(_args("doctor", "--revoke", "meta")) == 0
+    assert "meta@api.meta.ai+history" in capsys.readouterr().out
+
+
+@pytest.mark.asyncio
 async def test_grant_rejects_local_providers(clean_env):
     with pytest.raises(ValueError, match="nada que autorizar"):
         await _dispatch(_args("doctor", "--grant-consent", "fake@"))

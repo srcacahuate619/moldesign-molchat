@@ -317,14 +317,16 @@ class ConversationEngine:
         if reason:
             return reason, [], False
         conv = self._memory.get_conversation(conv_id, self._user_id)
-        recent, summary = ([], "")
-        if conv is not None:
-            recent, summary = self._memory.recent_context(conv)
+        # F2-C6: history/summaries are scientific content. A remote provider
+        # gets [system, query] only, unless content consent was granted for
+        # its destination. Local providers keep full context (no exfiltration).
         messages = [{"role": "system", "content": CONCEPTUAL_SYSTEM_P1}]
-        if summary:
-            messages.append({"role": "system", "content": f"Resumen: {summary}"})
-        messages.extend({"role": m.get("role", "user"), "content": m.get("content", "")}
-                        for m in recent[-12:])
+        if self._registry.content_granted(provider_id) and conv is not None:
+            recent, summary = self._memory.recent_context(conv)
+            if summary:
+                messages.append({"role": "system", "content": f"Resumen: {summary}"})
+            messages.extend({"role": m.get("role", "user"), "content": m.get("content", "")}
+                            for m in recent[-12:])
         messages.append({"role": "user", "content": text})
         try:
             events = [event async for event in provider.chat(

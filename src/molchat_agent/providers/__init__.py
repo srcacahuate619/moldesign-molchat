@@ -20,6 +20,7 @@ from .local_http import LlamaServerProvider, OllamaProvider
 from .meta import MetaProvider
 from .openai_compatible import OpenAICompatibleProvider
 from .registry import (
+    CONTENT_SCOPE,
     HACKATHON_REMOTE_ALLOWLIST,
     ConsentDenied,
     ConsentStore,
@@ -32,6 +33,7 @@ from .registry import (
 )
 
 __all__ = [
+    "CONTENT_SCOPE",
     "CatalogEntry", "ChatEvent", "ConsentDenied", "ConsentStore", "Destination",
     "FakeProvider", "HACKATHON_REMOTE_ALLOWLIST",
     "HealthCheckResult",

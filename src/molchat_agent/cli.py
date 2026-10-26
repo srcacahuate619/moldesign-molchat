@@ -65,6 +65,9 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Detallar consentimientos y frontera de datos")
     doctor.add_argument("--grant-consent", metavar="HUELLA", default=None,
                         help="Autorizar un destino (formato proveedor@host)")
+    doctor.add_argument("--grant-content", metavar="HUELLA", default=None,
+                        help="Autorizar historial científico al destino "
+                             "(requiere --grant-consent previo)")
     doctor.add_argument("--revoke", metavar="PROVEEDOR", default=None,
                         help="Retirar los consentimientos de un proveedor")
     return parser
@@ -126,21 +129,27 @@ async def _dispatch(args: argparse.Namespace) -> int:
 async def _doctor(args: argparse.Namespace) -> int:
     config = load_config()  # invalid config fails here, loudly
     registry = build_registry(config)
-    if args.grant_consent:
-        if "@" not in args.grant_consent:
+    if args.grant_consent or args.grant_content:
+        huella = args.grant_consent or args.grant_content
+        if "@" not in huella:
             raise ValueError("La huella tiene formato proveedor@host.")
-        provider_id = args.grant_consent.split("@", 1)[0]
+        provider_id = huella.split("@", 1)[0]
         provider = registry.get(provider_id)
         destination = registry.destination(provider.id)
         if destination.host.startswith("("):
             raise ValueError(f"{provider_id} está mal configurado; nada que autorizar.")
-        if destination.fingerprint != args.grant_consent:
+        if destination.fingerprint != huella:
             raise ValueError(
                 f"La huella no coincide con el destino actual "
                 f"({destination.fingerprint}); nada autorizado.")
-        record = registry.grant(provider.id)
-        print(f"Autorizado {record['provider_id']}@{record['host']} "
-              f"({record['granted_at']}).")
+        if args.grant_content:
+            record = registry.grant_content(provider.id)
+            print(f"Autorizado contenido científico a {huella} "
+                  f"({record['granted_at']}). Revócalo con --revoke {provider.id}.")
+        else:
+            record = registry.grant(provider.id)
+            print(f"Autorizado {record['provider_id']}@{record['host']} "
+                  f"({record['granted_at']}).")
         return 0
     if args.revoke:
         removed = registry.revoke(args.revoke)
@@ -166,10 +175,12 @@ async def _doctor(args: argparse.Namespace) -> int:
     print(f"Consentimientos: {len(records)} en {registry.consents.path}")
     if args.consents:
         for fingerprint, record in records.items():
-            print(f"  {fingerprint}: otorgado {record.get('granted_at')}")
-        print("Frontera de datos: un planificador remoto recibe el objetivo y el "
-              "catálogo; resultados e historial no salen sin un consentimiento "
-              "específico con vista previa.")
+            scope = record.get("scope", "destination")
+            print(f"  {fingerprint} [{scope}]: otorgado {record.get('granted_at')}")
+        print("Frontera de datos: plan() remoto recibe objetivo+catálogo; "
+              "chat() remoto recibe sistema+consulta, e historial científico "
+              "solo con consentimiento de contenido (+history). Resultados "
+              "fuera del turno exigen consentimiento específico con vista previa.")
     print("Puente MolDesign:")
     try:
         base = validate_base_url(config.moldesign_base_url,

@@ -97,6 +97,12 @@ def resolve_destination(provider: LLMProvider) -> Destination:
                        is_remote=host not in LOCAL_HOSTS)
 
 
+# Scope suffix for content consent: history/summaries/results may ride along
+# to an already-consented destination. Records keep "provider_id", so revoke
+# by provider withdraws both grants together. Summaries are data too.
+CONTENT_SCOPE = "+history"
+
+
 class ConsentStore:
     """Granted destinations, persisted as local JSON (no secrets inside)."""
 
@@ -135,15 +141,16 @@ class ConsentStore:
     def granted(self, fingerprint: str) -> bool:
         return fingerprint in self._load()
 
-    def grant(self, destination: Destination) -> dict[str, Any]:
+    def grant(self, destination: Destination, scope: str = "") -> dict[str, Any]:
         record = {
             "provider_id": destination.provider_id,
             "host": destination.host,
             "url": destination.url,
+            "scope": scope or "destination",
             "granted_at": datetime.now(timezone.utc).isoformat(),
         }
         data = self._load()
-        data[destination.fingerprint] = record
+        data[destination.fingerprint + scope] = record
         self._save(data)
         return record
 
@@ -281,6 +288,23 @@ class ProviderRegistry:
         if not destination.is_remote:
             raise ValueError(f"{provider_id} no sale de la máquina: nada que autorizar.")
         return self._consents.grant(destination)
+
+    def content_granted(self, provider_id: str) -> bool:
+        """May scientific history/summaries ride along to this destination?"""
+        destination = self.destination(provider_id)
+        if not destination.is_remote:
+            return True  # local providers never exfiltrate
+        return self._consents.granted(destination.fingerprint + CONTENT_SCOPE)
+
+    def grant_content(self, provider_id: str) -> dict[str, Any]:
+        """Authorize history/summaries for an already-consented destination."""
+        destination = self.destination(provider_id)
+        if not destination.is_remote:
+            raise ValueError(f"{provider_id} no sale de la máquina: nada que autorizar.")
+        if not self._consents.granted(destination.fingerprint):
+            raise ValueError(f"Autoriza primero el destino {destination.fingerprint} "
+                             f"(--grant-consent): el contenido viaja sobre el destino.")
+        return self._consents.grant(destination, CONTENT_SCOPE)
 
     def revoke(self, provider_id: str) -> list[str]:
         self.get(provider_id)  # validates known (profile still gates use)

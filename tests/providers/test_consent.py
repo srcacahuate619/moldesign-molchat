@@ -90,6 +90,24 @@ def test_grant_local_is_rejected_and_revoke_unknown_is_empty(tmp_path):
     assert registry.revoke("stub-remote") == []
 
 
+def test_content_consent_rides_on_destination_consent(tmp_path):
+    registry = _registry(tmp_path)
+    assert registry.content_granted("fake") is True  # local: nothing leaves
+    assert registry.content_granted("stub-remote") is False
+    with pytest.raises(ValueError, match="Autoriza primero el destino"):
+        registry.grant_content("stub-remote")
+    with pytest.raises(ValueError, match="nada que autorizar"):
+        registry.grant_content("fake")
+    registry.grant("stub-remote")
+    assert registry.content_granted("stub-remote") is False  # destination ≠ content
+    registry.grant_content("stub-remote")
+    assert registry.content_granted("stub-remote") is True
+    removed = registry.revoke("stub-remote")
+    assert sorted(removed) == ["stub-remote@cloud.example",
+                               "stub-remote@cloud.example+history"]
+    assert registry.content_granted("stub-remote") is False
+
+
 @pytest.mark.asyncio
 async def test_offline_overrides_grants(tmp_path):
     registry = _registry(tmp_path, offline=True)

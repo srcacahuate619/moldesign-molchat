@@ -1,5 +1,6 @@
 """Engine LLM path: verified conceptual answers, consent, deferrals."""
 
+import json
 from pathlib import Path
 
 import httpx
@@ -125,6 +126,86 @@ async def test_query_quotation_and_ordinals_pass_verification(tmp_path):
     result = await engine.turn(conv_id, "que es 12345?")
     assert VERIFICATION_NOTE not in result.text
     assert "12345" in result.text
+
+
+class _LocalSpy:
+    """Local provider capturing the messages it receives."""
+
+    id = "local-spy"
+    locality = "local"
+
+    def __init__(self):
+        from molchat_agent.providers.base import ProviderConfig
+        self.config = ProviderConfig()
+        self.seen = []
+
+    async def health(self):
+        from molchat_agent.providers.base import HealthCheckResult, HealthStatus
+        return HealthCheckResult(status=HealthStatus.OK)
+
+    async def plan(self, goal, catalog=None):
+        raise AssertionError("unreachable")
+
+    async def chat(self, turn):
+        from molchat_agent.providers.base import ChatEvent
+        self.seen.append(turn.messages)
+        yield ChatEvent(type="token", text="concepto local.")
+        yield ChatEvent(type="done", done=True)
+
+
+def _remote_spy_engine(tmp_path):
+    """Meta mock capturing the remote payload after a scientific turn."""
+    seen = {}
+
+    def handle(request):
+        seen.update(json.loads(request.content))
+        return httpx.Response(200, json={"choices": [{"message": {"content": "concepto."}}]})
+
+    config = load_config({"MODEL_API_KEY": "test-key",
+                          "MOLCHAT_CONSENTS_FILE": str(tmp_path / "c.json")})
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handle))
+    registry = build_registry(config, clients={"meta": client})
+    engine = ConversationEngine(
+        registry=registry, backend=QualityBackend(FIXTURES),
+        memory=MemoryStore(tmp_path / "memory.db"), user_id="llm-test")
+    return engine, engine._memory.create_conversation("llm-test"), seen
+
+
+@pytest.mark.asyncio
+async def test_remote_chat_omits_scientific_history_without_content_grant(tmp_path):
+    engine, conv_id, seen = _remote_spy_engine(tmp_path)
+    engine._registry.grant("meta")
+    await engine.turn(conv_id, "calcula propiedades de la aspirina")
+    await engine.turn(conv_id, "qué es un fármaco?")
+    roles = [m["role"] for m in seen["messages"]]
+    assert roles == ["system", "user"]  # no history, no summary
+    assert "180.2" not in json.dumps(seen)
+
+
+@pytest.mark.asyncio
+async def test_remote_chat_includes_history_with_content_grant(tmp_path):
+    engine, conv_id, seen = _remote_spy_engine(tmp_path)
+    engine._registry.grant("meta")
+    engine._registry.grant_content("meta")
+    await engine.turn(conv_id, "calcula propiedades de la aspirina")
+    await engine.turn(conv_id, "qué es un fármaco?")
+    assert len(seen["messages"]) > 2
+    assert "180.2" in json.dumps(seen)
+
+
+@pytest.mark.asyncio
+async def test_local_chat_keeps_context_without_grants(tmp_path):
+    registry = build_registry(load_config({}))
+    spy = _LocalSpy()
+    registry.register(spy)
+    registry.set_active("local-spy")
+    engine = ConversationEngine(
+        registry=registry, backend=QualityBackend(FIXTURES),
+        memory=MemoryStore(tmp_path / "memory.db"), user_id="llm-test")
+    conv_id = engine._memory.create_conversation("llm-test")
+    await engine.turn(conv_id, "calcula propiedades de la aspirina")
+    await engine.turn(conv_id, "qué es un fármaco?")
+    assert len(spy.seen[0]) > 2  # local: full context, nothing leaves
 
 
 @pytest.mark.asyncio
