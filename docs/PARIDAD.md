@@ -55,6 +55,8 @@ existente), **fase N** (planificado), **descartado** (justificado).
 4. "mejor/peor afinidad" por calidad, no por valor (interno responde al revés).
 5. Default MW solo con comparativos mayor/menor (interno: "mas puentes"→MW).
 6. Valores tipados en vez de parsear texto de tools (adiós inversión nombre↔valor).
+7. Verificación numérica cita ordinales y eco de consulta (F2-C1/C3: el Qwen
+   local cita "12345" y enumera "1." — ni cita ni viñeta son fabricación).
 
 ## Gate adversarial: 18 → 16
 

@@ -423,3 +423,15 @@ MolDesign es por API HTTP, no por copia de código.
   deshabilitado en el camino conceptual
 - Licencia resultante: GPL-3.0-or-later
 - Tests: son los tests
+
+### tests/quality/small_model_goals.json, scripts/measure_small_models.py, docs/MEDICION_MODELOS_PEQUENOS.md
+
+- Origen: código y documentos nuevos (sin porte desde MolDesign)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (corrección F2-C5 del supervisor): medición
+  formal de modelos pequeños (métrica "válido y sin inventados y sin pasos
+  extra", 4 objetivos, corredor reproducible, resultados Qwen 0/4 y Bonsai
+  0/4 con llama-server CUDA local)
+- Licencia resultante: GPL-3.0-or-later
+- Tests: N/A (medición manual con servidor local; ver documento)
