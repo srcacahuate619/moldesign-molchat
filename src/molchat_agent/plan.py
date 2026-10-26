@@ -1,7 +1,13 @@
-"""Immutable plans: their SHA-256 digest binds explicit human approvals."""
+"""Immutable plans: their SHA-256 digest binds explicit human approvals.
+
+Immutability is enforced by copying: ``from_dict`` deep-copies caller data
+and ``as_dict`` deep-copies on export, so no reference the caller keeps can
+mutate a plan (or be mutated through it) while a step is awaited (MP-01).
+"""
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass
 from hashlib import sha256
 import json
@@ -21,7 +27,8 @@ class Step:
 
     def as_dict(self) -> dict[str, Any]:
         return {"id": self.id, "capability": self.capability,
-                "arguments": self.arguments, "rationale": self.rationale}
+                "arguments": copy.deepcopy(self.arguments),
+                "rationale": self.rationale}
 
 
 @dataclass(frozen=True)
@@ -52,7 +59,9 @@ class Plan:
             if not isinstance(raw["rationale"], str) or len(raw["rationale"]) > 600:
                 raise PlanValidationError("Justificación demasiado larga")
             capability(raw["capability"]).validate(raw["arguments"])
-            steps.append(Step(**raw))
+            steps.append(Step(id=raw["id"], capability=raw["capability"],
+                              arguments=copy.deepcopy(raw["arguments"]),
+                              rationale=raw["rationale"]))
         return cls(goal=data["goal"], steps=tuple(steps), planner=data["planner"])
 
     def as_dict(self) -> dict[str, Any]:

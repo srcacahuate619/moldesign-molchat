@@ -103,3 +103,41 @@ async def test_preflight_blockers_stop_the_workflow_before_approval():
     assert report.state == "blocked"
     assert [call[0] for call in bridge.calls] == ["check_preflight"]
 
+
+def test_plan_construction_and_export_copy_arguments():
+    raw = {"goal": "Consultar", "planner": "manual", "steps": [
+        {"id": "s1", "capability": "list_evaluations",
+         "arguments": {"page": 2}, "rationale": ""},
+    ]}
+    plan = Plan.from_dict(raw)
+    raw["steps"][0]["arguments"]["page"] = 999
+    assert plan.steps[0].arguments == {"page": 2}
+    exported = plan.as_dict()
+    exported["steps"][0]["arguments"]["page"] = 999
+    assert plan.steps[0].arguments == {"page": 2}
+    assert plan.as_dict()["steps"][0]["arguments"] == {"page": 2}
+
+
+@pytest.mark.asyncio
+async def test_mutation_during_await_cannot_alter_executed_request():
+    """MP-01: mutating the original plan mid-flight changes nothing executed."""
+    plan = Plan.from_dict({"goal": "Consultar dos veces", "planner": "manual", "steps": [
+        {"id": "s1", "capability": "list_targets", "arguments": {}, "rationale": ""},
+        {"id": "s2", "capability": "list_evaluations",
+         "arguments": {"page": 2}, "rationale": ""},
+    ]})
+    digest_before = plan.digest
+
+    class MutatingBridge(FakeBridge):
+        async def call(self, capability, args):
+            result = await super().call(capability, args)
+            plan.steps[1].arguments["page"] = 999  # attacker mid-flight
+            return result
+
+    bridge = MutatingBridge()
+    report = await AgentExecutor(bridge).execute(plan)
+    assert report.state == "completed"
+    assert report.plan_digest == digest_before
+    s2_calls = [args for name, args in bridge.calls if name == "list_evaluations"]
+    assert s2_calls == [{"page": 2}]
+
