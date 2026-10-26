@@ -338,3 +338,16 @@ MolDesign es por API HTTP, no por copia de código.
   verificados, prompts versionados sin datos de usuario
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/conversation/test_evidence.py
+
+### src/molchat_agent/conversation/memory.py, tests/conversation/test_memory.py
+
+- Origen: código nuevo en este repositorio; diseño reimplementado desde
+  `backend/services/ai/memory_store.py` y `conversation_state.py` (commit de
+  referencia) sin copiar código
+- Commit de MolDesign: 66ff524334267c56558b7a3cce94cb919edbad2e
+- Autoría: Johan Amezcua (único titular; puede relicenciar bajo GPL-3.0-or-later)
+- Transformación: reimplementado (tarea 2.5): conversaciones + moléculas de
+  sesión por propietario, fallos de persistencia ruidosos, búsqueda LIKE por
+  dueño, compresión determinista; sin embeddings ni FTS (cuando una tool los pida)
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/conversation/test_memory.py (incluye aislamiento Alice/Mallory)
