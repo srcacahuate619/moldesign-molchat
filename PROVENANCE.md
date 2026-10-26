@@ -251,3 +251,15 @@ MolDesign es por API HTTP, no por copia de código.
   `status()` sin sondear sin consentimiento; el CLI `plan` rutea por registro
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/providers/test_consent.py
+
+### tests/test_doctor.py
+
+- Origen: código nuevo en este repositorio; espíritu de
+  `backend/services/ai/startup_detection.py` (commit de referencia)
+- Commit de MolDesign: 66ff524334267c56558b7a3cce94cb919edbad2e
+- Autoría: Johan Amezcua (único titular; puede relicenciar bajo GPL-3.0-or-later)
+- Transformación: código nuevo (tarea 1.5): `molchat-agent doctor` con
+  `--consents`, `--grant-consent` y `--revoke`; transportes httpx perezosos y
+  sondeos concurrentes
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/test_doctor.py

@@ -70,8 +70,15 @@ class OpenAICompatibleProvider:
             model=model if model is not None else config.openai_compat_model,
             temperature=temperature,
         )
+        self._client = client
         self._owns_client = client is None
-        self._client = client or httpx.AsyncClient(timeout=60.0, trust_env=False)
+
+    @property
+    def _http(self) -> httpx.AsyncClient:
+        """Transport, created on first use (fast builds, no leaks)."""
+        if self._client is None:
+            self._client = httpx.AsyncClient(timeout=60.0, trust_env=False)
+        return self._client
 
     def get_info(self) -> ProviderInfo:
         return ProviderInfo(
@@ -86,8 +93,9 @@ class OpenAICompatibleProvider:
         return self
 
     async def __aexit__(self, *_: object) -> None:
-        if self._owns_client:
+        if self._owns_client and self._client is not None:
             await self._client.aclose()
+            self._client = None
 
     def _headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json"}
@@ -106,7 +114,7 @@ class OpenAICompatibleProvider:
                 message="Falta OPENAI_COMPAT_API_KEY para el endpoint remoto.")
         start = time.monotonic()
         try:
-            response = await self._client.get(
+            response = await self._http.get(
                 f"{self.config.base_url}/models", headers=self._headers(),
                 timeout=httpx.Timeout(5.0, connect=1.0))
         except (httpx.RequestError, ValueError) as exc:
@@ -158,7 +166,7 @@ class OpenAICompatibleProvider:
         if not self.config.model:
             raise ValueError("Falta OPENAI_COMPAT_MODEL; el endpoint no sabe qué servir.")
         try:
-            response = await self._client.post(
+            response = await self._http.post(
                 f"{self.config.base_url}/chat/completions",
                 json=self._payload(goal, catalog), headers=self._headers())
             if response.status_code >= 400 or response.is_redirect:

@@ -10,6 +10,7 @@ offline mode overrides every grant.
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import json
@@ -290,33 +291,46 @@ class ProviderRegistry:
 
         Health of a non-consented remote destination is reported as
         ``no_consent`` WITHOUT probing it: a probe would send the very
-        bytes consent exists to prevent.
+        bytes consent exists to prevent. Live probes run concurrently.
         """
+        async def probe(provider: LLMProvider) -> HealthCheckResult:
+            try:
+                return await provider.health()
+            except Exception as exc:  # noqa: BLE001 - doctor must not crash
+                return HealthCheckResult(
+                    status=HealthStatus.NOT_AVAILABLE,
+                    message=f"health falló: {exc}")
+
         rows: list[ProviderStatus] = []
+        to_probe: list[LLMProvider] = []
         for provider_id in self.ids():
             provider = self._providers[provider_id]
             destination = resolve_destination(provider)
             enabled = self.is_enabled(provider_id)
             consented = ((not destination.is_remote)
                          or self._consents.granted(destination.fingerprint))
-            health: HealthCheckResult | None
             if not enabled:
-                health = None
+                rows.append(ProviderStatus(
+                    provider_id=provider_id, locality=provider.locality,
+                    destination=destination, enabled=False, consented=consented,
+                    health=None))
             elif destination.is_remote and not consented:
-                health = HealthCheckResult(
-                    status=HealthStatus.NO_CONSENT,
-                    message=f"Destino no autorizado ({destination.fingerprint}).")
+                rows.append(ProviderStatus(
+                    provider_id=provider_id, locality=provider.locality,
+                    destination=destination, enabled=True, consented=False,
+                    health=HealthCheckResult(
+                        status=HealthStatus.NO_CONSENT,
+                        message=f"Destino no autorizado ({destination.fingerprint}).")))
             else:
-                try:
-                    health = await provider.health()
-                except Exception as exc:  # noqa: BLE001 - doctor must not crash
-                    health = HealthCheckResult(
-                        status=HealthStatus.NOT_AVAILABLE,
-                        message=f"health falló: {exc}")
+                to_probe.append(provider)
+        probed = await asyncio.gather(*(probe(p) for p in to_probe))
+        for provider, health in zip(to_probe, probed):
+            destination = resolve_destination(provider)
             rows.append(ProviderStatus(
-                provider_id=provider_id, locality=provider.locality,
-                destination=destination, enabled=enabled, consented=consented,
+                provider_id=provider.id, locality=provider.locality,
+                destination=destination, enabled=True, consented=True,
                 health=health))
+        rows.sort(key=lambda r: r.provider_id)
         return rows
 
 

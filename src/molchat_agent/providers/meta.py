@@ -63,15 +63,23 @@ class MetaProvider:
             model=resolved_model,
         )
         self.reasoning_effort = reasoning_effort
+        self._client = client
         self._owns_client = client is None
-        self._client = client or httpx.AsyncClient(timeout=60.0, trust_env=False)
+
+    @property
+    def _http(self) -> httpx.AsyncClient:
+        """Transport, created on first use (fast builds, no leaks)."""
+        if self._client is None:
+            self._client = httpx.AsyncClient(timeout=60.0, trust_env=False)
+        return self._client
 
     async def __aenter__(self) -> "MetaProvider":
         return self
 
     async def __aexit__(self, *_: object) -> None:
-        if self._owns_client:
+        if self._owns_client and self._client is not None:
             await self._client.aclose()
+            self._client = None
 
     def get_info(self) -> ProviderInfo:
         return ProviderInfo(
@@ -91,7 +99,7 @@ class MetaProvider:
                 message="Falta MODEL_API_KEY; no se enviará nada a Meta.")
         start = time.monotonic()
         try:
-            response = await self._client.post(
+            response = await self._http.post(
                 META_URL,
                 json={"model": self.config.model,
                       "messages": [{"role": "user", "content": "hi"}],
@@ -153,7 +161,7 @@ class MetaProvider:
         if not isinstance(goal, str) or not 0 < len(goal) <= 4000:
             raise PlanValidationError("Objetivo no válido")
         try:
-            response = await self._client.post(
+            response = await self._http.post(
                 META_URL, json=self._payload(goal, catalog),
                 headers={"Authorization": f"Bearer {self.config.api_key}",
                          "Content-Type": "application/json"},

@@ -61,8 +61,15 @@ class LlamaServerProvider:
             model=model if model is not None else config.llama_server_model,
             temperature=temperature,
         )
+        self._client = client
         self._owns_client = client is None
-        self._client = client or httpx.AsyncClient(timeout=120.0, trust_env=False)
+
+    @property
+    def _http(self) -> httpx.AsyncClient:
+        """Transport, created on first use (fast builds, no leaks)."""
+        if self._client is None:
+            self._client = httpx.AsyncClient(timeout=120.0, trust_env=False)
+        return self._client
 
     def get_info(self) -> ProviderInfo:
         return ProviderInfo(
@@ -78,13 +85,14 @@ class LlamaServerProvider:
         return self
 
     async def __aexit__(self, *_: object) -> None:
-        if self._owns_client:
+        if self._owns_client and self._client is not None:
             await self._client.aclose()
+            self._client = None
 
     async def health(self) -> HealthCheckResult:
         start = time.monotonic()
         try:
-            response = await self._client.get(
+            response = await self._http.get(
                 f"{self.config.base_url}/models", timeout=PROBE_TIMEOUT)
         except (httpx.RequestError, ValueError) as exc:
             return HealthCheckResult(
@@ -132,7 +140,7 @@ class LlamaServerProvider:
         if not self.config.model:
             raise ValueError("Falta LLAMA_SERVER_MODEL; el servidor no sabe qué servir.")
         try:
-            response = await self._client.post(
+            response = await self._http.post(
                 f"{self.config.base_url}/chat/completions",
                 json=self._payload(goal, catalog))
             if response.status_code >= 400:
@@ -164,8 +172,15 @@ class OllamaProvider:
             model=(model if model is not None else config.ollama_model).strip(),
             temperature=temperature,
         )
+        self._client = client
         self._owns_client = client is None
-        self._client = client or httpx.AsyncClient(timeout=120.0, trust_env=False)
+
+    @property
+    def _http(self) -> httpx.AsyncClient:
+        """Transport, created on first use (fast builds, no leaks)."""
+        if self._client is None:
+            self._client = httpx.AsyncClient(timeout=120.0, trust_env=False)
+        return self._client
 
     def get_info(self) -> ProviderInfo:
         return ProviderInfo(
@@ -181,11 +196,12 @@ class OllamaProvider:
         return self
 
     async def __aexit__(self, *_: object) -> None:
-        if self._owns_client:
+        if self._owns_client and self._client is not None:
             await self._client.aclose()
+            self._client = None
 
     async def _tags(self) -> list[str]:
-        response = await self._client.get(
+        response = await self._http.get(
             f"{self.config.base_url}/api/tags", timeout=PROBE_TIMEOUT)
         if response.status_code != 200:
             raise ProviderError(f"Ollama devolvió HTTP {response.status_code}.")
@@ -267,7 +283,7 @@ class OllamaProvider:
                         "num_predict": self.config.max_tokens},
         }
         try:
-            response = await self._client.post(
+            response = await self._http.post(
                 f"{self.config.base_url}/api/chat", json=payload)
             if response.status_code != 200:
                 raise ProviderError(f"Ollama devolvió HTTP {response.status_code}.")
