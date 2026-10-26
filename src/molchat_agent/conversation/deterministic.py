@@ -278,3 +278,70 @@ def build_multi_compare_response(molecules: list[MoleculeProps]) -> str | None:
             continue  # only metrics every molecule has
         lines.append(f"{label} | " + " | ".join(fmt(v, precision) for v in values))  # type: ignore[arg-type]
     return "\n".join(lines)
+
+
+def build_properties_response(name: str, props: MoleculeProps) -> str | None:
+    """Clean property table. None when there is nothing to show."""
+    entries = [("MW", props.molecular_weight, 1),
+               ("LogP", props.log_p, 2),
+               ("TPSA", props.tpsa, 1),
+               ("H-Bond Donors", props.hbd, 0),
+               ("H-Bond Acceptors", props.hba, 0),
+               ("Rotatable Bonds", props.rotatable_bonds, 0),
+               ("Heavy Atoms", props.heavy_atoms, 0),
+               ("Rings", props.rings, 0)]
+    lines = [f"- {label}: {fmt(value, prec)}"
+             for label, value, prec in entries if value is not None]
+    if not lines:
+        return None
+    return f"Propiedades de {name}:\n" + "\n".join(lines)
+
+
+def build_session_history_response(molecules: list[MoleculeProps]) -> str:
+    """What this conversation computed. Persisted history is declared, not faked."""
+    if not molecules:
+        text = ("En esta conversación aún no calculaste propiedades de "
+                "ninguna molécula.")
+    else:
+        rows = []
+        for i, mol in enumerate(molecules, 1):
+            detail = ""
+            if mol.molecular_weight is not None:
+                detail = f" (MW {fmt(mol.molecular_weight, 1)} Da)"
+            rows.append(f"{i}. {mol.name}{detail}")
+        text = (f"En esta conversación calculaste {len(molecules)} "
+                f"moléculas:\n" + "\n".join(rows))
+    return text + ("\nEl historial persistido de evaluaciones aún no está "
+                   "conectado en este build.")
+
+
+def build_druglikeness_response(name: str, props: MoleculeProps,
+                                pains_recorded: list[str] | None) -> str | None:
+    """Lipinski (1997) + Veber (2002) rules over typed values.
+
+    PAINS needs a structural-alerts catalog (platform-side): without a
+    recorded evaluation this responder abstains on PAINS instead of
+    fabricating the good news ("sin alertas" unexamined).
+    """
+    mw, logp, hbd, hba = (props.molecular_weight, props.log_p, props.hbd, props.hba)
+    rot, tpsa = props.rotatable_bonds, props.tpsa
+    if None in (mw, logp, hbd, hba, rot, tpsa):
+        return None
+    assert mw is not None and logp is not None and tpsa is not None  # typed
+    lipinski = mw <= 500 and logp <= 5 and hbd <= 5 and hba <= 10  # type: ignore[operator]
+    veber = rot <= 10 and tpsa <= 140  # type: ignore[operator]
+    parts = [
+        f"Lipinski: {'CUMPLE' if lipinski else 'NO CUMPLE'} "
+        f"(MW={mw:.0f}, LogP={logp:.1f}, HBD={hbd}, HBA={hba}).",
+        f"Veber: {'CUMPLE' if veber else 'NO CUMPLE'} "
+        f"(RotB={rot}, TPSA={tpsa:.0f}).",
+    ]
+    if pains_recorded is None:
+        parts.append("PAINS: no evaluado en este build; "
+                     "no afirmo que no haya alertas.")
+    elif pains_recorded:
+        parts.append(f"PAINS (dato registrado): alertas: "
+                     f"{', '.join(pains_recorded)}.")
+    else:
+        parts.append("PAINS (dato registrado): sin alertas.")
+    return f"Drug-likeness de {name}: " + " ".join(parts)

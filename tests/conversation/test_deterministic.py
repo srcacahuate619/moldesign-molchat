@@ -8,8 +8,11 @@ import pytest
 from molchat_agent.conversation.deterministic import (
     MoleculeProps,
     build_compare_response,
+    build_druglikeness_response,
     build_multi_compare_response,
+    build_properties_response,
     build_rank_response,
+    build_session_history_response,
     detect_direction,
     detect_metric,
 )
@@ -109,3 +112,34 @@ def test_multi_compare_builds_typed_table():
 def test_multi_compare_refuses_partial_tables():
     molecules = [_mol("aspirina"), MoleculeProps(name="fallida")]
     assert build_multi_compare_response(molecules) is None
+
+
+def test_properties_response_lists_values_with_precision():
+    text = build_properties_response("aspirina", _mol("aspirina"))
+    assert text.startswith("Propiedades de aspirina:")
+    assert "- MW: 180.2" in text
+    assert "- LogP: 1.31" in text
+    assert "- H-Bond Donors: 1" in text
+    assert build_properties_response("x", MoleculeProps(name="x")) is None
+
+
+def test_session_history_lists_computed_and_declares_persisted_gap():
+    text = build_session_history_response([_mol("aspirina"), _mol("etanol")])
+    assert "2 moléculas" in text
+    assert "1. aspirina (MW 180.2 Da)" in text
+    assert "persistido" in text and "aún no está conectado" in text
+    empty = build_session_history_response([])
+    assert "aún no calculaste" in empty
+
+
+def test_druglikeness_reports_rules_and_recorded_pains():
+    text = build_druglikeness_response("aspirina", _mol("aspirina"), [])
+    assert "Lipinski: CUMPLE" in text
+    assert "Veber: CUMPLE" in text
+    assert "PAINS (dato registrado): sin alertas." in text
+    alerts = build_druglikeness_response("dopamina", _mol("dopamina"),
+                                         ["catechol_A(92)"])
+    assert "alertas: catechol_A(92)" in alerts
+    abstained = build_druglikeness_response("aspirina", _mol("aspirina"), None)
+    assert "no afirmo que no haya alertas" in abstained
+    assert build_druglikeness_response("x", MoleculeProps(name="x"), []) is None
