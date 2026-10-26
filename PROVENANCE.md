@@ -498,3 +498,15 @@ MolDesign es por API HTTP, no por copia de código.
   bloquean con motivo en vez de excepciones crudas
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/orchestration/test_store.py
+
+### src/molchat_agent/orchestration/jobs.py, tests/orchestration/test_jobs.py
+
+- Origen: código nuevo en este repositorio (sin porte desde MolDesign)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (tarea 3.4): seguimiento de evaluaciones
+  (SUCCESS/FAILURE) y lotes (completed/cancelled) con backoff 2s→30s,
+  una ventana SSE como espera (polling como veredicto), cancelación
+  explícita y reanudación sobre la misma fila
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/orchestration/test_jobs.py

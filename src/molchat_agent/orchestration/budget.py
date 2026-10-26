@@ -34,3 +34,6 @@ class BudgetTracker:
         if self.jobs_started >= self.budget.max_jobs:
             raise BudgetExceeded(f"límite de trabajos concurrentes ({self.budget.max_jobs})")
         self.jobs_started += 1
+
+    def release_job(self) -> None:
+        self.jobs_started = max(0, self.jobs_started - 1)
