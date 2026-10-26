@@ -13,10 +13,12 @@ from .base import (
     TurnContext,
     plan_from_content,
     read_only_catalog,
+    readonly_plan_schema,
 )
 from .base import CatalogEntry, LLMProvider, ProviderDisabled
 from .fake import FakeProvider
 from .meta import MetaProvider
+from .openai_compatible import OpenAICompatibleProvider
 from .registry import (
     HACKATHON_REMOTE_ALLOWLIST,
     ProviderRegistry,
@@ -27,8 +29,9 @@ from .registry import (
 __all__ = [
     "CatalogEntry", "ChatEvent", "FakeProvider", "HACKATHON_REMOTE_ALLOWLIST",
     "HealthCheckResult",
-    "HealthStatus", "LLMProvider", "MetaProvider", "ProviderConfig", "ProviderDisabled",
+    "HealthStatus", "LLMProvider", "MetaProvider", "OpenAICompatibleProvider",
+    "ProviderConfig", "ProviderDisabled",
     "ProviderError", "ProviderInfo", "ProviderRegistry", "TurnContext",
     "UnknownProviderError", "build_registry", "plan_from_content",
-    "read_only_catalog",
+    "read_only_catalog", "readonly_plan_schema",
 ]

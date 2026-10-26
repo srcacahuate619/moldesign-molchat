@@ -16,7 +16,7 @@ import httpx
 
 from ..capabilities import PlanValidationError
 from ..config import load_config
-from ..plan import MAX_STEPS, Plan
+from ..plan import Plan
 from .base import (
     CatalogEntry,
     ChatEvent,
@@ -28,6 +28,7 @@ from .base import (
     TurnContext,
     plan_from_content,
     read_only_catalog,
+    readonly_plan_schema,
 )
 
 META_URL = "https://api.meta.ai/v1/chat/completions"
@@ -125,21 +126,7 @@ class MetaProvider:
 
     def _payload(self, goal: str, catalog: list[CatalogEntry] | None) -> dict[str, Any]:
         safe_tools = read_only_catalog(catalog)
-        schema = {
-            "type": "object", "additionalProperties": False, "required": ["steps"],
-            "properties": {"steps": {"type": "array", "minItems": 1,
-                "maxItems": MAX_STEPS, "items": {"type": "object",
-                    "additionalProperties": False,
-                    "required": ["capability", "arguments", "rationale"],
-                    "properties": {
-                        "capability": {"type": "string",
-                                       "enum": [t["name"] for t in safe_tools]},
-                        "arguments": {"type": "object"},
-                        "rationale": {"type": "string"},
-                    },
-                },
-            }},
-        }
+        schema = readonly_plan_schema(safe_tools)
         return {
             "model": self.config.model,
             "reasoning_effort": self.reasoning_effort,

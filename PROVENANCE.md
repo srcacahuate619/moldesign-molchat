@@ -198,3 +198,16 @@ MolDesign es por API HTTP, no por copia de código.
   veto al nivel `contributor`; `meta.py` queda como shim una versión
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/test_meta.py (vía shim), tests/providers/test_meta_policy.py
+
+### src/molchat_agent/providers/openai_compatible.py, tests/providers/test_openai_compatible.py
+
+- Origen: código nuevo en este repositorio; diseño inspirado en
+  `backend/services/ai/providers/openai_provider.py` (commit de referencia)
+  sin copiar código
+- Commit de MolDesign: 66ff524334267c56558b7a3cce94cb919edbad2e
+- Autoría: Johan Amezcua (único titular; puede relicenciar bajo GPL-3.0-or-later)
+- Transformación: reimplementado (tarea 1.3): sin defaults de terceros,
+  remoto exige HTTPS, localidad calculada desde la URL; `meta.py` reutiliza
+  el nuevo `readonly_plan_schema` de `base.py`
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/providers/test_openai_compatible.py

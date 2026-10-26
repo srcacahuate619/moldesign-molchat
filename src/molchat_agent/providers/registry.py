@@ -23,6 +23,7 @@ from .base import (
 )
 from .fake import FakeProvider
 from .meta import MetaProvider
+from .openai_compatible import OpenAICompatibleProvider
 
 # In the hackathon profile, Meta is the only remote destination allowed.
 # Local providers are always allowed; unknown means remote (fail closed).
@@ -116,8 +117,8 @@ def build_registry(config: MolChatConfig | None = None,
                    clients: dict[str, httpx.AsyncClient] | None = None) -> ProviderRegistry:
     """Default registry from environment config.
 
-    Grows with the phase: fake and Meta here; OpenAI-compatible and local
-    HTTP join in later commits. ``clients`` injects transports (tests).
+    Grows with the phase: fake, Meta and OpenAI-compatible here; local HTTP
+    joins next. ``clients`` injects transports (tests).
     A provider that rejects its own configuration is registered broken
     instead of crashing the factory.
     """
@@ -133,6 +134,14 @@ def build_registry(config: MolChatConfig | None = None,
             client=transports.get("meta")))
     except ValueError as exc:
         registry.register(BrokenProvider("meta", str(exc)))
+    try:
+        registry.register(OpenAICompatibleProvider(
+            api_key=config.openai_compat_api_key,
+            base_url=config.openai_compat_base_url,
+            model=config.openai_compat_model,
+            client=transports.get("openai-compatible")))
+    except ValueError as exc:
+        registry.register(BrokenProvider("openai-compatible", str(exc)))
     if config.provider is not None:
         registry.set_active(config.provider)
     return registry

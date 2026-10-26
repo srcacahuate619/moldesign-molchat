@@ -14,7 +14,7 @@ from enum import Enum
 from typing import Any, AsyncIterator, Literal, Protocol
 
 from ..capabilities import CAPABILITIES, PlanValidationError
-from ..plan import Plan
+from ..plan import MAX_STEPS, Plan
 
 CatalogEntry = dict[str, Any]
 
@@ -91,6 +91,35 @@ def read_only_catalog(catalog: list[CatalogEntry] | None) -> list[CatalogEntry]:
     entries = (catalog if catalog is not None
                else [c.as_catalog_entry() for c in CAPABILITIES.values()])
     return [e for e in entries if e.get("risk") == "read"]
+
+
+def readonly_plan_schema(safe_tools: list[CatalogEntry]) -> dict[str, Any]:
+    """JSON schema for planner output: steps only, tools from an enum."""
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["steps"],
+        "properties": {
+            "steps": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": MAX_STEPS,
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["capability", "arguments", "rationale"],
+                    "properties": {
+                        "capability": {
+                            "type": "string",
+                            "enum": [t["name"] for t in safe_tools],
+                        },
+                        "arguments": {"type": "object"},
+                        "rationale": {"type": "string"},
+                    },
+                },
+            },
+        },
+    }
 
 
 def plan_from_content(content: str, goal: str, planner: str) -> Plan:
