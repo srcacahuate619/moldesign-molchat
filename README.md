@@ -15,9 +15,10 @@ en MolDesign desde texto o voz.**
 - Catálogo estricto de herramientas respaldadas por endpoints actuales de
   MolDesign. No permite ejecutar shell, código Python, URLs arbitrarias ni
   operaciones fuera de la lista.
-- Planificación opcional mediante **Muse Spark 1.3** en Meta Model API, con JSON
-  estructurado validado localmente. El planificador sólo ve herramientas de
-  lectura y preflight, nunca inicia docking.
+- Planificación mediante proveedores intercambiables (Muse Spark 1.3 Standard
+  por defecto, OpenAI-compatibles, llama-server/Ollama locales, o `fake`
+  determinista sin claves), con JSON estructurado validado localmente. El
+  planificador sólo ve herramientas de lectura y preflight, nunca inicia docking.
 - Revisión de planes antes de su ejecución, con huella SHA-256.
 - Aprobación de propuestas de docking mediante el **mismo endpoint existente**
   de MolDesign, bajo una segunda autorización humana ligada al hash del plan y
@@ -44,18 +45,25 @@ No necesitas clonar ni instalar todo su árbol científico dentro de este repo.
 | `MOLDESIGN_TOKEN` | Token de sesión de tu propia cuenta MolDesign |
 | `MOLDESIGN_ALLOW_REMOTE` | `1` sólo si autorizas un backend remoto HTTPS |
 | `MODEL_API_KEY` | Clave de Meta Model API para planificar con Muse Spark |
+| `MOLCHAT_PROFILE` | `hackathon` (Meta + locales) o `default` (todo, con consentimiento) |
+| `MOLCHAT_PROVIDER` | Proveedor activo (`meta` por defecto; `fake` para demo sin claves) |
 
 Los tokens se leen en el proceso. No se incluyen en el plan, los resultados
 ni los archivos del repositorio. No publiques `.env`.
 
 ## Primer flujo con dos etapas
 
-1. Pedir un plan (se envía **el texto del objetivo** a Meta; no incluyas datos
-   privados si no tienes autorización para compartirlos):
+1. Diagnosticar y pedir un plan (se envía **el texto del objetivo** al
+   proveedor; no incluyas datos privados sin autorización para compartirlos):
 
    ```bash
-   molchat-agent plan "Lista los receptores disponibles" --out plan.json
+   molchat-agent doctor
+   molchat-agent plan --provider fake "Lista los receptores"  # sin claves
+   molchat-agent plan "Lista los receptores" --out plan.json  # proveedor activo
    ```
+
+   Un destino remoto exige consentimiento previo
+   (`molchat-agent doctor --grant-consent proveedor@host`).
 
 2. Revisarlo y ejecutarlo contra MolDesign:
 

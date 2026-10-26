@@ -274,3 +274,14 @@ MolDesign es por API HTTP, no por copia de código.
   defecto vía `addopts`; salta sin fallar sin backend/token
 - Licencia resultante: GPL-3.0-or-later
 - Tests: son los tests (manuales, pre-release)
+
+### docs/ARQUITECTURA.md, docs/CONTRATO_MOLDESIGN.md
+
+- Origen: documentos nuevos de este repositorio (sin porte)
+- Commit de MolDesign: N/A (las referencias internas son por ruta de solo
+  lectura con el commit fijado, no copias)
+- Autoría: Johan Amezcua
+- Transformación: documentos nuevos (tarea 1.7): arquitectura del puerto de
+  proveedores y contrato `moldesign.molchat/1` con guía de la suite en vivo
+- Licencia resultante: GPL-3.0-or-later
+- Tests: N/A (documentación; la suite que describen es tests/contract/)
