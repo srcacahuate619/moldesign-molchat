@@ -299,3 +299,16 @@ MolDesign es por API HTTP, no por copia de código.
   reales y veredictos Lipinski/Veber/PAINS
 - Licencia resultante: GPL-3.0-or-later
 - Tests: validación de parseo en la propia grabación (falla si falta un campo)
+
+### src/molchat_agent/conversation/intents.py, src/molchat_agent/conversation/__init__.py, tests/conversation/test_intents.py
+
+- Origen: código nuevo en este repositorio; reglas reimplementadas desde
+  `backend/services/ai/intent_classifier.py` (commit de referencia) sin copiar
+  código; tabla mínima de 8 moléculas verificada contra `known_molecules.py`
+- Commit de MolDesign: 66ff524334267c56558b7a3cce94cb919edbad2e
+- Autoría: Johan Amezcua (único titular; puede relicenciar bajo GPL-3.0-or-later)
+- Transformación: reimplementado (tarea 2.2) con 3 fixes documentados vs el
+  original (suggest no roba "dame las propiedades de X", "qué son" es
+  conceptual, "y la X?" es anáfora); validación SMILES estructural sin RDKit
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/conversation/test_intents.py (consultas quality + regresiones)
