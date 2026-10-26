@@ -65,6 +65,9 @@ async def test_plan_parses_chat_completions_json():
     assert plan.planner == "llama-server:qwen-test"
     assert plan.steps[0].capability == "list_targets"
     assert seen["response_format"]["type"] == "json_schema"
+    # Generation is bounded: a plan is short JSON, and an unbounded thinking
+    # model would spend the whole client timeout reasoning (Fase 1 live run).
+    assert seen["max_tokens"] == provider.config.max_tokens
 
 
 @pytest.mark.asyncio

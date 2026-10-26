@@ -120,6 +120,10 @@ class LlamaServerProvider:
         return {
             "model": self.config.model,
             "temperature": self.config.temperature,
+            # Bound generation: a plan is short JSON. Without a cap, a
+            # thinking model on CPU spends the whole client timeout
+            # reasoning instead of answering (seen live, Fase 1 closure).
+            "max_tokens": self.config.max_tokens,
             "messages": [
                 {"role": "system", "content": (
                     "Eres un planificador de química computacional. Propón SOLO una secuencia "
