@@ -387,3 +387,15 @@ MolDesign es por API HTTP, no por copia de código.
   pata local vía `MOLCHAT_QUALITY_PROVIDER`; gate de latencia 300 ms
 - Licencia resultante: GPL-3.0-or-later
 - Tests: son los tests (43/43 con `fake` al cierre)
+
+### tests/adversarial/test_gate.py, tests/adversarial/__init__.py
+
+- Origen: casos adaptados de `backend/tests/test_gate_molchat_adversarial.py`
+  (commit de referencia); tests reescritos contra el motor nuevo
+- Commit de MolDesign: 66ff524334267c56558b7a3cce94cb919edbad2e
+- Autoría: Johan Amezcua (único titular; puede relicenciar bajo GPL-3.0-or-later)
+- Transformación: portados (tarea 2.7): 16 pruebas en 4 frentes (inyección,
+  fuga, tool-calls inválidos, alucinación); config por-cuenta no aplica
+  (sidecar monousuario) y se documenta en `docs/PARIDAD.md`
+- Licencia resultante: GPL-3.0-or-later
+- Tests: son los tests
