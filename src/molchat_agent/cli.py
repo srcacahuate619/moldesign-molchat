@@ -79,10 +79,16 @@ async def _dispatch(args: argparse.Namespace) -> int:
         registry = build_registry()
         provider = registry.get(args.provider or registry.active_id)
         destination = registry.destination(provider.id)
-        print(f"Proveedor: {provider.id} ({destination.url}). "
-              "El objetivo saldrá de esta máquina; evita datos privados."
-              if destination.is_remote else
-              f"Proveedor: {provider.id} (local, sin red).", file=sys.stderr)
+        if not destination.is_remote:
+            print(f"Proveedor: {provider.id} (local, sin red).", file=sys.stderr)
+        elif registry.block_reason(provider.id):
+            # Denied (no consent or offline): registry.plan will raise the
+            # denial. Never announce a departure that will not happen.
+            print(f"Proveedor: {provider.id} ({destination.url}).", file=sys.stderr)
+        else:
+            print(f"Proveedor: {provider.id} ({destination.url}). "
+                  "El objetivo saldrá de esta máquina; evita datos privados.",
+                  file=sys.stderr)
         plan = await registry.plan(args.goal, provider_id=args.provider)
         _write_new(args.out, plan.as_dict(), force=args.force)
         print(f"Plan escrito: {args.out}\nHuella: {plan.digest}\nRevisa con 'inspect' antes de ejecutarlo.")
