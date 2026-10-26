@@ -285,3 +285,17 @@ MolDesign es por API HTTP, no por copia de código.
   proveedores y contrato `moldesign.molchat/1` con guía de la suite en vivo
 - Licencia resultante: GPL-3.0-or-later
 - Tests: N/A (documentación; la suite que describen es tests/contract/)
+
+## Entradas de la Fase 2 (conversación determinista)
+
+### scripts/record_fixtures.py, tests/quality/fixtures/properties.json
+
+- Origen: código nuevo; valores computados con `services/ai/tools/rdkit_tools.py`
+  (commit de referencia), no copiados de memoria
+- Commit de MolDesign: 66ff524334267c56558b7a3cce94cb919edbad2e
+- Autoría: Johan Amezcua (único titular; puede relicenciar bajo GPL-3.0-or-later)
+- Transformación: código nuevo (tarea 2.7, base): grabador reproducible
+  (backend por argv, sin rutas de máquina) + 8 moléculas con descriptores RDKit
+  reales y veredictos Lipinski/Veber/PAINS
+- Licencia resultante: GPL-3.0-or-later
+- Tests: validación de parseo en la propia grabación (falla si falta un campo)
