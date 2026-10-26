@@ -325,3 +325,16 @@ MolDesign es por API HTTP, no por copia de código.
   por calidad, default MW solo con comparativos); tests de inversión
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/conversation/test_deterministic.py
+
+### src/molchat_agent/conversation/evidence.py, src/molchat_agent/conversation/prompts.py, tests/conversation/test_evidence.py
+
+- Origen: código nuevo en este repositorio; diseño reimplementado desde
+  `backend/services/ai/tool_registry.py` (clases epistémicas, `FIN_DE_EVIDENCIA`)
+  y la verificación numérica del guard (commit de referencia), sin copiar código
+- Commit de MolDesign: 66ff524334267c56558b7a3cce94cb919edbad2e
+- Autoría: Johan Amezcua (único titular; puede relicenciar bajo GPL-3.0-or-later)
+- Transformación: código nuevo (tarea 2.4): bloques de evidencia con clase y
+  fuente, abstención sin números, verificación numérica contra valores
+  verificados, prompts versionados sin datos de usuario
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/conversation/test_evidence.py
