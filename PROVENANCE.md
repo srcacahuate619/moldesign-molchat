@@ -446,3 +446,17 @@ MolDesign es por API HTTP, no por copia de código.
   90/90 válidos, latencia monótona; default `medium` se mantiene con evidencia
 - Licencia resultante: GPL-3.0-or-later
 - Tests: N/A (informe de medición; corredor en scripts/ab_reasoning.py)
+
+### src/molchat_agent/providers/registry.py, src/molchat_agent/plan.py, src/molchat_agent/providers/base.py
+
+- Origen: código nuevo en este repositorio (sin porte desde MolDesign)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: correcciones Enmienda 2026-10-26-B del supervisor:
+  F2-C6 consentimiento de contenido (`huella+history`, chat remoto sin
+  historial hasta otorgarlo), F2-C7 copia profunda en Plan (cierra la
+  ventana de mutación durante `await`), F2-C8 `plan_from_content` valida
+  contra el catálogo exacto enviado al proveedor
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/providers/test_consent.py, tests/test_executor.py,
+  tests/providers/test_port.py (+ engine/doctor/chat)

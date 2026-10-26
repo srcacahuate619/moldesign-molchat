@@ -19,7 +19,7 @@
 |---|---|---|---|---|
 | medium | 30/30 | 4048 ms | 6381 ms | 1–2 |
 | high | 30/30 | 4739 ms | 6325 ms | 1–2 |
-| xhigh | 30/30 | 12540 ms (max) / 7090 ms (p50) | 12540 ms | 1–2 |
+| xhigh | 30/30 | 7090 ms | 12540 ms | 1–2 |
 
 Datos crudos: `docs/ab_reasoning_20261026.json`.
 
