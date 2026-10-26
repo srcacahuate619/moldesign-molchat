@@ -375,3 +375,15 @@ MolDesign es por API HTTP, no por copia de código.
   consentimiento antes de chat remoto, abstención sin números y streaming
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/conversation/test_engine.py, tests/conversation/test_engine_llm.py
+
+### tests/quality/runner.py, tests/quality/test_quality.py, tests/quality/cases.json, tests/quality/__init__.py
+
+- Origen: consultas verbatim de `backend/quality_suite.py` (commit de
+  referencia); runner y validadores reimplementados, no copiados
+- Commit de MolDesign: 66ff524334267c56558b7a3cce94cb919edbad2e
+- Autoría: Johan Amezcua (único titular; puede relicenciar bajo GPL-3.0-or-later)
+- Transformación: portados (tarea 2.7): 43 casos a JSON + runner con
+  validadores sobre fixtures tipados (coherencia por construcción);
+  pata local vía `MOLCHAT_QUALITY_PROVIDER`; gate de latencia 300 ms
+- Licencia resultante: GPL-3.0-or-later
+- Tests: son los tests (43/43 con `fake` al cierre)
