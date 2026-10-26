@@ -146,3 +146,136 @@ class LlamaServerProvider:
     async def chat(self, turn: TurnContext) -> AsyncIterator[ChatEvent]:
         raise NotImplementedError("chat en streaming llega en la Fase 2")
         yield  # pragma: no cover - makes this an async generator function
+
+
+class OllamaProvider:
+    """Planner against a running Ollama server (native /api/*)."""
+
+    id = "ollama"
+    locality = "local"
+
+    def __init__(self, *, base_url: str | None = None, model: str | None = None,
+                 temperature: float = 0.1,
+                 client: httpx.AsyncClient | None = None) -> None:
+        config = load_config()
+        resolved_base = base_url if base_url is not None else config.ollama_url
+        self.config = ProviderConfig(
+            base_url=_require_loopback(resolved_base.strip(), "OLLAMA_URL"),
+            model=(model if model is not None else config.ollama_model).strip(),
+            temperature=temperature,
+        )
+        self._owns_client = client is None
+        self._client = client or httpx.AsyncClient(timeout=120.0, trust_env=False)
+
+    def get_info(self) -> ProviderInfo:
+        return ProviderInfo(
+            id=self.id,
+            name="Ollama (local)",
+            description="Servidor Ollama en ejecución, puerto 11434 por defecto.",
+            requires_api_key=False,
+            requires_base_url=False,
+            default_base_url="http://127.0.0.1:11434",
+        )
+
+    async def __aenter__(self) -> "OllamaProvider":
+        return self
+
+    async def __aexit__(self, *_: object) -> None:
+        if self._owns_client:
+            await self._client.aclose()
+
+    async def _tags(self) -> list[str]:
+        response = await self._client.get(
+            f"{self.config.base_url}/api/tags", timeout=PROBE_TIMEOUT)
+        if response.status_code != 200:
+            raise ProviderError(f"Ollama devolvió HTTP {response.status_code}.")
+        try:
+            return [m["name"] for m in response.json().get("models", [])]
+        except (ValueError, AttributeError, KeyError, TypeError):
+            return []
+
+    @staticmethod
+    def _installed(model: str, installed: list[str]) -> str | None:
+        """How Ollama lists ``model`` (bare names resolve to ``:latest``)."""
+        model = model.strip()
+        if not model:
+            return None
+        candidates = {model} if ":" in model else {model, f"{model}:latest"}
+        return next((m for m in installed if m in candidates), None)
+
+    async def health(self) -> HealthCheckResult:
+        start = time.monotonic()
+        try:
+            installed = await self._tags()
+        except (httpx.RequestError, ValueError, ProviderError) as exc:
+            return HealthCheckResult(
+                status=HealthStatus.CONNECTION_ERROR,
+                message=f"Ollama no responde en {self.config.base_url}: {exc}",
+                latency_ms=(time.monotonic() - start) * 1000)
+        elapsed_ms = round((time.monotonic() - start) * 1000, 1)
+        if not installed:
+            return HealthCheckResult(
+                status=HealthStatus.NOT_AVAILABLE,
+                message=(f"Ollama responde en {self.config.base_url} pero no "
+                         "tiene modelos. Descarga uno con `ollama pull <modelo>`."),
+                latency_ms=elapsed_ms)
+        if not self.config.model:
+            return HealthCheckResult(
+                status=HealthStatus.NOT_CONFIGURED,
+                message=(f"Falta OLLAMA_MODEL. Instalados: {', '.join(installed[:6])}."),
+                latency_ms=elapsed_ms)
+        resolved = self._installed(self.config.model, installed)
+        if resolved is None:
+            return HealthCheckResult(
+                status=HealthStatus.NOT_AVAILABLE,
+                message=(f"Ollama no tiene {self.config.model!r}. Instalados: "
+                         f"{', '.join(installed[:6])} (o `ollama pull "
+                         f"{self.config.model}`)."),
+                latency_ms=elapsed_ms)
+        return HealthCheckResult(
+            status=HealthStatus.OK,
+            message=(f"Responde en {self.config.base_url} con {resolved}."),
+            latency_ms=elapsed_ms)
+
+    async def plan(self, goal: str, catalog: list[CatalogEntry] | None = None) -> Plan:
+        if not self.config.model:
+            raise ValueError("Falta OLLAMA_MODEL; nada que pedirle a Ollama.")
+        safe_tools = read_only_catalog(catalog)
+        try:
+            installed = await self._tags()
+        except (httpx.RequestError, ValueError) as exc:
+            raise ProviderError(f"Ollama no responde en {self.config.base_url}.") from exc
+        if self._installed(self.config.model, installed) is None:
+            raise ProviderError(
+                f"Ollama no tiene {self.config.model!r}; descárgalo con "
+                f"`ollama pull {self.config.model}`.")
+        payload = {
+            "model": self.config.model,
+            "messages": [
+                {"role": "system", "content": (
+                    "Eres un planificador de química computacional. Propón SOLO una secuencia "
+                    "de herramientas enumeradas en el catálogo. Nunca inventes IDs, SMILES, "
+                    "datos de receptores ni resultados. Devuelve el plan como JSON con la "
+                    "estructura indicada."
+                )},
+                {"role": "user", "content": json.dumps(
+                    {"goal": goal, "capabilities": safe_tools}, ensure_ascii=False)},
+            ],
+            "stream": False,
+            "format": "json",
+            "options": {"temperature": self.config.temperature,
+                        "num_predict": self.config.max_tokens},
+        }
+        try:
+            response = await self._client.post(
+                f"{self.config.base_url}/api/chat", json=payload)
+            if response.status_code != 200:
+                raise ProviderError(f"Ollama devolvió HTTP {response.status_code}.")
+            content = response.json()["message"]["content"]
+            return plan_from_content(content, goal, f"ollama:{self.config.model}")
+        except (httpx.RequestError, KeyError, TypeError, ValueError) as exc:
+            raise ProviderError("Ollama no entregó un plan válido.") from exc
+
+    async def chat(self, turn: TurnContext) -> AsyncIterator[ChatEvent]:
+        raise NotImplementedError("chat en streaming llega en la Fase 2")
+        yield  # pragma: no cover - makes this an async generator function

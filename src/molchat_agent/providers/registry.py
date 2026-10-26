@@ -22,7 +22,7 @@ from .base import (
     ProviderError,
 )
 from .fake import FakeProvider
-from .local_http import LlamaServerProvider
+from .local_http import LlamaServerProvider, OllamaProvider
 from .meta import MetaProvider
 from .openai_compatible import OpenAICompatibleProvider
 
@@ -116,12 +116,10 @@ class ProviderRegistry:
 
 def build_registry(config: MolChatConfig | None = None,
                    clients: dict[str, httpx.AsyncClient] | None = None) -> ProviderRegistry:
-    """Default registry from environment config.
-
-    Grows with the phase: fake, Meta, OpenAI-compatible and llama-server
-    here; Ollama joins next. ``clients`` injects transports (tests).
-    A provider that rejects its own configuration is registered broken
-    instead of crashing the factory.
+    """Default registry from environment config: fake, Meta,
+    OpenAI-compatible, llama-server and Ollama. ``clients`` injects
+    transports (tests). A provider that rejects its own configuration is
+    registered broken instead of crashing the factory.
     """
     config = config or load_config()
     transports = clients or {}
@@ -150,6 +148,13 @@ def build_registry(config: MolChatConfig | None = None,
             client=transports.get("llama-server")))
     except ValueError as exc:
         registry.register(BrokenProvider("llama-server", str(exc)))
+    try:
+        registry.register(OllamaProvider(
+            base_url=config.ollama_url,
+            model=config.ollama_model,
+            client=transports.get("ollama")))
+    except ValueError as exc:
+        registry.register(BrokenProvider("ollama", str(exc)))
     if config.provider is not None:
         registry.set_active(config.provider)
     return registry

@@ -220,8 +220,22 @@ MolDesign es por API HTTP, no por copia de código.
   sin copiar código
 - Commit de MolDesign: 66ff524334267c56558b7a3cce94cb919edbad2e
 - Autoría: Johan Amezcua (único titular; puede relicenciar bajo GPL-3.0-or-later)
-- Transformación: reimplementado (tarea 1.3): proveedor `llama-server`
-  loopback-only sobre `/v1` (Ollama se suma en el siguiente commit); sin
-  gestión del proceso servidor (Fase 5)
+- Transformación: reimplementado (tarea 1.3): proveedores `llama-server`
+  (sobre `/v1`) y `ollama` (API nativa `/api/chat` + `/api/tags` con
+  validación de modelo instalado) loopback-only; sin gestión del proceso
+  servidor (Fase 5)
 - Licencia resultante: GPL-3.0-or-later
-- Tests: tests/providers/test_local_http.py
+- Tests: tests/providers/test_local_http.py, tests/providers/test_ollama.py,
+  tests/providers/test_parity.py
+
+### tests/providers/test_ollama.py, tests/providers/test_parity.py
+
+- Origen: código nuevo en este repositorio; diseño de Ollama inspirado en
+  `backend/services/ai/providers/ollama_provider.py` (commit de referencia)
+  sin copiar código
+- Commit de MolDesign: 66ff524334267c56558b7a3cce94cb919edbad2e
+- Autoría: Johan Amezcua (único titular; puede relicenciar bajo GPL-3.0-or-later)
+- Transformación: código nuevo (tarea 1.3): tests del proveedor `ollama` y
+  prueba de paridad fake/local/Meta sobre el mismo objetivo
+- Licencia resultante: GPL-3.0-or-later
+- Tests: son los tests
