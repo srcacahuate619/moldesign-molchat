@@ -1,0 +1,699 @@
+{
+  "goals": [
+    "B01",
+    "B02",
+    "B03",
+    "B04",
+    "B05",
+    "B06",
+    "B07",
+    "B08",
+    "B09",
+    "C01",
+    "C02",
+    "C03",
+    "C04",
+    "C05",
+    "A01",
+    "A02",
+    "A03",
+    "A04",
+    "D01",
+    "D02",
+    "D03",
+    "D04",
+    "L01",
+    "R01",
+    "R02",
+    "R03",
+    "H01",
+    "H02",
+    "H03",
+    "V01"
+  ],
+  "levels": {
+    "medium": {
+      "level": "medium",
+      "cases": 30,
+      "valid": 30,
+      "latency_ms": {
+        "p50": 4048,
+        "max": 6381
+      },
+      "rows": [
+        {
+          "case": "B01",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 4481,
+          "error": ""
+        },
+        {
+          "case": "B02",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 4866,
+          "error": ""
+        },
+        {
+          "case": "B03",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 4462,
+          "error": ""
+        },
+        {
+          "case": "B04",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 4237,
+          "error": ""
+        },
+        {
+          "case": "B05",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 6381,
+          "error": ""
+        },
+        {
+          "case": "B06",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 3751,
+          "error": ""
+        },
+        {
+          "case": "B07",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 3653,
+          "error": ""
+        },
+        {
+          "case": "B08",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 2962,
+          "error": ""
+        },
+        {
+          "case": "B09",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 3875,
+          "error": ""
+        },
+        {
+          "case": "C01",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 3768,
+          "error": ""
+        },
+        {
+          "case": "C02",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 3855,
+          "error": ""
+        },
+        {
+          "case": "C03",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 5230,
+          "error": ""
+        },
+        {
+          "case": "C04",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 3926,
+          "error": ""
+        },
+        {
+          "case": "C05",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 3355,
+          "error": ""
+        },
+        {
+          "case": "A01",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 3535,
+          "error": ""
+        },
+        {
+          "case": "A02",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 4522,
+          "error": ""
+        },
+        {
+          "case": "A03",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 3215,
+          "error": ""
+        },
+        {
+          "case": "A04",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 4208,
+          "error": ""
+        },
+        {
+          "case": "D01",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 4520,
+          "error": ""
+        },
+        {
+          "case": "D02",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 4454,
+          "error": ""
+        },
+        {
+          "case": "D03",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 4384,
+          "error": ""
+        },
+        {
+          "case": "D04",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 4048,
+          "error": ""
+        },
+        {
+          "case": "L01",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 4078,
+          "error": ""
+        },
+        {
+          "case": "R01",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 5035,
+          "error": ""
+        },
+        {
+          "case": "R02",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 3713,
+          "error": ""
+        },
+        {
+          "case": "R03",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 4568,
+          "error": ""
+        },
+        {
+          "case": "H01",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 3292,
+          "error": ""
+        },
+        {
+          "case": "H02",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 2597,
+          "error": ""
+        },
+        {
+          "case": "H03",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 2260,
+          "error": ""
+        },
+        {
+          "case": "V01",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 4032,
+          "error": ""
+        }
+      ]
+    },
+    "high": {
+      "level": "high",
+      "cases": 30,
+      "valid": 30,
+      "latency_ms": {
+        "p50": 4739,
+        "max": 6325
+      },
+      "rows": [
+        {
+          "case": "B01",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 4117,
+          "error": ""
+        },
+        {
+          "case": "B02",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 4564,
+          "error": ""
+        },
+        {
+          "case": "B03",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 5672,
+          "error": ""
+        },
+        {
+          "case": "B04",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 5122,
+          "error": ""
+        },
+        {
+          "case": "B05",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 6195,
+          "error": ""
+        },
+        {
+          "case": "B06",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 3538,
+          "error": ""
+        },
+        {
+          "case": "B07",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 4869,
+          "error": ""
+        },
+        {
+          "case": "B08",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 5843,
+          "error": ""
+        },
+        {
+          "case": "B09",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 4559,
+          "error": ""
+        },
+        {
+          "case": "C01",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 4204,
+          "error": ""
+        },
+        {
+          "case": "C02",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 4425,
+          "error": ""
+        },
+        {
+          "case": "C03",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 4964,
+          "error": ""
+        },
+        {
+          "case": "C04",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 5476,
+          "error": ""
+        },
+        {
+          "case": "C05",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 4739,
+          "error": ""
+        },
+        {
+          "case": "A01",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 3227,
+          "error": ""
+        },
+        {
+          "case": "A02",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 5945,
+          "error": ""
+        },
+        {
+          "case": "A03",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 4597,
+          "error": ""
+        },
+        {
+          "case": "A04",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 4607,
+          "error": ""
+        },
+        {
+          "case": "D01",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 6325,
+          "error": ""
+        },
+        {
+          "case": "D02",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 3704,
+          "error": ""
+        },
+        {
+          "case": "D03",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 6138,
+          "error": ""
+        },
+        {
+          "case": "D04",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 4826,
+          "error": ""
+        },
+        {
+          "case": "L01",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 5386,
+          "error": ""
+        },
+        {
+          "case": "R01",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 5459,
+          "error": ""
+        },
+        {
+          "case": "R02",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 5167,
+          "error": ""
+        },
+        {
+          "case": "R03",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 4594,
+          "error": ""
+        },
+        {
+          "case": "H01",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 2829,
+          "error": ""
+        },
+        {
+          "case": "H02",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 3572,
+          "error": ""
+        },
+        {
+          "case": "H03",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 2880,
+          "error": ""
+        },
+        {
+          "case": "V01",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 4677,
+          "error": ""
+        }
+      ]
+    },
+    "xhigh": {
+      "level": "xhigh",
+      "cases": 30,
+      "valid": 30,
+      "latency_ms": {
+        "p50": 7090,
+        "max": 12540
+      },
+      "rows": [
+        {
+          "case": "B01",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 7090,
+          "error": ""
+        },
+        {
+          "case": "B02",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 6676,
+          "error": ""
+        },
+        {
+          "case": "B03",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 8139,
+          "error": ""
+        },
+        {
+          "case": "B04",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 9321,
+          "error": ""
+        },
+        {
+          "case": "B05",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 12540,
+          "error": ""
+        },
+        {
+          "case": "B06",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 5943,
+          "error": ""
+        },
+        {
+          "case": "B07",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 5202,
+          "error": ""
+        },
+        {
+          "case": "B08",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 6317,
+          "error": ""
+        },
+        {
+          "case": "B09",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 8135,
+          "error": ""
+        },
+        {
+          "case": "C01",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 6610,
+          "error": ""
+        },
+        {
+          "case": "C02",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 8953,
+          "error": ""
+        },
+        {
+          "case": "C03",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 6604,
+          "error": ""
+        },
+        {
+          "case": "C04",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 7529,
+          "error": ""
+        },
+        {
+          "case": "C05",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 5635,
+          "error": ""
+        },
+        {
+          "case": "A01",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 5240,
+          "error": ""
+        },
+        {
+          "case": "A02",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 7874,
+          "error": ""
+        },
+        {
+          "case": "A03",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 6588,
+          "error": ""
+        },
+        {
+          "case": "A04",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 4860,
+          "error": ""
+        },
+        {
+          "case": "D01",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 9746,
+          "error": ""
+        },
+        {
+          "case": "D02",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 9405,
+          "error": ""
+        },
+        {
+          "case": "D03",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 9469,
+          "error": ""
+        },
+        {
+          "case": "D04",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 10205,
+          "error": ""
+        },
+        {
+          "case": "L01",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 6579,
+          "error": ""
+        },
+        {
+          "case": "R01",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 11024,
+          "error": ""
+        },
+        {
+          "case": "R02",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 9047,
+          "error": ""
+        },
+        {
+          "case": "R03",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 6895,
+          "error": ""
+        },
+        {
+          "case": "H01",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 6150,
+          "error": ""
+        },
+        {
+          "case": "H02",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 6876,
+          "error": ""
+        },
+        {
+          "case": "H03",
+          "valid": true,
+          "steps": 1,
+          "latency_ms": 4604,
+          "error": ""
+        },
+        {
+          "case": "V01",
+          "valid": true,
+          "steps": 2,
+          "latency_ms": 8187,
+          "error": ""
+        }
+      ]
+    }
+  }
+}

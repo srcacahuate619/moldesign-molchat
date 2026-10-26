@@ -435,3 +435,14 @@ MolDesign es por API HTTP, no por copia de código.
   0/4 con llama-server CUDA local)
 - Licencia resultante: GPL-3.0-or-later
 - Tests: N/A (medición manual con servidor local; ver documento)
+
+### docs/AB_REASONING.md, docs/ab_reasoning_20261026.json
+
+- Origen: medición nueva con Muse Spark 1.3 Standard (clave temporal del
+  propietario, solo para este experimento; ningún dato privado enviado)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: informe (tarea 2.9): A/B medium/high/xhigh sobre 30 metas,
+  90/90 válidos, latencia monótona; default `medium` se mantiene con evidencia
+- Licencia resultante: GPL-3.0-or-later
+- Tests: N/A (informe de medición; corredor en scripts/ab_reasoning.py)
