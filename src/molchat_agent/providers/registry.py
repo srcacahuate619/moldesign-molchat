@@ -12,8 +12,17 @@ import httpx
 
 from ..config import HACKATHON_PROFILE, MolChatConfig, load_config
 from ..plan import Plan
-from .base import CatalogEntry, LLMProvider, ProviderDisabled
+from .base import (
+    CatalogEntry,
+    HealthCheckResult,
+    HealthStatus,
+    LLMProvider,
+    ProviderConfig,
+    ProviderDisabled,
+    ProviderError,
+)
 from .fake import FakeProvider
+from .meta import MetaProvider
 
 # In the hackathon profile, Meta is the only remote destination allowed.
 # Local providers are always allowed; unknown means remote (fail closed).
@@ -23,6 +32,32 @@ PROFILE_DEFAULT_PROVIDER = "meta"
 
 class UnknownProviderError(KeyError):
     """No provider is registered under that id."""
+
+
+class BrokenProvider:
+    """Placeholder when a provider cannot even be constructed from config.
+
+    Keeps ``doctor`` and ``status`` reporting instead of crashing: the
+    configuration error is the report.
+    """
+
+    locality = "remote"
+
+    def __init__(self, provider_id: str, error: str) -> None:
+        self.id = provider_id
+        self.config = ProviderConfig()
+        self._error = error
+
+    async def health(self) -> HealthCheckResult:
+        return HealthCheckResult(
+            status=HealthStatus.NOT_AVAILABLE, message=self._error)
+
+    async def plan(self, goal: str, catalog: list[CatalogEntry] | None = None) -> Plan:
+        raise ProviderError(self._error)
+
+    async def chat(self, turn):  # pragma: no cover - never reached usefully
+        raise NotImplementedError("chat en streaming llega en la Fase 2")
+        yield
 
 
 class ProviderRegistry:
@@ -81,13 +116,23 @@ def build_registry(config: MolChatConfig | None = None,
                    clients: dict[str, httpx.AsyncClient] | None = None) -> ProviderRegistry:
     """Default registry from environment config.
 
-    Grows with the phase: fake here; Meta, OpenAI-compatible and local HTTP
-    join in later commits. ``clients`` injects transports (tests).
+    Grows with the phase: fake and Meta here; OpenAI-compatible and local
+    HTTP join in later commits. ``clients`` injects transports (tests).
+    A provider that rejects its own configuration is registered broken
+    instead of crashing the factory.
     """
-    _ = clients  # used once network providers join the factory
     config = config or load_config()
+    transports = clients or {}
     registry = ProviderRegistry(profile=config.profile)
     registry.register(FakeProvider())
+    try:
+        registry.register(MetaProvider(
+            api_key=config.model_api_key,
+            model=config.meta_model,
+            reasoning_effort=config.meta_reasoning_effort,
+            client=transports.get("meta")))
+    except ValueError as exc:
+        registry.register(BrokenProvider("meta", str(exc)))
     if config.provider is not None:
         registry.set_active(config.provider)
     return registry

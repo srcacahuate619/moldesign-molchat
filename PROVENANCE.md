@@ -186,3 +186,15 @@ MolDesign es por API HTTP, no por copia de código.
   `config.py` y en el almacén de consentimientos)
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/providers/test_registry.py
+
+### src/molchat_agent/providers/meta.py, src/molchat_agent/meta.py, tests/providers/test_meta_policy.py
+
+- Origen: `src/molchat_agent/meta.py` de este repositorio (código nuevo del kit
+  inicial, sin porte desde MolDesign); movido a `providers/meta.py`
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: movido al puerto `LLMProvider` (tareas 1.2/1.8) con
+  `reasoning_effort` configurable (default `medium`), modelo Standard fijado y
+  veto al nivel `contributor`; `meta.py` queda como shim una versión
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/test_meta.py (vía shim), tests/providers/test_meta_policy.py
