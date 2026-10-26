@@ -163,7 +163,7 @@ def find_name(text: str) -> str | None:
     return None
 
 
-def _find_all_names(text: str) -> list[str] | None:
+def find_all_names(text: str) -> list[str] | None:
     lo = normalize(text)
     found: list[tuple[int, str]] = []
     for name in KNOWN_SMILES:
@@ -204,7 +204,7 @@ def _pdb_suelto(text: str) -> str:
 
 
 def _find_compare_names(text: str) -> tuple[str, str] | None:
-    names = _find_all_names(text)
+    names = find_all_names(text)
     if names and len(names) >= 2:
         return names[0], names[1]
     candidate = _extract_smiles(text)
@@ -299,7 +299,7 @@ def classify(msg: str) -> Intent:
 
     # Comparison: 2 names (or N>=3 list).
     if _COMPARE_RE.search(lo):
-        all_names = _find_all_names(msg)
+        all_names = find_all_names(msg)
         if all_names and len(all_names) >= 3:
             smiles_list = [KNOWN_SMILES[n] for n in all_names]
             return Intent("compare", smiles=smiles_list[0],

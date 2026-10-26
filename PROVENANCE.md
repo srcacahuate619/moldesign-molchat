@@ -362,3 +362,16 @@ MolDesign es por API HTTP, no por copia de código.
   texto canned sin dígitos
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/providers/test_chat.py
+
+### src/molchat_agent/conversation/engine.py, src/molchat_agent/conversation/tools.py, tests/conversation/test_engine.py, tests/conversation/test_engine_llm.py
+
+- Origen: código nuevo en este repositorio; flujo reimplementado desde el
+  patrón v3 de `docs/34_MOLCHAT_V3.md` y la descomposición de `chat_service.py`
+  (commit de referencia), sin copiar el monolito
+- Commit de MolDesign: 66ff524334267c56558b7a3cce94cb919edbad2e
+- Autoría: Johan Amezcua (único titular; puede relicenciar bajo GPL-3.0-or-later)
+- Transformación: código nuevo (tarea 2.6): turno clasifica→herramienta→
+  determinista | LLM verificado, con backend tipado, evidencia por turno,
+  consentimiento antes de chat remoto, abstención sin números y streaming
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/conversation/test_engine.py, tests/conversation/test_engine_llm.py
