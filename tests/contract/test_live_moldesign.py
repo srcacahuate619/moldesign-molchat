@@ -12,6 +12,7 @@ states, not contract verdicts. Once reachable, failures are real.
 
 import httpx
 import pytest
+import pytest_asyncio
 
 from molchat_agent.bridge import BridgeError, MolDesignBridge
 from molchat_agent.config import load_config
@@ -37,14 +38,22 @@ def _reachability():
     return response.status_code
 
 
-@pytest.fixture(scope="module")
-def bridge():
+@pytest_asyncio.fixture
+async def bridge():
+    """One bridge per test, closed with its event loop.
+
+    A shared module-scoped bridge pools httpx connections on the first
+    test's loop; pytest-asyncio closes that loop per test and later tests
+    die with ``RuntimeError: Event loop is closed`` — a harness failure,
+    not a contract verdict (found in the Fase 1 live run, 2026-10-26).
+    """
     status = _reachability()
     if status is None:
         pytest.skip("MolDesign inalcanzable; arráncalo para la suite de contrato.")
     if status in (401, 403):
         pytest.skip("Token ausente o rechazado; usa MOLDESIGN_TOKEN de pruebas.")
-    return MolDesignBridge.from_env()
+    async with MolDesignBridge.from_env() as bridge:
+        yield bridge
 
 
 @pytest.mark.asyncio
