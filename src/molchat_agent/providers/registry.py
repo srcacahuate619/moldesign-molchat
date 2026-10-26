@@ -1,0 +1,93 @@
+"""Provider registry: profiles, active provider, and plan routing.
+
+Reimplemented from the design of MolDesign's ``providers/registry.py``
+without its per-user persistence: this sidecar is single-user and reads
+configuration from :mod:`molchat_agent.config`. Per-destination consent
+enforcement (tarea 1.4) extends :meth:`ProviderRegistry.plan`.
+"""
+
+from __future__ import annotations
+
+import httpx
+
+from ..config import HACKATHON_PROFILE, MolChatConfig, load_config
+from ..plan import Plan
+from .base import CatalogEntry, LLMProvider, ProviderDisabled
+from .fake import FakeProvider
+
+# In the hackathon profile, Meta is the only remote destination allowed.
+# Local providers are always allowed; unknown means remote (fail closed).
+HACKATHON_REMOTE_ALLOWLIST = frozenset({"meta"})
+PROFILE_DEFAULT_PROVIDER = "meta"
+
+
+class UnknownProviderError(KeyError):
+    """No provider is registered under that id."""
+
+
+class ProviderRegistry:
+    def __init__(self, *, profile: str = HACKATHON_PROFILE) -> None:
+        self._profile = profile
+        self._providers: dict[str, LLMProvider] = {}
+        self._active_id: str | None = None
+
+    @property
+    def profile(self) -> str:
+        return self._profile
+
+    def register(self, provider: LLMProvider) -> None:
+        self._providers[provider.id] = provider
+
+    def ids(self) -> list[str]:
+        return sorted(self._providers)
+
+    def is_enabled(self, provider_id: str) -> bool:
+        provider = self._providers[provider_id]
+        if provider.locality == "local":
+            return True
+        if self._profile != HACKATHON_PROFILE:
+            return True
+        return provider_id in HACKATHON_REMOTE_ALLOWLIST
+
+    def get(self, provider_id: str) -> LLMProvider:
+        try:
+            provider = self._providers[provider_id]
+        except KeyError as exc:
+            raise UnknownProviderError(f"Proveedor desconocido: {provider_id}") from exc
+        if not self.is_enabled(provider_id):
+            raise ProviderDisabled(
+                f"El perfil {self._profile!r} no permite el proveedor remoto "
+                f"{provider_id!r}. Usa 'meta' o un proveedor local.")
+        return provider
+
+    def set_active(self, provider_id: str) -> None:
+        self.get(provider_id)  # validates known + enabled
+        self._active_id = provider_id
+
+    @property
+    def active_id(self) -> str:
+        if self._active_id is not None:
+            return self._active_id
+        if PROFILE_DEFAULT_PROVIDER in self._providers:
+            return PROFILE_DEFAULT_PROVIDER
+        return "fake"
+
+    async def plan(self, goal: str, catalog: list[CatalogEntry] | None = None,
+                   provider_id: str | None = None) -> Plan:
+        return await self.get(provider_id or self.active_id).plan(goal, catalog)
+
+
+def build_registry(config: MolChatConfig | None = None,
+                   clients: dict[str, httpx.AsyncClient] | None = None) -> ProviderRegistry:
+    """Default registry from environment config.
+
+    Grows with the phase: fake here; Meta, OpenAI-compatible and local HTTP
+    join in later commits. ``clients`` injects transports (tests).
+    """
+    _ = clients  # used once network providers join the factory
+    config = config or load_config()
+    registry = ProviderRegistry(profile=config.profile)
+    registry.register(FakeProvider())
+    if config.provider is not None:
+        registry.set_active(config.provider)
+    return registry

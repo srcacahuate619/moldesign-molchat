@@ -174,3 +174,15 @@ MolDesign es por API HTTP, no por copia de código.
   proveedor determinista `fake`); sin acoplamiento a cuentas ni a MolDesign
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/providers/test_port.py
+
+### src/molchat_agent/providers/registry.py, tests/providers/test_registry.py
+
+- Origen: código nuevo en este repositorio; diseño del registro inspirado en
+  `backend/services/ai/providers/registry.py` (commit de referencia) sin copiar código
+- Commit de MolDesign: 66ff524334267c56558b7a3cce94cb919edbad2e
+- Autoría: Johan Amezcua (único titular; puede relicenciar bajo GPL-3.0-or-later)
+- Transformación: reimplementado (tarea 1.2: registro con perfiles
+  `hackathon`/`default`; sin persistencia por usuario, que vive en
+  `config.py` y en el almacén de consentimientos)
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/providers/test_registry.py
