@@ -173,7 +173,9 @@ class OpenAICompatibleProvider:
                 raise ProviderError(
                     f"El endpoint devolvió HTTP {response.status_code}.")
             content = response.json()["choices"][0]["message"]["content"]
-            return plan_from_content(content, goal, f"openai-compatible:{self.config.model}")
+            allowed = [t["name"] for t in read_only_catalog(catalog)]
+            return plan_from_content(content, goal, f"openai-compatible:{self.config.model}",
+                                     allowed)
         except (httpx.RequestError, KeyError, IndexError, TypeError, ValueError) as exc:
             raise ProviderError("El proveedor no entregó un plan válido.") from exc
 

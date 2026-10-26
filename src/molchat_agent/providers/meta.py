@@ -169,7 +169,9 @@ class MetaProvider:
             if response.status_code >= 400 or response.is_redirect:
                 raise RuntimeError(f"Meta Model API devolvió HTTP {response.status_code}")
             content = response.json()["choices"][0]["message"]["content"]
-            return plan_from_content(content, goal, f"meta:{self.config.model}")
+            allowed = [t["name"] for t in read_only_catalog(catalog)]
+            return plan_from_content(content, goal, f"meta:{self.config.model}",
+                                     allowed)
         except (httpx.RequestError, KeyError, IndexError, TypeError, ValueError) as exc:
             raise RuntimeError("Meta no entregó un plan válido; no se ejecutó nada") from exc
         except ProviderError as exc:

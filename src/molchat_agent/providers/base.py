@@ -127,18 +127,30 @@ def readonly_plan_schema(safe_tools: list[CatalogEntry]) -> dict[str, Any]:
     }
 
 
-def plan_from_content(content: str, goal: str, planner: str) -> Plan:
+def plan_from_content(content: str, goal: str, planner: str,
+                      allowed: list[str] | None = None) -> Plan:
     """Parse ``{"steps": [...]}`` model output into a validated plan.
 
     Step ids (s1, s2, …) are assigned locally and every step is validated
     against the capability contract; unknown tools or bad arguments raise
-    instead of producing a plan.
+    instead of producing a plan. When ``allowed`` carries the exact tool
+    names sent to the provider, anything outside that set is rejected even
+    if the general catalog knows it (MP-02: the read-only offer is the
+    ceiling, not the catalog). ``None`` is for trusted, code-generated
+    content only (fake provider).
     """
     try:
         decoded = json.loads(content)
         raw_steps = decoded["steps"]
         steps = [dict(id=f"s{n}", **item)
                  for n, item in enumerate(raw_steps, 1)]
+        if allowed is not None:
+            names = set(allowed)
+            for step in steps:
+                if step.get("capability") not in names:
+                    raise ProviderError(
+                        f"La respuesta usa {step.get('capability')!r}, fuera "
+                        f"del catálogo enviado: {sorted(names)}")
         return Plan.from_dict({"goal": goal, "steps": steps, "planner": planner})
     except (ValueError, KeyError, TypeError, AttributeError) as exc:
         raise ProviderError(f"El proveedor no entregó un plan válido: {exc}") from exc

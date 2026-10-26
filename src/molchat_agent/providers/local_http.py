@@ -151,7 +151,9 @@ class LlamaServerProvider:
                 raise ProviderError(
                     f"llama-server devolvió HTTP {response.status_code}.")
             content = response.json()["choices"][0]["message"]["content"]
-            return plan_from_content(content, goal, f"llama-server:{self.config.model}")
+            allowed = [t["name"] for t in read_only_catalog(catalog)]
+            return plan_from_content(content, goal, f"llama-server:{self.config.model}",
+                                     allowed)
         except (httpx.RequestError, KeyError, IndexError, TypeError, ValueError) as exc:
             raise ProviderError("llama-server no entregó un plan válido.") from exc
 
@@ -307,7 +309,9 @@ class OllamaProvider:
             if response.status_code != 200:
                 raise ProviderError(f"Ollama devolvió HTTP {response.status_code}.")
             content = response.json()["message"]["content"]
-            return plan_from_content(content, goal, f"ollama:{self.config.model}")
+            allowed = [t["name"] for t in read_only_catalog(catalog)]
+            return plan_from_content(content, goal, f"ollama:{self.config.model}",
+                                     allowed)
         except (httpx.RequestError, KeyError, TypeError, ValueError) as exc:
             raise ProviderError("Ollama no entregó un plan válido.") from exc
 

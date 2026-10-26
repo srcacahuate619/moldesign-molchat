@@ -1,5 +1,7 @@
 """Port-level guarantees shared by every provider."""
 
+import json
+
 import pytest
 
 from molchat_agent.capabilities import PlanValidationError
@@ -43,6 +45,22 @@ def test_plan_from_content_rejects_unknown_tools_and_bad_json():
         plan_from_content(
             '{"steps": [{"capability": "run_shell", "arguments": {}, "rationale": ""}]}',
             "goal", "x")
+
+
+def test_plan_from_content_rejects_tools_outside_the_sent_catalog():
+    """MP-02: approve exists in the general catalog but was never offered."""
+    from molchat_agent.providers.base import read_only_catalog
+    allowed = [e["name"] for e in read_only_catalog(None)]
+    assert "approve_docking_proposal" not in allowed
+    fabricated = json.dumps({"steps": [{
+        "capability": "approve_docking_proposal",
+        "arguments": {"proposal_id": "p1", "proposal_hash": "sha256:" + "a" * 64},
+        "rationale": "fabricado"}]})
+    with pytest.raises(ProviderError, match="fuera del catálogo enviado"):
+        plan_from_content(fabricated, "goal", "x", allowed)
+    # Without the allowlist (trusted, code-generated content only) it parses.
+    plan = plan_from_content(fabricated, "goal", "x")
+    assert plan.steps[0].capability == "approve_docking_proposal"
 
 
 @pytest.mark.asyncio

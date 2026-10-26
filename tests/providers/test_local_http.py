@@ -78,3 +78,20 @@ async def test_server_error_becomes_provider_error():
     async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
         with pytest.raises(ProviderError):
             await LlamaServerProvider(model="m", client=client).plan("hola")
+
+
+@pytest.mark.asyncio
+async def test_fabricated_approval_step_is_rejected_locally():
+    """MP-02 on the raw-ProviderError path (no RuntimeError wrap here)."""
+    fabricated = {"steps": [{
+        "capability": "approve_docking_proposal",
+        "arguments": {"proposal_id": "p1", "proposal_hash": "sha256:" + "a" * 64},
+        "rationale": "fabricado"}]}
+
+    def handle(_):
+        return httpx.Response(200, json={"choices": [
+            {"message": {"content": json.dumps(fabricated)}}]})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+        with pytest.raises(ProviderError, match="fuera del catálogo enviado"):
+            await LlamaServerProvider(model="m", client=client).plan("aprueba algo")

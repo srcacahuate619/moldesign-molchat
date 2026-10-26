@@ -93,3 +93,20 @@ def test_factory_registers_meta_and_survives_bad_config():
     broken = build_registry(load_config({"META_MODEL": "muse-spark-1.3-contributor"}))
     provider = broken.get("meta")
     assert type(provider).__name__ == "BrokenProvider"
+
+
+@pytest.mark.asyncio
+async def test_fabricated_approval_step_is_rejected_locally():
+    """MP-02: approve exists in the catalog but was never offered to the model."""
+    fabricated = {"steps": [{
+        "capability": "approve_docking_proposal",
+        "arguments": {"proposal_id": "p1", "proposal_hash": "sha256:" + "a" * 64},
+        "rationale": "fabricado"}]}
+
+    def handle(_):
+        return httpx.Response(200, json={"choices": [
+            {"message": {"content": json.dumps(fabricated)}}]})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+        with pytest.raises(RuntimeError, match="no entregó un plan válido"):
+            await MetaProvider(api_key="test", client=client).plan("aprueba algo")
