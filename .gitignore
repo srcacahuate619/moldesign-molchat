@@ -13,4 +13,5 @@ reports/
 # contiene rutas de máquina y referencias internas; no entra al historial
 # público. En Fase 7 se publica la versión saneada docs/PLAN_PUBLICO.md.
 PLAN.md
+mejorasplan.md
 
