@@ -71,15 +71,22 @@ def _narrator_fn(provider_id):
 
 
 async def _run_video(bridge, store, jobs, molecule_id, task_id, reports):
+    # Molcy only renders runs the researcher saved in Moldex (platform rule:
+    # an unsaved evaluation is not a video source, POST /molcy/trabajos 404).
+    # Saving is a write, so it rides in the same human-approved plan.
     plan = Plan.from_dict({
         "goal": f"Vídeo del mejor resultado ({molecule_id[:8]})",
         "planner": "demo-fase5",
-        "steps": [{"id": "s1", "capability": "request_case_video",
-                   "arguments": {"origen": "moldex", "id": molecule_id,
-                                 "escena": "resultado",
-                                 "formato": "previsualizacion",
-                                 "task_id": task_id},
-                   "rationale": "render del mejor run"}],
+        "steps": [
+            {"id": "s1", "capability": "save_molecule",
+             "arguments": {"molecule_id": molecule_id, "task_id": task_id},
+             "rationale": "guardar la corrida en Moldex, fuente del vídeo"},
+            {"id": "s2", "capability": "request_case_video",
+             "arguments": {"origen": "moldex", "id": molecule_id,
+                           "escena": "resultado",
+                           "formato": "previsualizacion",
+                           "task_id": task_id},
+             "rationale": "render del mejor run"}],
     })
     print(f"  plan vídeo; huella={plan.digest}")
     answer = input("  Aprueba escribiendo la huella (o Enter para declinar): ").strip()
@@ -96,7 +103,10 @@ async def _run_video(bridge, store, jobs, molecule_id, task_id, reports):
     print(f"  vídeo: estado={report.state} informe={out}")
     if report.state != "completed":
         return None
-    job_id = report.outcomes[0].result.get("submitted", {}).get("id", "")
+    video_outcome = next(
+        (o for o in report.outcomes if o.capability == "request_case_video"), None)
+    job_id = (video_outcome.result or {}).get("submitted", {}).get("id", "") \
+        if video_outcome else ""
     acta_plan = Plan.from_dict({
         "goal": "Leer acta del vídeo", "planner": "demo-fase5",
         "steps": [{"id": "s1", "capability": "get_video_acta",
