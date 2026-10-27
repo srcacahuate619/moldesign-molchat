@@ -42,6 +42,7 @@ const es = {
   "jobs.cancel": "Cancelar trabajo",
   "jobs.state": "Estado",
   "jobs.report": "Reporte",
+  "jobs.unhosted": "Modo standalone: sin host que abrir.",
   "settings.language": "Idioma",
   "settings.data": "Datos de propiedades",
   "settings.dataNote":
@@ -103,6 +104,7 @@ const en: Record<StringKey, string> = {
   "jobs.cancel": "Cancel job",
   "jobs.state": "State",
   "jobs.report": "Report",
+  "jobs.unhosted": "Standalone mode: no host to open.",
   "settings.language": "Language",
   "settings.data": "Property data",
   "settings.dataNote":

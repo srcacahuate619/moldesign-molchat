@@ -1,7 +1,9 @@
 import { useCallback, useState } from "react";
-import { api } from "./lib/api";
+import { api, type CatalogEntry } from "./lib/api";
 import { strings, type Locale, type StringKey } from "./lib/i18n";
 import Chat from "./components/Chat";
+import Jobs from "./components/Jobs";
+import Plans from "./components/Plans";
 import Settings from "./components/Settings";
 import Unlock from "./components/Unlock";
 import "./styles.css";
@@ -9,13 +11,15 @@ import "./styles.css";
 const SESSION_KEY = "molchat.session";
 const LOCALE_KEY = "molchat.locale";
 
-type Tab = "chat" | "settings";
+type Tab = "chat" | "plans" | "jobs" | "settings";
 
 export default function App() {
   const [token, setToken] = useState<string | null>(() =>
     sessionStorage.getItem(SESSION_KEY),
   );
   const [unlockFailed, setUnlockFailed] = useState(false);
+  const [catalog, setCatalog] = useState<CatalogEntry[]>([]);
+  const [focusId, setFocusId] = useState<string | null>(null);
   const [locale, setLocale] = useState<Locale>(() =>
     localStorage.getItem(LOCALE_KEY) === "en" ? "en" : "es",
   );
@@ -27,7 +31,7 @@ export default function App() {
 
   const connect = useCallback(async (candidate: string) => {
     try {
-      await api.catalog(candidate); // validates the session, nothing else
+      setCatalog(await api.catalog(candidate)); // validates the session, nothing else
       sessionStorage.setItem(SESSION_KEY, candidate);
       setUnlockFailed(false);
       setToken(candidate);
@@ -69,6 +73,18 @@ export default function App() {
             {t("nav.chat")}
           </button>
           <button
+            className={tab === "plans" ? "active" : ""}
+            onClick={() => setTab("plans")}
+          >
+            {t("nav.plans")}
+          </button>
+          <button
+            className={tab === "jobs" ? "active" : ""}
+            onClick={() => setTab("jobs")}
+          >
+            {t("nav.jobs")}
+          </button>
+          <button
             className={tab === "settings" ? "active" : ""}
             onClick={() => setTab("settings")}
           >
@@ -76,9 +92,30 @@ export default function App() {
           </button>
         </nav>
       </header>
-      {tab === "chat" ? (
+      {tab === "chat" && (
         <Chat token={token} t={t} onSessionInvalid={sessionInvalid} />
-      ) : (
+      )}
+      {tab === "plans" && (
+        <Plans
+          token={token}
+          catalog={catalog}
+          t={t}
+          onSessionInvalid={sessionInvalid}
+          onExecuted={(id) => {
+            setFocusId(id);
+            setTab("jobs");
+          }}
+        />
+      )}
+      {tab === "jobs" && (
+        <Jobs
+          token={token}
+          t={t}
+          focusId={focusId}
+          onSessionInvalid={sessionInvalid}
+        />
+      )}
+      {tab === "settings" && (
         <Settings
           t={t}
           locale={locale}
