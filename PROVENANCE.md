@@ -703,3 +703,15 @@ MolDesign es por API HTTP, no por copia de código.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/voice/test_cloud_stt.py, tests/server/test_serve.py,
   tests/server/test_transcribe.py, ui/src/components/Settings.test.tsx
+
+### src/molchat_agent/voice/vocabulary.py, src/molchat_agent/voice/evaluate.py, tests/voice/test_vocabulary.py, scripts/eval_stt.py
+
+- Origen: código nuevo en este repositorio (sin porte desde MolDesign)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (tarea 5.5): lexicón químico es/en con
+  initial_prompt para faster-whisper local (el endpoint de plataforma no
+  admite prompt: sin sesgo, declarado); puntuación pura de recall de
+  términos; script operador con SKIP honesto sin audios
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/voice/test_vocabulary.py, tests/voice/test_local_whisper.py

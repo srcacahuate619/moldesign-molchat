@@ -14,6 +14,7 @@ from typing import Any, Callable
 
 from ..bridge import BridgeError
 from .stt import AUDIO_LIMIT, LANGS, STTError
+from .vocabulary import initial_prompt
 
 
 def faster_whisper_available() -> bool:
@@ -45,7 +46,9 @@ class LocalWhisperSTT:
 
     def _transcribe_sync(self, audio_bytes: bytes, lang: str) -> str:
         model = self._load()
-        segments, _info = model.transcribe(io.BytesIO(audio_bytes), language=lang)
+        segments, _info = model.transcribe(
+            io.BytesIO(audio_bytes), language=lang,
+            initial_prompt=initial_prompt(lang))
         return "".join(segment.text for segment in segments).strip()
 
     async def transcribe(self, audio_bytes: bytes, *, lang: str = "es") -> str:

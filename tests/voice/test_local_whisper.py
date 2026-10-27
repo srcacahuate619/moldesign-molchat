@@ -22,8 +22,8 @@ class _FakeModel:
     def __init__(self, *args, **kwargs):
         self.calls = []
 
-    def transcribe(self, stream, language=None):
-        self.calls.append(language)
+    def transcribe(self, stream, language=None, **kwargs):
+        self.calls.append((language, kwargs.get("initial_prompt")))
         return [_Segment("lista los "), _Segment("receptores")], object()
 
 
@@ -31,6 +31,8 @@ class _FakeModel:
 async def test_local_whisper_joins_segments():
     stt = LocalWhisperSTT(model_factory=_FakeModel)
     assert await stt.transcribe(b"RIFF-fake-audio", lang="es") == "lista los receptores"
+    _language, prompt = stt._model.calls[-1]
+    assert "SMILES" in prompt  # chemical decoder bias travels with the call
 
 
 @pytest.mark.asyncio
