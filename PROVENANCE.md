@@ -547,3 +547,14 @@ MolDesign es por API HTTP, no por copia de código.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/test_executor.py, tests/test_bridge.py,
   tests/orchestration/test_store.py
+
+### src/molchat_agent/server/auth.py, src/molchat_agent/server/__init__.py, tests/server/__init__.py, tests/server/test_auth.py
+
+- Origen: código nuevo en este repositorio (sin porte desde MolDesign)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (tarea 4.1, MP-06): sesiones de host firmadas
+  HMAC con permisos, audiencia y caducidad verificables; sin secreto no se
+  acuña ni se verifica nada
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/server/test_auth.py

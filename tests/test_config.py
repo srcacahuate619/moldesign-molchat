@@ -62,3 +62,20 @@ def test_redacted_never_contains_secret_values():
     assert summary["moldesign_token"] == "set"
     assert "super-secret" not in str(summary)
     assert summary["meta_model"] == "muse-spark-1.3"
+
+
+def test_server_session_settings():
+    config = load_config({"MOLCHAT_HOST_SECRET": "test-secret",
+                          "MOLCHAT_ALLOWED_ORIGINS": "https://a.example, https://b.example",
+                          "MOLCHAT_SESSION_TTL_S": "120"})
+    assert config.redacted()["host_secret"] == "set"
+    assert config.allowed_origins == ("https://a.example", "https://b.example")
+    assert config.session_ttl_s == 120
+    defaults = load_config({})
+    assert defaults.host_secret is None
+    assert defaults.allowed_origins == ()
+    assert defaults.session_ttl_s == 3600
+    with pytest.raises(ValueError, match="entero"):
+        load_config({"MOLCHAT_SESSION_TTL_S": "pronto"})
+    with pytest.raises(ValueError, match="positivo"):
+        load_config({"MOLCHAT_SESSION_TTL_S": "0"})

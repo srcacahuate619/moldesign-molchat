@@ -42,6 +42,9 @@ class MolChatConfig:
     ollama_model: str = ""
     consents_file: Path = field(default_factory=_default_consents_file)
     offline: bool = False
+    host_secret: str | None = None  # shared HMAC secret with the MolDesign host
+    allowed_origins: tuple[str, ...] = ()  # extra UI origins besides loopback
+    session_ttl_s: int = 3600  # standalone session lifetime
 
     def redacted(self) -> dict[str, str]:
         """Config summary safe to print: secrets become set/unset, never values."""
@@ -66,6 +69,9 @@ class MolChatConfig:
             "ollama_model": self.ollama_model or "(unset)",
             "consents_file": str(self.consents_file),
             "offline": str(self.offline),
+            "host_secret": secret(self.host_secret),
+            "allowed_origins": ",".join(self.allowed_origins) or "(loopback only)",
+            "session_ttl_s": str(self.session_ttl_s),
         }
 
 
@@ -87,6 +93,15 @@ def load_config(env: Mapping[str, str] | None = None) -> MolChatConfig:
         raise ValueError(f"MOLCHAT_PROFILE debe ser uno de {list(PROFILES)}: {profile!r}")
 
     consents = text("MOLCHAT_CONSENTS_FILE")
+    origins = tuple(o for o in
+                    (part.strip() for part in text("MOLCHAT_ALLOWED_ORIGINS").split(","))
+                    if o)
+    try:
+        session_ttl = int(text("MOLCHAT_SESSION_TTL_S", "3600"))
+    except ValueError as exc:
+        raise ValueError("MOLCHAT_SESSION_TTL_S debe ser un entero") from exc
+    if session_ttl <= 0:
+        raise ValueError("MOLCHAT_SESSION_TTL_S debe ser positivo")
     return MolChatConfig(
         moldesign_base_url=text("MOLDESIGN_BASE_URL", "http://127.0.0.1:8000"),
         moldesign_token=secret("MOLDESIGN_TOKEN"),
@@ -105,4 +120,7 @@ def load_config(env: Mapping[str, str] | None = None) -> MolChatConfig:
         ollama_model=text("OLLAMA_MODEL"),
         consents_file=Path(consents) if consents else _default_consents_file(),
         offline=flag("MOLCHAT_OFFLINE"),
+        host_secret=secret("MOLCHAT_HOST_SECRET"),
+        allowed_origins=origins,
+        session_ttl_s=session_ttl,
     )
