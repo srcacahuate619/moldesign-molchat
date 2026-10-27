@@ -721,3 +721,29 @@ async def test_resume_ambiguous_without_recovery_keeps_report(tmp_path):
     assert second.state == "ambiguous"
     assert len(second.outcomes) == 1
 
+
+@pytest.mark.asyncio
+async def test_molcy_render_is_followed_to_terminal(tmp_path):
+    from molchat_agent.orchestration.jobs import JobTracker
+    from molchat_agent.orchestration.store import ExecutionStore
+
+    async def no_sleep(_delay):
+        pass
+
+    job_id = "12345678-1234-1234-1234-123456789012"
+    bridge = ScriptedBridge({
+        "request_case_video": {"id": job_id, "estado": "en_cola"},
+        "molcy_job_status": [{"estado": "renderizando"}, {"estado": "completo"}],
+    })
+    store = ExecutionStore(tmp_path / "exec.db")
+    jobs = JobTracker(bridge, store=store, sleep=no_sleep, jitter=0)
+    plan = Plan.from_dict({"goal": "Vídeo", "planner": "manual", "steps": [
+        {"id": "s1", "capability": "request_case_video",
+         "arguments": {"origen": "moldex", "id": job_id, "escena": "resultado",
+                       "formato": "horizontal"},
+         "rationale": ""}]})
+    report = await AgentExecutor(bridge, store=store, jobs=jobs).execute(
+        plan, approval_digest=plan.digest, approved_steps={"s1"})
+    assert report.state == "completed"
+    assert report.outcomes[0].result["final"]["estado"] == "completo"
+

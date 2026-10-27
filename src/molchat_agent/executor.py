@@ -243,10 +243,10 @@ class AgentExecutor:
                         "Clave de idempotencia con otros parámetros: rehusado.")
                 try:
                     if pending is not None and self.jobs is not None:
-                        job = await self.jobs.follow_evaluation(
-                            pending["remote_id"], digest=digest, step_id=step.id,
-                            job_id=pending["job_id"]) if pending["kind"] == "evaluation" else \
-                            await self.jobs.follow_batch(
+                        follow = {"evaluation": self.jobs.follow_evaluation,
+                                  "batch": self.jobs.follow_batch,
+                                  "molcy": self.jobs.follow_molcy}[pending["kind"]]
+                        job = await follow(
                             pending["remote_id"], digest=digest, step_id=step.id,
                             job_id=pending["job_id"])
                         value = {"resumed_job": job.remote_id, "final": job.status,
@@ -397,12 +397,17 @@ class AgentExecutor:
             kind, remote_id = "evaluation", value["task_id"]
         elif isinstance(value.get("batch_id"), str):
             kind, remote_id = "batch", value["batch_id"]
+        elif step.capability == "request_case_video" and isinstance(value.get("id"), str):
+            kind, remote_id = "molcy", value["id"]
         if kind is None or remote_id is None:
             return None
         self._set_state(digest, "waiting_job", step.id)
         try:
             if kind == "evaluation":
                 job = await self.jobs.follow_evaluation(
+                    remote_id, digest=digest, step_id=step.id)
+            elif kind == "molcy":
+                job = await self.jobs.follow_molcy(
                     remote_id, digest=digest, step_id=step.id)
             else:
                 job = await self.jobs.follow_batch(
@@ -418,7 +423,8 @@ class AgentExecutor:
             return ("completed", wrapped, sha, None)
         if job.outcome == "cancelled":
             return ("cancelled", wrapped, sha, "trabajo cancelado")
-        return ("failed", wrapped, sha, f"el trabajo terminó: {job.status.get('status')}")
+        ended = job.status.get("status", job.status.get("estado"))
+        return ("failed", wrapped, sha, f"el trabajo terminó: {ended}")
 
     def _terminal(self, frozen: Plan, digest: str, outcomes: list[StepOutcome],
                   state: str, step: Any, error: str) -> ExecutionReport:

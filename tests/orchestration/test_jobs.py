@@ -20,9 +20,9 @@ class ScriptedBridge:
         if name == "stream_evaluation":
             self.stream_calls += 1
             return {"events": [{"type": "start"}]}
-        if name in ("cancel_evaluation", "cancel_batch"):
+        if name in ("cancel_evaluation", "cancel_batch", "cancel_molcy_job"):
             return {"cancelled": True}
-        remote = args.get("task_id") or args.get("batch_id")
+        remote = args.get("task_id") or args.get("batch_id") or args.get("job_id")
         script = self.scripts.get(remote, [{"status": "SUCCESS"}])
         if len(script) > 1:
             return script.pop(0)
@@ -134,3 +134,21 @@ async def test_job_start_budget_enforced():
     tracker = JobTracker(ScriptedBridge({}), budget=BudgetTracker(Budget(max_jobs=0)))
     with pytest.raises(BudgetExceeded, match="concurrentes"):
         await tracker.follow_evaluation("t1")
+
+
+@pytest.mark.asyncio
+async def test_molcy_render_followed_to_terminal(sleep_recorder):
+    bridge = ScriptedBridge({
+        "j-1": [{"estado": "en_cola"}, {"estado": "renderizando"},
+                {"estado": "completo", "video_sha256": "abc"}],
+        "j-2": [{"estado": "fallido", "motivo": "sin GPU"}],
+        "j-3": [{"estado": "cancelado"}],
+    })
+    tracker = _tracker(bridge, sleep_recorder)
+    done = await tracker.follow_molcy("j-1")
+    assert done.outcome == "done"
+    assert done.status["video_sha256"] == "abc"
+    assert (await tracker.follow_molcy("j-2")).outcome == "failed"
+    assert (await tracker.follow_molcy("j-3")).outcome == "cancelled"
+    assert await tracker.cancel("molcy", "j-1") == {"cancelled": True}
+    assert ("cancel_molcy_job", {"job_id": "j-1"}) in bridge.calls

@@ -2,11 +2,11 @@
 
 Toda comunicación agente↔plataforma es HTTP con este contrato. El catálogo
 vivo servido por la plataforma (CR-04) no existe aún: el catálogo es local
-(`tools/moldesign.py`, 25 capacidades) y la suite de contrato lo valida
-contra un MolDesign instalado. CR-06/CR-07 viven en la rama
-`feat/molchat-plataforma-cr` (worktree de plataforma, sin merge a main).
+(`tools/moldesign.py` + `tools/molcy.py`, 30 capacidades) y la suite de
+contrato lo valida contra un MolDesign instalado. CR-06/CR-07 viven en la
+rama `feat/molchat-plataforma-cr` (worktree de plataforma, sin merge a main).
 
-## Capacidades (25)
+## Capacidades (30)
 
 | Capacidad | Endpoint | Riesgo | Notas |
 |---|---|---|---|
@@ -34,6 +34,11 @@ contra un MolDesign instalado. CR-06/CR-07 viven en la rama
 | `rescoring_health`, `rescoring_info`, `rescoring_ram` | `GET /rescoring/…` | read | Estado del servicio |
 | `create_docking_proposal` | `POST /ai/proposals` | write | CR-07: crea revisable sin lanzar; 409 con preflight si bloquea; `smiles`, `target_pdb_id?`, `chain?` |
 | `reconcile_operation` | `GET /ai/idempotency/{key}` | read | CR-06: `{operation, status, proposal_id?, task_id?, response?}`; 404 si no existe |
+| `molcy_fuentes` | `GET /molcy/fuentes` | read | Corridas renderizables + receptores |
+| `request_case_video` | `POST /molcy/trabajos` | write | Render GPU (202 `{id, estado}`); solo GPU, escena según origen |
+| `molcy_job_status` | `GET /molcy/trabajos/{job_id}` | read | `en_cola\|renderizando\|completo\|fallido\|cancelado` |
+| `get_video_acta` | `GET /molcy/trabajos/{job_id}/procedencia` | read | Acta `molcy.procedencia/1` (hashes, build) |
+| `cancel_molcy_job` | `POST /molcy/trabajos/{job_id}/cancelar` | write | Cancela el render |
 
 Reglas: sin redirecciones; tope 5 MB por respuesta; loopback por defecto y
 remoto solo HTTPS con `MOLDESIGN_ALLOW_REMOTE=1`. El servidor impone identidad
@@ -73,7 +78,7 @@ Excluidas con motivo (abstención por ausencia, no simulación):
 Cada CR, cuando MolDesign la implemente, entra como capacidad con sus tests
 de contrato. Hasta entonces la capacidad **no existe**: el agente se abstiene.
 
-## Suite de contrato (33 peticiones)
+## Suite de contrato (36 peticiones)
 
 ```bash
 MOLDESIGN_BASE_URL=http://127.0.0.1:8000 MOLDESIGN_TOKEN=<cuenta-de-pruebas> \
@@ -111,6 +116,9 @@ con CR-06/CR-07 (rama `feat/molchat-plataforma-cr`); el 33 además exige
 | 31 | `reconcile_operation` tras crear | `COMPLETADA` con `proposal_id` y `response` |
 | 32 | `reconcile_operation` de clave inexistente | `BridgeError` (404) |
 | 33 | approve con clave dos veces (con `MOLCHAT_CONTRACT_MAY_LAUNCH=1`) | Mismo `task_id` (replay, sin segundo cómputo) |
+| 34 | `molcy_fuentes` | `{moldex, receptores}` como listas |
+| 35 | Molcy con UUID inexistente (status/acta/cancel) | `BridgeError` |
+| 36 | Render pedido + sondeado + cancelado (con `MOLCHAT_CONTRACT_MAY_LAUNCH=1`) | Estados del vocabulario; GPU liberada |
 
 ## Paridad de planificadores (puerta de la Fase 1)
 

@@ -21,6 +21,8 @@ EXPECTED = {
     "stream_ai_report", "get_case_dossier", "get_sar", "get_history_stats",
     "save_molecule", "rescoring_health", "rescoring_info", "rescoring_ram",
     "create_docking_proposal", "reconcile_operation",
+    "molcy_fuentes", "request_case_video", "molcy_job_status",
+    "get_video_acta", "cancel_molcy_job",
 }
 
 

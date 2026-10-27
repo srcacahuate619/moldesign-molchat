@@ -11,8 +11,9 @@ from .catalog import (
     register,
 )
 from . import moldesign as moldesign  # noqa: F401 - registers the pack
+from . import molcy as molcy  # noqa: F401 - registers the pack
 
 __all__ = [
     "Capability", "EpistemicClass", "FieldSpec", "PlanValidationError",
-    "capability", "catalog", "moldesign", "read_only_names", "register",
+    "capability", "catalog", "molcy", "moldesign", "read_only_names", "register",
 ]

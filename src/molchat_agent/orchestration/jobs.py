@@ -19,6 +19,9 @@ EVAL_DONE = "SUCCESS"
 EVAL_FAILED = "FAILURE"
 BATCH_DONE = "completed"
 BATCH_CANCELLED = "cancelled"
+MOLCY_DONE = "completo"
+MOLCY_FAILED = "fallido"
+MOLCY_CANCELLED = "cancelado"
 
 
 @dataclass
@@ -52,11 +55,17 @@ class JobTracker:
                            step_id: str = "", job_id: int | None = None) -> JobResult:
         return await self._follow("batch", batch_id, digest, step_id, job_id)
 
+    async def follow_molcy(self, remote_id: str, *, digest: str = "",
+                         step_id: str = "", job_id: int | None = None) -> JobResult:
+        return await self._follow("molcy", remote_id, digest, step_id, job_id)
+
     async def cancel(self, kind: str, remote_id: str) -> dict[str, Any]:
         if kind == "evaluation":
             return await self._bridge.call("cancel_evaluation", {"task_id": remote_id})
         if kind == "batch":
             return await self._bridge.call("cancel_batch", {"batch_id": remote_id})
+        if kind == "molcy":
+            return await self._bridge.call("cancel_molcy_job", {"job_id": remote_id})
         raise ValueError(f"tipo de trabajo desconocido: {kind}")
 
     async def _follow(self, kind: str, remote_id: str, digest: str,
@@ -97,6 +106,8 @@ class JobTracker:
     async def _poll(self, kind: str, remote_id: str) -> dict[str, Any]:
         if kind == "evaluation":
             result = await self._bridge.call("evaluation_status", {"task_id": remote_id})
+        elif kind == "molcy":
+            result = await self._bridge.call("molcy_job_status", {"job_id": remote_id})
         else:
             result = await self._bridge.call("batch_status", {"batch_id": remote_id})
         return result if isinstance(result, dict) else {}
@@ -112,12 +123,21 @@ class JobTracker:
 
     @staticmethod
     def _outcome(kind: str, status: dict[str, Any]) -> str | None:
-        state = status.get("status")
+        # Molcy reports `estado`; evaluations and batches report `status`.
+        state = status.get("estado") if kind == "molcy" else status.get("status")
         if kind == "evaluation":
             if state == EVAL_DONE:
                 return "done"
             if state == EVAL_FAILED:
                 return "failed"
+            return None
+        if kind == "molcy":
+            if state == MOLCY_DONE:
+                return "done"
+            if state == MOLCY_FAILED:
+                return "failed"
+            if state == MOLCY_CANCELLED:
+                return "cancelled"
             return None
         if state == BATCH_DONE:
             return "done"

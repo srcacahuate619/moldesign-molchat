@@ -659,3 +659,18 @@ MolDesign es por API HTTP, no por copia de código.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/runtime/test_llama_server.py (subproceso stub real),
   tests/runtime/test_models.py
+
+### src/molchat_agent/tools/molcy.py, tests/tools/test_molcy.py, tests/contract/test_live_molcy.py
+
+- Origen: código nuevo en este repositorio; endpoints verificados en
+  backend/api/routers/molcy.py de la rama feat/molchat-plataforma-cr
+  (fuentes, trabajos, estado, procedencia, cancelar), sin copiar código
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (tarea 5.1): tool-pack Molcy (descubrir,
+  pedir render GPU, seguir trabajo, leer acta, cancelar); JobTracker y
+  ejecutor siguen renders (en_cola/renderizando→completo/fallido/
+  cancelado); el MP4 nunca pasa por el agente (deep link open_molcy)
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/tools/test_molcy.py, tests/orchestration/test_jobs.py,
+  tests/test_executor.py, tests/contract/test_live_molcy.py (vivo)
