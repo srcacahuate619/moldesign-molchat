@@ -78,6 +78,24 @@ def build_parser() -> argparse.ArgumentParser:
                        help="Puerto (0 = efímero)")
     serve.add_argument("--ui-dist", default="",
                        help="Directorio con la UI construida (por defecto ./ui/dist)")
+
+    llm = commands.add_parser("local-llm", help="Runtime local llama-server (foreground)")
+    llm_sub = llm.add_subparsers(dest="llm_command", required=True)
+    llm_start = llm_sub.add_parser("start", help="Arrancar y servir en foreground (Ctrl-C detiene)")
+    llm_start.add_argument("--model", required=True, help="Modelo .gguf (ruta o nombre)")
+    llm_start.add_argument("--llama-bin", default=None, help="Binario llama-server (búsqueda por defecto)")
+    llm_start.add_argument("--port", type=int, default=8400)
+    llm_start.add_argument("--gpu-layers", default="auto",
+                           help="Capas en GPU: entero, -1 todas, o auto (defecto)")
+    llm_status = llm_sub.add_parser("status", help="Salud del servidor local")
+    llm_status.add_argument("--port", type=int, default=8400)
+    llm_models = llm_sub.add_parser("models", help="Listar .gguf instalados")
+    llm_models.add_argument("--dir", action="append", default=[],
+                            help="Directorio extra (repetible)")
+    llm_dl = llm_sub.add_parser("download", help="Descargar un modelo por https")
+    llm_dl.add_argument("url", help="URL https del .gguf")
+    llm_dl.add_argument("--out", required=True, help="Destino local")
+    llm_dl.add_argument("--sha256", default=None, help="Hash esperado (recomendado)")
     return parser
 
 
@@ -135,7 +153,51 @@ async def _dispatch(args: argparse.Namespace) -> int:
         from .server.serve import serve_async
 
         return await serve_async(args.host, args.port, ui_dist=args.ui_dist)
+    if args.command == "local-llm":
+        return _local_llm(args)
     raise AssertionError("Comando no implementado")
+
+
+def _local_llm(args: argparse.Namespace) -> int:
+    from .runtime.llama_server import LlamaServer
+    from .runtime.models import download_model, find_models
+
+    if args.llm_command == "models":
+        models = find_models([Path(d) for d in args.dir])
+        if not models:
+            print("Sin modelos .gguf instalados.")
+            return 0
+        for model in models:
+            print(f"{model.name} ({model.bytes} bytes) {model.path}")
+        return 0
+    if args.llm_command == "download":
+        out = download_model(args.url, Path(args.out), sha256_hex=args.sha256)
+        print(f"Descargado: {out} ({out.stat().st_size} bytes)")
+        return 0
+    if args.llm_command == "status":
+        server = LlamaServer(port=args.port, gpu_layers=0)
+        print(f"{server.url}: {'saludable' if server.healthy() else 'sin respuesta'}")
+        return 0 if server.healthy() else 1
+    if args.llm_command == "start":
+        try:
+            layers: int | str = int(args.gpu_layers)
+        except ValueError:
+            layers = args.gpu_layers
+        server = LlamaServer(binary=args.llama_bin, model=args.model,
+                             port=args.port, gpu_layers=layers)
+        print(server.start())
+        print("Sirviendo en foreground; Ctrl-C detiene y libera el puerto.")
+        try:
+            import time
+
+            while True:
+                time.sleep(3600)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            print(server.stop())
+        return 0
+    raise AssertionError("Comando local-llm no implementado")
 
 
 async def _doctor(args: argparse.Namespace) -> int:

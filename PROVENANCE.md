@@ -644,3 +644,18 @@ MolDesign es por API HTTP, no por copia de código.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/test_executor.py, tests/test_bridge.py, tests/tools/,
   tests/orchestration/test_store.py, tests/contract/test_live_cr.py (vivo)
+
+### src/molchat_agent/runtime/llama_server.py, src/molchat_agent/runtime/models.py, src/molchat_agent/runtime/__init__.py, tests/runtime/__init__.py, tests/runtime/test_llama_server.py, tests/runtime/test_models.py, tests/runtime/test_cli.py
+
+- Origen: backend/services/ai/local_llm.py (brújula: cwd en el binario,
+  creationflags literales, drenaje de stdout, probe sync, atexit) y
+  backend/services/ai/model_registry.py (idea de catálogo); reimplementado
+  sin ResourceManager, core.config/hardware ni structlog
+- Commit de MolDesign: 66ff524334267c56558b7a3cce94cb919edbad2e
+- Autoría: Johan Amezcua (único titular; puede relicenciar bajo GPL-3.0-or-later)
+- Transformación: código nuevo (tarea 5.4): ciclo de vida start/stop/health
+  idempotente con GPU auto simplificada, argv builder inyectable, catálogo
+  .gguf agnóstico de máquina y descarga https con tope y SHA-256
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/runtime/test_llama_server.py (subproceso stub real),
+  tests/runtime/test_models.py
