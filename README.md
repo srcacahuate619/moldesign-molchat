@@ -12,15 +12,12 @@ programa independiente (sidecar) y conserva los motores, la identidad y las
 autorizaciones. La ciencia nunca se duplica aquí: se consume por API HTTP
 versionada (`docs/CONTRATO_MOLDESIGN.md`).
 
-> Estado: **fases 0–4 cerradas y verificadas contra una MolDesign real**
+> Estado: **fases 0–5 cerradas y verificadas contra una MolDesign real**
 > (contrato 27/27, ejecución completa sin terminal, voz de extremo a
-> extremo). La fase 5 está revisada y casi: el agente ya crea propuestas de
-> docking por sí mismo (CR-07/CR-06 verificados en vivo), y quedan dos
-> bloqueos abiertos — el ciclo de hipótesis de dos rondas sin una corrida
-> completa registrada, y el vídeo de Molcy, cuyo render falla hoy en la
-> plataforma (Blender se cae al renderizar; el tool-pack del agente está
-> verificado). Revisa los límites científicos y de seguridad antes de
-> fiarte de cualquier número.
+> extremo, ciclo de hipótesis de dos rondas con aprobación humana y vídeo
+> científico de Molcy del mejor resultado, con su acta de procedencia).
+> Revisa los límites científicos y de seguridad antes de fiarte de
+> cualquier número.
 
 ## Qué existe en esta versión
 
@@ -150,9 +147,10 @@ antes de convertirse en un plan de laboratorio.
   (valores RDKit grabados); la cobertura completa espera la API de plataforma
   (CR-01) y lo desconocido se abstiene en vez de inventar.
 - El vídeo científico lo renderiza Molcy en la plataforma, nunca el agente;
-  hoy ese render falla en la plataforma antes del primer fotograma (caída de
-  Blender al renderizar), así que la capacidad está verificada contra la API
-  pero el artefacto final depende de corregir ese entorno.
+  el agente pide el trabajo, lo sigue y enlaza su acta de procedencia
+  (`molcy.procedencia/1`). Solo puede ser fuente de vídeo una corrida que el
+  investigador haya guardado en Moldex: es la regla de la plataforma y el
+  agente la respeta pidiendo ese guardado dentro del plan aprobado.
 
 Consulta [`docs/CONTRATO_MOLDESIGN.md`](docs/CONTRATO_MOLDESIGN.md) para el
 contrato vigente con la plataforma y el registro de corridas en vivo;
