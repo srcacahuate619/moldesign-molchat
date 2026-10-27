@@ -1,12 +1,26 @@
 # MolChat Agent
 
-**Agente independiente y auditable para coordinar flujos de química computacional
-en MolDesign desde texto o voz.**
+**El agente de [MolDesign](https://github.com/srcacahuate619/moldesign-app):
+un asistente de laboratorio auditable que coordina flujos de química
+computacional desde texto o voz.**
 
-> Estado: **sidecar utilizable (fase 4)**. Conversación con evidencia,
-> planes con aprobación por hash, trabajos con cancelación y voz local con
-> confirmación, servidos por `molchat-agent serve` con UI propia. Revisa los
-> límites científicos y de seguridad antes de fiarte de cualquier número.
+MolChat es el agente que vive dentro de la plataforma MolDesign: conversa con
+el investigador, propone planes verificables, pide aprobación humana donde
+toca y sigue los trabajos científicos hasta su resultado con evidencia. Este
+repositorio es su fuente única (GPL-3.0-or-later); MolDesign lo incluye como
+programa independiente (sidecar) y conserva los motores, la identidad y las
+autorizaciones. La ciencia nunca se duplica aquí: se consume por API HTTP
+versionada (`docs/CONTRATO_MOLDESIGN.md`).
+
+> Estado: **fases 0–4 cerradas y verificadas contra una MolDesign real**
+> (contrato 27/27, ejecución completa sin terminal, voz de extremo a
+> extremo). La fase 5 está revisada y casi: el agente ya crea propuestas de
+> docking por sí mismo (CR-07/CR-06 verificados en vivo), y quedan dos
+> bloqueos abiertos — el ciclo de hipótesis de dos rondas sin una corrida
+> completa registrada, y el vídeo de Molcy, cuyo render falla hoy en la
+> plataforma (Blender se cae al renderizar; el tool-pack del agente está
+> verificado). Revisa los límites científicos y de seguridad antes de
+> fiarte de cualquier número.
 
 ## Qué existe en esta versión
 
@@ -17,13 +31,22 @@ en MolDesign desde texto o voz.**
   operaciones fuera de la lista.
 - Planificación mediante proveedores intercambiables (Muse Spark 1.3 Standard
   por defecto, OpenAI-compatibles, llama-server/Ollama locales, o `fake`
-  determinista sin claves), con JSON estructurado validado localmente. El
-  planificador sólo ve herramientas de lectura y preflight, nunca inicia docking.
-- Revisión de planes antes de su ejecución, con huella SHA-256.
-- Aprobación de propuestas de docking mediante el **mismo endpoint existente**
-  de MolDesign, bajo una segunda autorización humana ligada al hash del plan y
-  con el `proposal_hash` verificado por el servidor.
-- Registro de resultados, fallos y hashes de salida; parada ante error.
+  determinista sin claves), con JSON estructurado validado localmente y contra
+  el conjunto exacto de herramientas enviado. El planificador sólo ve
+  herramientas de lectura y preflight: nunca aprueba ni inicia docking por
+  sí solo.
+- Planes en dos esquemas: secuenciales (`/1`) y con referencias tipadas entre
+  pasos (`/2`, `{"$from": "s1.task_id"}`), validadas antes de ejecutar.
+- Revisión de planes antes de su ejecución, con huella SHA-256; la copia que
+  se ejecuta es inmutable tras la aprobación.
+- Propuestas de docking de extremo a extremo: el agente las **crea** (cuando
+  la plataforma expone CR-07), el humano aprueba ligado al hash del plan, la
+  plataforma revalida identidad y `proposal_hash`, y el agente sigue el
+  trabajo hasta su estado terminal (con cancelación y presupuestos).
+- Ciclo de hipótesis acotado con expediente: cribado por preflight, ranking
+  determinista, una propuesta por ronda y aprobación humana en cada una.
+- Registro de resultados, fallos y hashes de salida; parada ante error y
+  estado persistente que se reanuda sin re-ejecutar nada.
 - Entrada por audio WAV mediante el Whisper local de MolDesign (con sesión),
   o push-to-talk en la UI con confirmación antes de entrar como turno.
 - Sidecar local (`molchat-agent serve`, extra `server`): API en loopback con
@@ -45,6 +68,7 @@ No necesitas clonar ni instalar todo su árbol científico dentro de este repo.
 ## Sidecar (sin terminal, con UI)
 
 ```bash
+python -m pip install -e '.[server]'        # Starlette + uvicorn del sidecar
 MOLCHAT_PROVIDER=fake molchat-agent serve   # demo sin claves
 ```
 
@@ -86,16 +110,13 @@ ni los archivos del repositorio. No publiques `.env`.
    molchat-agent execute plan.json --out report.json
    ```
 
-La versión inicial sólo ofrece tareas secuenciales y pasos sin parámetros
-dependientes de resultados anteriores. Este límite evita que el agente invente
-identificadores científicos mientras añadimos un planificador verificable de
-varias etapas.
+### Aprobación de una propuesta
 
-### Aprobación de una propuesta existente
-
-El plan de aprobación se redacta **manualmente** con `approve_docking_proposal`
-e incluye un `proposal_id` y un `proposal_hash` obtenidos del flujo de MolDesign.
-El modelo de Meta no puede emitir ese paso por sí solo. Después de revisarlo:
+El agente puede crear la propuesta (`create_docking_proposal`, con clave de
+idempotencia) o trabajar con una existente. El paso de aprobación
+(`approve_docking_proposal`, con `proposal_id` y `proposal_hash`) nunca lo
+emite el modelo por sí solo: va en un plan revisado y aprobado por un humano.
+Después de revisarlo:
 
 ```bash
 molchat-agent inspect plan.json
@@ -128,10 +149,17 @@ antes de convertirse en un plan de laboratorio.
 - Las propiedades por conversación usan un dataset demo local de 8 moléculas
   (valores RDKit grabados); la cobertura completa espera la API de plataforma
   (CR-01) y lo desconocido se abstiene en vez de inventar.
+- El vídeo científico lo renderiza Molcy en la plataforma, nunca el agente;
+  hoy ese render falla en la plataforma antes del primer fotograma (caída de
+  Blender al renderizar), así que la capacidad está verificada contra la API
+  pero el artefacto final depende de corregir ese entorno.
 
-Consulta [`docs/AUDITORIA.md`](docs/AUDITORIA.md) para el mapa de dependencias,
-contratos y licencias; [`docs/HOJA_DE_RUTA.md`](docs/HOJA_DE_RUTA.md) para los pasos
-pendientes.
+Consulta [`docs/CONTRATO_MOLDESIGN.md`](docs/CONTRATO_MOLDESIGN.md) para el
+contrato vigente con la plataforma y el registro de corridas en vivo;
+[`docs/AUDITORIA.md`](docs/AUDITORIA.md) para el mapa de dependencias y
+licencias; [`docs/PARIDAD.md`](docs/PARIDAD.md) para qué hace ya este agente
+frente al MolChat que vivía dentro de MolDesign; y
+[`docs/SEGURIDAD.md`](docs/SEGURIDAD.md) para el modelo de amenazas.
 
 **Licencia:** GNU GPL-3.0-or-later. Consulte `LICENSE` y `NOTICE.md`.
 
