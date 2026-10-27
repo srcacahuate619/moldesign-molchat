@@ -522,3 +522,14 @@ MolDesign es por API HTTP, no por copia de código.
   store/jobs el comportamiento previo se conserva intacto
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/test_executor.py
+
+### tests/contract/conftest.py, tests/contract/test_live_fase3.py, scripts/demo_fase3.py
+
+- Origen: código nuevo en este repositorio (sin porte desde MolDesign)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (tareas 3.6/3.7 base): fixture de contrato
+  compartida con sonda autenticada, 17 casos Fase 3 (errores seguros +
+  positivos con id), script de demo operada A/B/C/D con SKIPs honestos
+- Licencia resultante: GPL-3.0-or-later
+- Tests: son los tests (manuales con backend real)

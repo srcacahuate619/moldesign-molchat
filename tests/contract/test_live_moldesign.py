@@ -8,52 +8,18 @@ Requires MolDesign running and ``MOLDESIGN_TOKEN`` from a test account
 (see docs/CONTRATO_MOLDESIGN.md). Skips — never fails — when the backend
 is unreachable or the token is missing/rejected: those are environment
 states, not contract verdicts. Once reachable, failures are real.
+The ``bridge`` fixture lives in ``conftest.py`` (shared with Fase 3 tests).
 """
 
-import httpx
 import pytest
-import pytest_asyncio
 
-from molchat_agent.bridge import BridgeError, MolDesignBridge
-from molchat_agent.config import load_config
+from molchat_agent.bridge import BridgeError
 
 pytestmark = pytest.mark.contract
 
 TARGET = "1HSG"  # public PDB entry (HIV-1 protease)
 ETHANOL = "CCO"
 ASPIRIN = "CC(=O)Oc1ccccc1C(=O)O"
-
-
-def _reachability():
-    """Probe once: reachable/auth state, or None when there is no backend."""
-    config = load_config()
-    headers = {"Accept": "application/json"}
-    if config.moldesign_token:
-        headers["Authorization"] = f"Bearer {config.moldesign_token}"
-    try:
-        response = httpx.get(f"{config.moldesign_base_url.rstrip('/')}/targets/",
-                             headers=headers, timeout=5.0, follow_redirects=False)
-    except (httpx.RequestError, ValueError):
-        return None
-    return response.status_code
-
-
-@pytest_asyncio.fixture
-async def bridge():
-    """One bridge per test, closed with its event loop.
-
-    A shared module-scoped bridge pools httpx connections on the first
-    test's loop; pytest-asyncio closes that loop per test and later tests
-    die with ``RuntimeError: Event loop is closed`` — a harness failure,
-    not a contract verdict (found in the Fase 1 live run, 2026-10-26).
-    """
-    status = _reachability()
-    if status is None:
-        pytest.skip("MolDesign inalcanzable; arráncalo para la suite de contrato.")
-    if status in (401, 403):
-        pytest.skip("Token ausente o rechazado; usa MOLDESIGN_TOKEN de pruebas.")
-    async with MolDesignBridge.from_env() as bridge:
-        yield bridge
 
 
 @pytest.mark.asyncio
