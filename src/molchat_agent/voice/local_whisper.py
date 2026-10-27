@@ -13,7 +13,7 @@ import io
 from typing import Any, Callable
 
 from ..bridge import BridgeError
-from .stt import AUDIO_LIMIT, LANGS
+from .stt import AUDIO_LIMIT, LANGS, STTError
 
 
 def faster_whisper_available() -> bool:
@@ -56,7 +56,7 @@ class LocalWhisperSTT:
         try:
             return await asyncio.to_thread(self._transcribe_sync, audio_bytes, lang)
         except ImportError as exc:
-            raise BridgeError("faster-whisper no está instalado en este equipo") from exc
+            raise STTError("faster-whisper no está instalado en este equipo") from exc
 
 
 class ChainSTT:
@@ -77,7 +77,7 @@ class ChainSTT:
         for backend in self._backends:
             try:
                 return await backend.transcribe(audio_bytes, lang=lang)
-            except (BridgeError, ValueError, RuntimeError) as exc:
+            except (BridgeError, STTError, ValueError, RuntimeError) as exc:
                 last = exc
         assert last is not None
         raise last

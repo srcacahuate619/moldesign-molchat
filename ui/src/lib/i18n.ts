@@ -52,6 +52,10 @@ const es = {
   "settings.consents": "Consentimientos de red",
   "settings.consentsNote":
     "Se gestionan por terminal (`molchat-agent doctor --consents`); esta UI nunca los pide ni los cambia.",
+  "settings.stt": "Transcripción de voz",
+  "settings.sttLocal": "Local: el audio no sale de este equipo.",
+  "settings.sttCloud": "NUBE: el audio sale de este equipo al destino configurado.",
+  "settings.sttNone": "Sin transcripción disponible en este sidecar.",
   "voice.record": "Grabar (pulsa para hablar)",
   "voice.stop": "Detener grabación",
   "voice.confirm": "La transcripción entra como un turno normal solo si confirmas:",
@@ -114,6 +118,10 @@ const en: Record<StringKey, string> = {
   "settings.consents": "Network consents",
   "settings.consentsNote":
     "Managed from the terminal (`molchat-agent doctor --consents`); this UI never requests or changes them.",
+  "settings.stt": "Voice transcription",
+  "settings.sttLocal": "Local: audio never leaves this machine.",
+  "settings.sttCloud": "CLOUD: audio leaves this machine to the configured destination.",
+  "settings.sttNone": "No transcription available on this sidecar.",
   "voice.record": "Record (push to talk)",
   "voice.stop": "Stop recording",
   "voice.confirm": "The transcript enters as a normal turn only if you confirm:",

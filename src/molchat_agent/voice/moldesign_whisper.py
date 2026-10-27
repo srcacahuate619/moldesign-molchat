@@ -8,8 +8,7 @@ from __future__ import annotations
 
 import httpx
 
-from ..bridge import BridgeError
-from .stt import AUDIO_LIMIT, LANGS
+from .stt import AUDIO_LIMIT, LANGS, STTError
 
 
 class MolDesignWhisper:
@@ -31,10 +30,10 @@ class MolDesignWhisper:
                 timeout=90.0,
             )
             if response.status_code >= 400 or response.is_redirect:
-                raise BridgeError(f"Transcripción local falló (HTTP {response.status_code})")
+                raise STTError(f"Transcripción local falló (HTTP {response.status_code})")
             value = response.json().get("text", "")
             if not isinstance(value, str):
-                raise BridgeError("Formato de transcripción inesperado")
+                raise STTError("Formato de transcripción inesperado")
             return value
         except (httpx.RequestError, ValueError) as exc:
-            raise BridgeError("No se pudo transcribir el audio local") from exc
+            raise STTError("No se pudo transcribir el audio local") from exc

@@ -689,3 +689,17 @@ MolDesign es por API HTTP, no por copia de código.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/providers/test_claude.py, tests/providers/test_gemini.py,
   tests/providers/test_registry.py
+
+### src/molchat_agent/voice/cloud_stt.py, tests/voice/test_cloud_stt.py
+
+- Origen: código nuevo en este repositorio (sin porte: la plataforma no
+  tiene STT en nube; contrato público OpenAI-compatible /audio/transcriptions)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (tarea 5.3): cliente multipart https con
+  tope y forma verificada; opt-in triple (flag + URL/clave + permiso
+  transcribe), exclusivo cuando activo (nunca fallback silencioso);
+  `STTError` unifica errores de voz; `/v1/version` declara stt local/cloud/none
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/voice/test_cloud_stt.py, tests/server/test_serve.py,
+  tests/server/test_transcribe.py, ui/src/components/Settings.test.tsx

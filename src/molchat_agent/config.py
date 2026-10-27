@@ -44,6 +44,10 @@ class MolChatConfig:
     claude_model: str = "claude-haiku-4-5-20251001"
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-2.5-flash"
+    cloud_stt_enabled: bool = False
+    cloud_stt_base_url: str = ""
+    cloud_stt_api_key: str | None = None
+    cloud_stt_model: str = ""
     consents_file: Path = field(default_factory=_default_consents_file)
     offline: bool = False
     host_secret: str | None = None  # shared HMAC secret with the MolDesign host
@@ -79,6 +83,10 @@ class MolChatConfig:
             "claude_model": self.claude_model,
             "gemini_api_key": secret(self.gemini_api_key),
             "gemini_model": self.gemini_model,
+            "cloud_stt_enabled": str(self.cloud_stt_enabled),
+            "cloud_stt_base_url": self.cloud_stt_base_url or "(unset)",
+            "cloud_stt_api_key": secret(self.cloud_stt_api_key),
+            "cloud_stt_model": self.cloud_stt_model or "(unset)",
             "consents_file": str(self.consents_file),
             "offline": str(self.offline),
             "host_secret": secret(self.host_secret),
@@ -140,6 +148,10 @@ def load_config(env: Mapping[str, str] | None = None) -> MolChatConfig:
         claude_model=text("CLAUDE_MODEL", "claude-haiku-4-5-20251001"),
         gemini_api_key=secret("GEMINI_API_KEY"),
         gemini_model=text("GEMINI_MODEL", "gemini-2.5-flash"),
+        cloud_stt_enabled=flag("MOLCHAT_CLOUD_STT"),
+        cloud_stt_base_url=text("MOLCHAT_CLOUD_STT_URL"),
+        cloud_stt_api_key=secret("MOLCHAT_CLOUD_STT_KEY"),
+        cloud_stt_model=text("MOLCHAT_CLOUD_STT_MODEL"),
         consents_file=Path(consents) if consents else _default_consents_file(),
         offline=flag("MOLCHAT_OFFLINE"),
         host_secret=secret("MOLCHAT_HOST_SECRET"),

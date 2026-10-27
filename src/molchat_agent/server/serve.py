@@ -22,6 +22,7 @@ from ..orchestration.store import ExecutionStore
 from ..providers import build_registry
 from ..voice.local_whisper import ChainSTT, LocalWhisperSTT, faster_whisper_available
 from ..voice.moldesign_whisper import MolDesignWhisper
+from ..voice.cloud_stt import CloudSTT
 from .app import create_app
 from .auth import mint, standalone_secret
 from .executions import ExecutionManager
@@ -59,13 +60,17 @@ def find_ui_dist(explicit: str = "") -> Path | None:
 
 
 def _build_stt(config: MolChatConfig, bridge: MolDesignBridge):  # type: ignore[no-untyped-def]
-    """STT chain: platform Whisper first, local faster-whisper as fallback.
+    """STT chain: cloud when explicitly enabled, else platform/local chain.
 
-    The platform endpoint is the default (PLAN §12), but a MolDesign build
-    without faster-whisper answers 501; the sidecar's own local model keeps
-    voice working without touching the platform. No backend at all -> None
-    (the transcribe endpoint then answers 503, never invents text).
-    """
+Cloud is EXCLUSIVE when enabled (explicit opt-in wins; failures are loud,
+never a silent substitution). Without it, the platform endpoint comes first
+and the sidecar's own local model is the fallback. No backend -> None (503).
+"""
+    if config.cloud_stt_enabled and config.cloud_stt_base_url \
+            and config.cloud_stt_api_key and config.cloud_stt_model:
+        return CloudSTT(base_url=config.cloud_stt_base_url,
+                        api_key=config.cloud_stt_api_key,
+                        model=config.cloud_stt_model)
     backends: list = []
     if config.moldesign_token:
         backends.append(MolDesignWhisper(bridge.client, config.moldesign_token))

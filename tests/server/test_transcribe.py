@@ -113,3 +113,26 @@ async def test_transcribe_unavailable_without_backend(tmp_path, monkeypatch):
         response = await client.post("/v1/transcribe", headers=headers,
                                      content=b"RIFF-x")
         assert response.status_code == 503
+
+
+@pytest.mark.asyncio
+async def test_version_declares_stt_backend(world):
+    client, _, _ = world
+    version = await client.get("/v1/version")
+    assert version.json()["stt"] == "local"  # stub backend, never cloud
+
+
+@pytest.mark.asyncio
+async def test_version_declares_no_stt_without_backend(tmp_path, monkeypatch):
+    monkeypatch.setattr("molchat_agent.server.auth.time.time", lambda: NOW)
+    registry = build_registry(MolChatConfig(profile="hackathon"))
+    state = ServerState(
+        secret=SECRET, registry=registry,
+        memory=MemoryStore(tmp_path / "mem.db"),
+        backend=QualityBackend(FIXTURES), provider_id="fake", stt=None)
+    app = create_app(state, allowed_hosts=("testserver",))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport,
+                                 base_url="http://testserver") as client:
+        version = await client.get("/v1/version")
+        assert version.json()["stt"] == "none"

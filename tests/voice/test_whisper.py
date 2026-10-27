@@ -3,8 +3,7 @@
 import httpx
 import pytest
 
-from molchat_agent.bridge import BridgeError
-from molchat_agent.voice import MolDesignWhisper
+from molchat_agent.voice import MolDesignWhisper, STTError
 
 
 def _client(handler):
@@ -28,12 +27,12 @@ async def test_transcribes_with_auth_and_wav_content_type():
 
 
 @pytest.mark.asyncio
-async def test_http_error_and_bad_shape_are_bridge_errors():
+async def test_http_error_and_bad_shape_are_stt_errors():
     async with _client(lambda r: httpx.Response(500, json={})) as client:
-        with pytest.raises(BridgeError):
+        with pytest.raises(STTError):
             await MolDesignWhisper(client, "test-token-1").transcribe(b"RIFF-x")
     async with _client(lambda r: httpx.Response(200, json={"text": 42})) as client:
-        with pytest.raises(BridgeError):
+        with pytest.raises(STTError):
             await MolDesignWhisper(client, "test-token-1").transcribe(b"RIFF-x")
 
 

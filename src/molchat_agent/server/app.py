@@ -28,7 +28,7 @@ from ..plan import Plan
 from ..providers.base import ProviderDisabled, ProviderError
 from ..providers.registry import ConsentDenied
 from ..tools import PlanValidationError, capability, catalog
-from ..voice.stt import AUDIO_LIMIT, LANGS
+from ..voice.stt import AUDIO_LIMIT, LANGS, STTError
 from .auth import AuthError, Session, parse_bearer, verify
 from .events import SSE_HEADERS, encode_event
 from .executions import TERMINAL as EXEC_TERMINAL
@@ -131,7 +131,8 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
 
     async def version(_request: Request) -> JSONResponse:
         return JSONResponse({"molchat": __version__, "contract": CONTRACT,
-                             "plan_schemas": ["/1", "/2"]})
+                             "plan_schemas": ["/1", "/2"],
+                             "stt": _stt_kind(state.stt)})
 
     async def get_catalog(request: Request) -> JSONResponse:
         await need_read(request)
@@ -321,7 +322,7 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
             text = await state.stt.transcribe(bytes(audio), lang=lang)
         except ValueError as exc:
             return _error(400, str(exc))
-        except BridgeError as exc:
+        except (BridgeError, STTError) as exc:
             raise HTTPException(502, f"la transcripción falló: {exc}") from exc
         return JSONResponse({"text": text, "lang": lang})
 
@@ -437,6 +438,15 @@ def _hostname(value: str) -> str:
         return (urlsplit("//" + value).hostname or "").lower()
     except ValueError:
         return ""
+
+
+def _stt_kind(stt: Any) -> str:
+    """Declared transcription backend: local (default), cloud, or none."""
+    if stt is None:
+        return "none"
+    from ..voice.cloud_stt import CloudSTT
+
+    return "cloud" if isinstance(stt, CloudSTT) else "local"
 
 
 def _public_event(event: dict[str, Any]) -> dict[str, Any]:

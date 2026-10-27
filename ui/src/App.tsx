@@ -19,6 +19,7 @@ export default function App() {
   );
   const [unlockFailed, setUnlockFailed] = useState(false);
   const [catalog, setCatalog] = useState<CatalogEntry[]>([]);
+  const [stt, setStt] = useState("none");
   const [focusId, setFocusId] = useState<string | null>(null);
   const [locale, setLocale] = useState<Locale>(() =>
     localStorage.getItem(LOCALE_KEY) === "en" ? "en" : "es",
@@ -32,6 +33,8 @@ export default function App() {
   const connect = useCallback(async (candidate: string) => {
     try {
       setCatalog(await api.catalog(candidate)); // validates the session, nothing else
+      const info = await api.version();
+      setStt(typeof info.stt === "string" ? info.stt : "none");
       sessionStorage.setItem(SESSION_KEY, candidate);
       setUnlockFailed(false);
       setToken(candidate);
@@ -119,6 +122,7 @@ export default function App() {
         <Settings
           t={t}
           locale={locale}
+          stt={stt}
           onLocale={(next) => {
             localStorage.setItem(LOCALE_KEY, next);
             setLocale(next);

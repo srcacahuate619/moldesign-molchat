@@ -168,7 +168,11 @@ class MolDesignBridge:
         if not self._token:
             raise BridgeError("La transcripción requiere una sesión MolDesign")
         from .voice.moldesign_whisper import MolDesignWhisper  # noqa: PLC0415
+        from .voice.stt import STTError  # noqa: PLC0415
 
-        return await MolDesignWhisper(self._client, self._token).transcribe(
-            audio_bytes, lang=lang)
+        try:
+            return await MolDesignWhisper(self._client, self._token).transcribe(
+                audio_bytes, lang=lang)
+        except STTError as exc:
+            raise BridgeError(str(exc)) from exc
 

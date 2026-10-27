@@ -89,6 +89,11 @@ const postJson = (token: string, path: string, body: unknown) =>
   });
 
 export const api = {
+  version: async (): Promise<{ stt?: string }> => {
+    const response = await fetch("/v1/version");
+    if (!response.ok) return {};
+    return (await response.json()) as { stt?: string };
+  },
   catalog: (t: string) => request(t, "/v1/catalog") as Promise<CatalogEntry[]>,
   createConversation: (t: string) =>
     postJson(t, "/v1/conversations", {}) as Promise<{ id: string }>,

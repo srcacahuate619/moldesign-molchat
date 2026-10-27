@@ -40,6 +40,27 @@ def test_hosted_build_uses_shared_secret_and_no_token(tmp_path):
     assert served.secret == b"test-host-secret"
 
 
+def test_cloud_stt_selected_only_when_explicitly_enabled(tmp_path):
+    from molchat_agent.voice.cloud_stt import CloudSTT
+
+    full = MolChatConfig(memory_file=tmp_path / "mem.db",
+                         exec_store=tmp_path / "exec.db",
+                         moldesign_token="test-token",
+                         cloud_stt_enabled=True,
+                         cloud_stt_base_url="https://stt.example.com/v1",
+                         cloud_stt_api_key="test-key",
+                         cloud_stt_model="whisper-1")
+    assert isinstance(build_server(full).state.stt, CloudSTT)
+    off = MolChatConfig(memory_file=tmp_path / "mem.db",
+                        exec_store=tmp_path / "exec.db",
+                        moldesign_token="test-token")
+    assert not isinstance(build_server(off).state.stt, CloudSTT)
+    incomplete = MolChatConfig(memory_file=tmp_path / "mem.db",
+                               exec_store=tmp_path / "exec.db",
+                               cloud_stt_enabled=True)
+    assert not isinstance(build_server(incomplete).state.stt, CloudSTT)
+
+
 def test_find_ui_dist_prefers_explicit(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)  # no ./ui/dist here
     good = tmp_path / "dist"
