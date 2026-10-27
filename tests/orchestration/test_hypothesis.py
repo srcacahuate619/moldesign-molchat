@@ -115,6 +115,38 @@ async def test_full_iteration_with_approval(runner):
 
 
 @pytest.mark.asyncio
+async def test_second_iteration_proposes_next_candidate(runner):
+    # Regression (Fase 5 live): re-proposing the best candidate yields the
+    # identical plan digest, the executor returns the stored report, and
+    # the "second run" launches nothing (same task_id, history unchanged).
+    screening = await runner.screen("inhibir X", "7E2Y", ["CCC", "CCO"])
+    first = runner.propose_run(screening)
+    assert first.pending.candidate.smiles == "CCC"
+    await runner.execute_run(first, approval_digest=first.pending.digest,
+                             approved_steps={"s1", "s2"})
+    second = runner.propose_run(screening)
+    assert second.pending is not None
+    assert second.pending.candidate.smiles == "CCO"
+    assert second.pending.digest != first.pending.digest
+
+
+@pytest.mark.asyncio
+async def test_compare_unwraps_followed_job_result(runner):
+    # Real shape: outcome.result.final = {task_id, status, result: {...}}.
+    # Without unwrapping, affinity_kcal read as null live (Fase 5).
+    runner._bridge.statuses = [{"status": "SUCCESS", "result": {
+        "affinity_kcal": -6.25, "molecule_id": "m-9"}}]
+    screening = await runner.screen("inhibir X", "7E2Y", ["CCC"])
+    record = runner.propose_run(screening)
+    await runner.execute_run(record, approval_digest=record.pending.digest,
+                             approved_steps={"s1", "s2"})
+    comparison = await runner.compare_and_report(record)
+    assert comparison["affinity_kcal"] == -6.25
+    assert comparison["delta_vs_best"] == 0.75  # vs history best -7.0
+    assert comparison["verdict"] == "no mejora el mejor histórico"
+
+
+@pytest.mark.asyncio
 async def test_no_eligible_candidate_is_honest(runner):
     screening = await runner.screen("inhibir X", "7E2Y", ["MALO"])
     record = runner.propose_run(screening)

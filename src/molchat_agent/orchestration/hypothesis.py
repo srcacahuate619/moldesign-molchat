@@ -208,8 +208,17 @@ class HypothesisRunner:
 
     def propose_run(self, screening: Screening,
                     iteration: int | None = None) -> IterationRecord:
-        """Draft the create→approve plan for the best candidate. No sends."""
-        best = next((c for c in screening.ranked() if c.eligible), None)
+        """Draft the create→approve plan for the best untried candidate.
+
+        A candidate already proposed in an earlier iteration is never
+        re-proposed: its plan digest is identical, so the executor would
+        return the stored report and the "iteration" would launch nothing
+        (measured live, Fase 5: round 2 replayed round 1's task_id).
+        """
+        tried = {r.pending.candidate.smiles for r in self._iterations
+                 if r.pending is not None}
+        best = next((c for c in screening.ranked()
+                     if c.eligible and c.smiles not in tried), None)
         record = IterationRecord(
             index=len(self._iterations) + 1 if iteration is None else iteration,
             screening=screening)
@@ -272,6 +281,12 @@ class HypothesisRunner:
         for outcome in outcomes:
             result = outcome.get("result") or {}
             final = result.get("final", result)
+        # Followed jobs nest the measured payload one level deeper:
+        # final = {task_id, status, result: {affinity_kcal, molecule_id...}}.
+        # Without unwrapping, affinity reads as null and every comparison
+        # reports "sin afinidad medida" (measured live, Fase 5).
+        if isinstance(final, dict) and isinstance(final.get("result"), dict):
+            final = final["result"]
         target = record.screening.target
         history: list[dict[str, Any]] = []
         try:
