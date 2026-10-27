@@ -36,6 +36,11 @@ class ServerState:
     stt: SpeechToText | None = None
     user_id: str | None = None
     revoked: set[str] = field(default_factory=set)
+    # Hosted mode (MOLCHAT_HOST_SECRET set): platform calls forward the
+    # request's Bearer instead of a fixed token. `bridge` is the shared
+    # platform client the endpoints bind per request.
+    hosted: bool = False
+    bridge: Any | None = None
 
     def pin_user(self, sub: str) -> None:
         """Bind the process to the first account; reject any other."""

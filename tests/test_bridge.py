@@ -170,3 +170,40 @@ async def test_error_responses_carry_status_and_detail():
     assert caught.value.status_code == 409
     assert "preflight" in (caught.value.detail or "")
 
+
+@pytest.mark.asyncio
+async def test_with_token_shares_client_with_own_authorization():
+    seen = []
+
+    def handle(request):
+        seen.append(request.headers.get("authorization"))
+        return httpx.Response(200, json={"ok": True})
+
+    async with httpx.AsyncClient(base_url="http://127.0.0.1:8000",
+                                 transport=httpx.MockTransport(handle)) as client:
+        bridge = MolDesignBridge(token="test-fixed", client=client)
+        bound = bridge.with_token("test-bearer")
+        assert bound.client is client
+        await bound.call("list_targets", {})
+        await bridge.call("list_targets", {})
+        await bound.__aexit__(None, None, None)
+        assert not client.is_closed  # the bound copy never owns the client
+    assert seen == ["Bearer test-bearer", "Bearer test-fixed"]
+
+
+@pytest.mark.asyncio
+async def test_transcribe_local_accepts_per_call_token():
+    seen = []
+
+    def handle(request):
+        seen.append(request.headers.get("authorization"))
+        return httpx.Response(200, json={"text": "hola"})
+
+    async with httpx.AsyncClient(base_url="http://127.0.0.1:8000",
+                                 transport=httpx.MockTransport(handle)) as client:
+        bridge = MolDesignBridge(client=client)  # no fixed token (hosted)
+        assert await bridge.transcribe_local(b"RIFF-x", token="test-bearer") == "hola"
+        with pytest.raises(BridgeError, match="sesión MolDesign"):
+            await bridge.transcribe_local(b"RIFF-x")
+    assert seen == ["Bearer test-bearer"]
+

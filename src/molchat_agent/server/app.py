@@ -106,6 +106,17 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
     need_cancel = require("cancel")
     need_transcribe = require("transcribe")
 
+    def platform_token(request: Request) -> str | None:
+        """The request's identity for platform calls, in hosted mode only.
+
+        Standalone keeps its fixed configured token; hosted forwards the
+        Bearer the host minted (the platform accepts it as identity).
+        Called after the scope check, so the Bearer is already verified.
+        """
+        if not state.hosted:
+            return None
+        return parse_bearer(request.headers.get("authorization"))
+
     async def read_json(request: Request) -> Any:
         try:
             length = int(request.headers.get("content-length", "0"))
@@ -255,7 +266,8 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
         if digest is not None and not isinstance(digest, str):
             return _error(400, "approval_digest no válido")
         record = state.executions.submit(
-            plan, approval_digest=digest, approved_steps=set(approved))
+            plan, approval_digest=digest, approved_steps=set(approved),
+            platform_token=platform_token(request))
         return JSONResponse(state.executions.view(record), status_code=202)
 
     async def get_execution(request: Request) -> JSONResponse:
@@ -292,14 +304,17 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
         await need_cancel(request)
         if state.executions is None:
             return _error(503, "ejecución no disponible en este sidecar")
-        changed, detail = await state.executions.cancel(request.path_params["exec_id"])
+        changed, detail = await state.executions.cancel(
+            request.path_params["exec_id"],
+            platform_token(request))
         if detail == "not-found":
             return _error(404, "ejecución no encontrada")
         return JSONResponse({"cancelled": changed, "detail": detail})
 
     async def transcribe(request: Request) -> JSONResponse:
         await need_transcribe(request)
-        if state.stt is None:
+        hosted_platform = state.hosted and state.bridge is not None
+        if state.stt is None and not hosted_platform:
             return _error(503, "transcripción no disponible en este sidecar")
         content_type = request.headers.get("content-type", "")
         if not content_type.startswith("audio/"):
@@ -318,7 +333,22 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
             return _error(400, "audio vacío")
         if len(audio) > AUDIO_LIMIT:
             return _error(413, "audio superior a 15 MB")
+        if hosted_platform:
+            # Platform STT first, with the request's identity; local chain
+            # stays the fallback (same order as standalone, honest identity).
+            assert state.bridge is not None
+            try:
+                text = await state.bridge.transcribe_local(
+                    bytes(audio), lang=lang, token=platform_token(request))
+            except ValueError as exc:
+                return _error(400, str(exc))
+            except BridgeError as exc:
+                if state.stt is None:
+                    raise HTTPException(502, f"la transcripción falló: {exc}") from exc
+            else:
+                return JSONResponse({"text": text, "lang": lang})
         try:
+            assert state.stt is not None
             text = await state.stt.transcribe(bytes(audio), lang=lang)
         except ValueError as exc:
             return _error(400, str(exc))

@@ -69,11 +69,23 @@ class MolDesignBridge:
     ) -> None:
         self.base_url = validate_base_url(base_url, allow_remote=allow_remote)
         self._token = token
+        self._allow_remote = allow_remote
         self._owns_client = client is None
         self._client = client or httpx.AsyncClient(
             base_url=self.base_url, timeout=30.0, follow_redirects=False,
             trust_env=False,
         )
+
+    def with_token(self, token: str | None) -> "MolDesignBridge":
+        """Same client and URL policy, different Authorization.
+
+        Per-request identity in hosted mode: the sidecar re-sends the
+        request's Bearer to the platform instead of a fixed token. The
+        shared client is never closed through the bound copy.
+        """
+        return MolDesignBridge(self.base_url, token=token,
+                               allow_remote=self._allow_remote,
+                               client=self._client)
 
     @classmethod
     def from_env(cls) -> "MolDesignBridge":
@@ -163,15 +175,21 @@ class MolDesignBridge:
             raise BridgeTransportError(f"No se pudo leer el stream de {name}") from exc
         return {"events": events}
 
-    async def transcribe_local(self, audio_bytes: bytes, *, lang: str = "es") -> str:
-        """Use MolDesign's authenticated local Whisper endpoint."""
-        if not self._token:
+    async def transcribe_local(self, audio_bytes: bytes, *, lang: str = "es",
+                             token: str | None = None) -> str:
+        """Use MolDesign's authenticated local Whisper endpoint.
+
+        ``token`` overrides the configured one for this call (hosted mode
+        forwards the request's Bearer); otherwise the fixed token applies.
+        """
+        effective = token or self._token
+        if not effective:
             raise BridgeError("La transcripción requiere una sesión MolDesign")
         from .voice.moldesign_whisper import MolDesignWhisper  # noqa: PLC0415
         from .voice.stt import STTError  # noqa: PLC0415
 
         try:
-            return await MolDesignWhisper(self._client, self._token).transcribe(
+            return await MolDesignWhisper(self._client, effective).transcribe(
                 audio_bytes, lang=lang)
         except STTError as exc:
             raise BridgeError(str(exc)) from exc

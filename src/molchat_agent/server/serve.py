@@ -110,6 +110,8 @@ def build_server(config: MolChatConfig | None = None,
         provider_id=config.provider,
         executions=ExecutionManager(bridge, store),
         stt=_build_stt(config, bridge),
+        hosted=bool(config.host_secret),
+        bridge=bridge,
     )
     found = find_ui_dist(ui_dist or config.ui_dist)
     app = create_app(state, ui_dist=found)

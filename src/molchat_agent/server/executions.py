@@ -49,11 +49,15 @@ class ExecutionManager:
         self._tasks: dict[str, asyncio.Task] = {}
 
     def submit(self, plan: Plan, *, approval_digest: str | None = None,
-               approved_steps: set[str] | None = None) -> ExecutionRecord:
+               approved_steps: set[str] | None = None,
+               platform_token: str | None = None) -> ExecutionRecord:
+        """Queue a run. ``platform_token`` (hosted mode) binds this run to
+        the request's identity instead of the manager's fixed bridge."""
         record = ExecutionRecord(id=uuid.uuid4().hex[:16], digest=plan.digest)
         self._records[record.id] = record
         task = asyncio.get_running_loop().create_task(
-            self._run(record, plan, approval_digest, approved_steps or set()))
+            self._run(record, plan, approval_digest, approved_steps or set(),
+                      platform_token))
         self._tasks[record.id] = task
         task.add_done_callback(lambda _t, rid=record.id: self._tasks.pop(rid, None))
         return record
@@ -65,7 +69,18 @@ class ExecutionManager:
         return {"id": record.id, "digest": record.digest, "state": record.state,
                 "report": record.report, "created_at": record.created_at}
 
-    async def cancel(self, exec_id: str) -> tuple[bool, str]:
+    def _bound(self, platform_token: str | None) -> Any:
+        if platform_token is None:
+            return self._bridge
+        return self._bridge.with_token(platform_token)
+
+    def _tracker_for(self, bridge: Any) -> JobTracker:
+        if bridge is self._bridge:
+            return self._tracker_factory()
+        return JobTracker(bridge, store=self._store)
+
+    async def cancel(self, exec_id: str,
+                     platform_token: str | None = None) -> tuple[bool, str]:
         """Cancel remote work and mark the execution. (True, detail) on change."""
         record = self._records.get(exec_id)
         if record is None:
@@ -74,7 +89,7 @@ class ExecutionManager:
             return False, f"already terminal: {record.state}"
         record.cancel_requested = True
         cancelled: list[str] = []
-        tracker = self._tracker_factory()
+        tracker = self._tracker_for(self._bound(platform_token))
         for job in self._store.pending_jobs(record.digest):
             try:
                 await tracker.cancel(job["kind"], job["remote_id"])
@@ -89,11 +104,13 @@ class ExecutionManager:
         return True, "cancelling (no remote jobs were pending)"
 
     async def _run(self, record: ExecutionRecord, plan: Plan,
-                   approval_digest: str | None, approved_steps: set[str]) -> None:
+                   approval_digest: str | None, approved_steps: set[str],
+                   platform_token: str | None) -> None:
         record.state = "running"
         try:
-            executor = AgentExecutor(self._bridge, store=self._store,
-                                     jobs=self._tracker_factory(),
+            bridge = self._bound(platform_token)
+            executor = AgentExecutor(bridge, store=self._store,
+                                     jobs=self._tracker_for(bridge),
                                      budget=self._budget)
             report: ExecutionReport = await executor.execute(
                 plan, approval_digest=approval_digest, approved_steps=approved_steps)

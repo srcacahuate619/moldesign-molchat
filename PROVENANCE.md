@@ -780,3 +780,16 @@ MolDesign es por API HTTP, no por copia de código.
   ya listaba 31 con la fila triple de rescoring)
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/tools/, tests/test_conformance.py, 1b en vivo
+
+### src/molchat_agent/bridge.py, src/molchat_agent/server/executions.py, src/molchat_agent/server/state.py, src/molchat_agent/server/serve.py, src/molchat_agent/server/app.py, tests/server/test_hosted_forwarding.py
+
+- Origen: código nuevo en este repositorio (sin porte desde MolDesign)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (Fase 6, soporte al host): en modo host
+  (MOLCHAT_HOST_SECRET) el sidecar reenvía el Bearer de cada petición a
+  la plataforma en vez del token fijo (with_token comparte cliente;
+  submit/cancel atan la identidad; transcribe prueba plataforma-con-
+  Bearer y cae a la cadena local); standalone intacto
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/server/test_hosted_forwarding.py, tests/test_bridge.py
