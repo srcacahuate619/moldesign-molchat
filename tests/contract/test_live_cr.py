@@ -19,8 +19,9 @@ from molchat_agent.bridge import BridgeError
 
 pytestmark = pytest.mark.contract
 
-SMILES = "CCO"
-TARGET = "7E2Y"  # platform default target (pre-curated)
+SMILES = "CC(=O)Oc1ccccc1C(=O)O"  # aspirin: evaluable (>=5 heavy atoms;
+# ethanol "CCO" is rejected 422 by the platform submit validator, Fase 3 lesson)
+TARGET = "1HSG"  # curated target, present in the seeded catalog
 
 needs_launch = pytest.mark.skipif(
     os.environ.get("MOLCHAT_CONTRACT_MAY_LAUNCH") != "1",
