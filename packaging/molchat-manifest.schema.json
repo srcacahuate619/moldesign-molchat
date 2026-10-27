@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/srcacahuate619/moldesign-molchat/packaging/molchat-manifest.schema.json",
+  "title": "molchat-manifest.json",
+  "description": "Integrity manifest of a vendored MolChat copy (schema moldesign.molchat/1, PLAN Fase 6). Produced by scripts/make_manifest.py from a clean commit; consumed by the MolDesign host before every sidecar launch. The host implements the checks in code (no JSON Schema dependency at runtime); this file is the shared contract of what those checks enforce.",
+  "type": "object",
+  "required": [
+    "schema",
+    "programa",
+    "version",
+    "licencia_spdx",
+    "licencia_texto",
+    "fuente",
+    "invocacion",
+    "no_se_enlaza",
+    "contrato",
+    "requisitos",
+    "excluidos",
+    "archivos",
+    "sha256_conjunto"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "moldesign.molchat/1",
+      "description": "Manifest schema identity. A host that does not know this exact value must abstain, never guess."
+    },
+    "programa": {
+      "type": "string",
+      "description": "Human name of the vendored program."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Package version (SemVer), equal to both [project] version and __version__ of the vendored commit."
+    },
+    "licencia_spdx": {
+      "const": "GPL-3.0-or-later",
+      "description": "SPDX identifier; the file named by licencia_texto must carry exactly that license text."
+    },
+    "licencia_texto": {
+      "type": "string",
+      "description": "Manifest-relative path of the license text (verified by hash, LF-normalized)."
+    },
+    "fuente": {
+      "type": "object",
+      "required": ["proyecto", "commit", "rama"],
+      "additionalProperties": false,
+      "properties": {
+        "proyecto": {"const": "moldesign-molchat"},
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "description": "Commit the vendored blobs were read from (git objects, never the worktree)."
+        },
+        "rama": {
+          "type": "string",
+          "description": "Branch that commit was on when staged."
+        },
+        "repositorio": {
+          "type": "string",
+          "pattern": "^https://[^/@]+/[^ ]+$",
+          "description": "Public repository URL without credentials (the GPL source offer). https only."
+        }
+      }
+    },
+    "invocacion": {
+      "type": "string",
+      "description": "How the host launches the sidecar (loopback process, ephemeral port, scoped token)."
+    },
+    "no_se_enlaza": {
+      "type": "string",
+      "description": "Boundary statement: no imports either way, HTTP contract only."
+    },
+    "contrato": {
+      "type": "object",
+      "required": ["agente_plataforma"],
+      "additionalProperties": false,
+      "properties": {
+        "agente_plataforma": {
+          "const": "moldesign.molchat/1",
+          "description": "Agent-platform HTTP contract the vendored sidecar speaks."
+        },
+        "min_moldesign": {
+          "type": "string",
+          "description": "Minimum MolDesign release carrying the host surface. Omitted while no released MolDesign carries it."
+        }
+      }
+    },
+    "requisitos": {
+      "type": "object",
+      "required": ["python", "dependencias"],
+      "additionalProperties": false,
+      "properties": {
+        "python": {
+          "type": "string",
+          "description": "Interpreter requirement, copied from requires-python (e.g. >=3.11)."
+        },
+        "dependencias": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Runtime dependencies the host interpreter must provide (base plus server extra)."
+        }
+      }
+    },
+    "excluidos": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "What exists in the source repo but deliberately does not travel, with the reason for each."
+    },
+    "archivos": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[^\\0]+$": {
+          "type": "object",
+          "required": ["bytes", "sha256"],
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {"type": "integer", "minimum": 0},
+            "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+          }
+        }
+      },
+      "description": "Manifest-relative paths (posix separators) to exact byte counts and SHA-256 hashes."
+    },
+    "sha256_conjunto": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Set fingerprint over sorted paths and hashes; changes if a byte, a name, or the list changes."
+    }
+  }
+}

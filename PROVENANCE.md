@@ -728,3 +728,20 @@ MolDesign es por API HTTP, no por copia de código.
   de 2 rondas + vídeo Molcy del mejor con acta
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/orchestration/test_hypothesis.py; demo viva con backend CR
+
+### scripts/make_manifest.py, packaging/molchat-manifest.schema.json, src/molchat_agent/__main__.py, tests/test_make_manifest.py, tests/test_main_entry.py
+
+- Origen: scripts/stage_molcy_motor.py, tools/molcy/molcy-manifest.json y
+  backend/services/molcy/motor.py (brújula: blobs desde commit, árbol limpio,
+  manifiesto exacto con sha256_conjunto, hash de licencia, scan de rutas,
+  bytecode ignorado); detectores reutilizados de scripts/check_secrets.py
+- Commit de MolDesign: 66ff524334267c56558b7a3cce94cb919edbad2e
+- Autoría: Johan Amezcua (único titular; puede relicenciar bajo GPL-3.0-or-later)
+- Transformación: código nuevo (tarea 6.1): genera la copia vendorizable
+  (paquete + build UI + LICENSE/NOTICE/pyproject) con manifiesto
+  moldesign.molchat/1; la UI viaja desde disco solo si el build está fresco
+  y sus fuentes commiteadas; versión única pyproject/__init__; --check
+  verifica conjunto exacto, hashes, licencia, secretos y forma del esquema
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/test_make_manifest.py (repos git scaffold + forma),
+  tests/test_main_entry.py
