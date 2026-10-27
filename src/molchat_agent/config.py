@@ -40,6 +40,10 @@ class MolChatConfig:
     llama_server_model: str = ""
     ollama_url: str = "http://127.0.0.1:11434"
     ollama_model: str = ""
+    anthropic_api_key: str | None = None
+    claude_model: str = "claude-haiku-4-5-20251001"
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-2.5-flash"
     consents_file: Path = field(default_factory=_default_consents_file)
     offline: bool = False
     host_secret: str | None = None  # shared HMAC secret with the MolDesign host
@@ -71,6 +75,10 @@ class MolChatConfig:
             "llama_server_model": self.llama_server_model or "(unset)",
             "ollama_url": self.ollama_url,
             "ollama_model": self.ollama_model or "(unset)",
+            "anthropic_api_key": secret(self.anthropic_api_key),
+            "claude_model": self.claude_model,
+            "gemini_api_key": secret(self.gemini_api_key),
+            "gemini_model": self.gemini_model,
             "consents_file": str(self.consents_file),
             "offline": str(self.offline),
             "host_secret": secret(self.host_secret),
@@ -128,6 +136,10 @@ def load_config(env: Mapping[str, str] | None = None) -> MolChatConfig:
         llama_server_model=text("LLAMA_SERVER_MODEL"),
         ollama_url=text("OLLAMA_URL", "http://127.0.0.1:11434"),
         ollama_model=text("OLLAMA_MODEL"),
+        anthropic_api_key=secret("ANTHROPIC_API_KEY"),
+        claude_model=text("CLAUDE_MODEL", "claude-haiku-4-5-20251001"),
+        gemini_api_key=secret("GEMINI_API_KEY"),
+        gemini_model=text("GEMINI_MODEL", "gemini-2.5-flash"),
         consents_file=Path(consents) if consents else _default_consents_file(),
         offline=flag("MOLCHAT_OFFLINE"),
         host_secret=secret("MOLCHAT_HOST_SECRET"),

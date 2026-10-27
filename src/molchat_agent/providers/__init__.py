@@ -15,7 +15,9 @@ from .base import (
     read_only_catalog,
     readonly_plan_schema,
 )
+from .claude import ClaudeProvider
 from .fake import FakeProvider
+from .gemini import GeminiProvider
 from .local_http import LlamaServerProvider, OllamaProvider
 from .meta import MetaProvider
 from .openai_compatible import OpenAICompatibleProvider
@@ -34,8 +36,8 @@ from .registry import (
 
 __all__ = [
     "CONTENT_SCOPE",
-    "CatalogEntry", "ChatEvent", "ConsentDenied", "ConsentStore", "Destination",
-    "FakeProvider", "HACKATHON_REMOTE_ALLOWLIST",
+    "CatalogEntry", "ChatEvent", "ClaudeProvider", "ConsentDenied", "ConsentStore", "Destination",
+    "FakeProvider", "GeminiProvider", "HACKATHON_REMOTE_ALLOWLIST",
     "HealthCheckResult",
     "HealthStatus", "LLMProvider", "LlamaServerProvider", "MetaProvider",
     "OllamaProvider", "OpenAICompatibleProvider", "ProviderConfig", "ProviderDisabled",

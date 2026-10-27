@@ -66,6 +66,24 @@ def test_hackathon_allows_local_and_meta_only():
         registry.get("stub-remote")
 
 
+def test_future_providers_disabled_in_hackathon_enabled_in_default(tmp_path):
+    from molchat_agent.config import MolChatConfig
+    from molchat_agent.providers import build_registry
+
+    config = MolChatConfig(profile=HACKATHON_PROFILE,
+                           consents_file=tmp_path / "c.json")
+    hackathon = build_registry(config)
+    assert "claude" in hackathon.ids() and "gemini" in hackathon.ids()
+    with pytest.raises(ProviderDisabled):
+        hackathon.get("claude")
+    with pytest.raises(ProviderDisabled):
+        hackathon.get("gemini")
+    default = build_registry(MolChatConfig(profile=DEFAULT_PROFILE,
+                                           consents_file=tmp_path / "c.json"))
+    assert default.get("claude").id == "claude"
+    assert default.get("gemini").id == "gemini"
+
+
 def test_default_profile_allows_everything_registered():
     registry = _registry_with_stubs(DEFAULT_PROFILE)
     assert registry.get("stub-remote") is not None
@@ -102,4 +120,5 @@ def test_build_registry_from_config():
     registry = build_registry(load_config({"MOLCHAT_PROVIDER": "fake"}))
     assert registry.profile == HACKATHON_PROFILE
     assert registry.active_id == "fake"
-    assert registry.ids() == ["fake", "llama-server", "meta", "ollama", "openai-compatible"]
+    assert registry.ids() == ["claude", "fake", "gemini", "llama-server", "meta",
+                                "ollama", "openai-compatible"]

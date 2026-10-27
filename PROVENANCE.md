@@ -674,3 +674,18 @@ MolDesign es por API HTTP, no por copia de código.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/tools/test_molcy.py, tests/orchestration/test_jobs.py,
   tests/test_executor.py, tests/contract/test_live_molcy.py (vivo)
+
+### src/molchat_agent/providers/claude.py, src/molchat_agent/providers/gemini.py, tests/providers/test_claude.py, tests/providers/test_gemini.py
+
+- Origen: backend/services/ai/providers/claude_provider.py y
+  gemini_provider.py (brújula: modelos y salud por defecto, mapeo de roles
+  Gemini, auth por cabecera); reimplementados sobre httpx sin el SDK de
+  Anthropic ni acoplamientos, en la forma de la casa (plan/chat/salud)
+- Commit de MolDesign: 66ff524334267c56558b7a3cce94cb919edbad2e
+- Autoría: Johan Amezcua (único titular; puede relicenciar bajo GPL-3.0-or-later)
+- Transformación: código nuevo (tarea 5.3): proveedores remotos solo-perfil
+  default (hackathon los deshabilita, §6.1.1); plan pide JSON
+  (responseMimeType en Gemini); sin claves en vivo aún, probados con mocks
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/providers/test_claude.py, tests/providers/test_gemini.py,
+  tests/providers/test_registry.py

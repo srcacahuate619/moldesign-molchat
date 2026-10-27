@@ -32,7 +32,9 @@ from .base import (
     ProviderDisabled,
     ProviderError,
 )
+from .claude import ClaudeProvider
 from .fake import FakeProvider
+from .gemini import GeminiProvider
 from .local_http import LlamaServerProvider, OllamaProvider
 from .meta import MetaProvider
 from .openai_compatible import OpenAICompatibleProvider
@@ -402,6 +404,20 @@ def build_registry(config: MolChatConfig | None = None,
             client=transports.get("ollama")))
     except ValueError as exc:
         registry.register(BrokenProvider("ollama", str(exc)))
+    try:
+        registry.register(ClaudeProvider(
+            api_key=config.anthropic_api_key,
+            model=config.claude_model,
+            client=transports.get("claude")))
+    except ValueError as exc:
+        registry.register(BrokenProvider("claude", str(exc)))
+    try:
+        registry.register(GeminiProvider(
+            api_key=config.gemini_api_key,
+            model=config.gemini_model,
+            client=transports.get("gemini")))
+    except ValueError as exc:
+        registry.register(BrokenProvider("gemini", str(exc)))
     if config.provider is not None:
         registry.set_active(config.provider)
     return registry
