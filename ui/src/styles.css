@@ -1,0 +1,244 @@
+:root {
+  color-scheme: light;
+  --bg: #f7f5f0;
+  --panel: #ffffff;
+  --ink: #1d1b16;
+  --muted: #6b675c;
+  --line: #e2ddd1;
+  --accent: #1f5eff;
+  --danger: #b3261e;
+  --evidence: #eef4ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.45;
+}
+
+.app {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.app-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.app-header h1 {
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+nav {
+  display: flex;
+  gap: 0.5rem;
+}
+
+button {
+  font: inherit;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+input,
+select {
+  font: inherit;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.error {
+  color: var(--danger);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.unlock {
+  max-width: 560px;
+  margin: 4rem auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1.5rem;
+}
+
+.unlock form {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.unlock input {
+  flex: 1;
+}
+
+.chat {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 1rem;
+}
+
+.chat-side ul {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.chat-side li button {
+  width: 100%;
+  text-align: left;
+}
+
+.messages {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 240px;
+}
+
+.message {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+}
+
+.message.user {
+  border-left: 4px solid var(--muted);
+}
+
+.message.assistant {
+  border-left: 4px solid var(--accent);
+}
+
+.message-who {
+  margin: 0 0 0.25rem;
+  font-weight: 600;
+}
+
+.message-text {
+  margin: 0.25rem 0 0;
+  white-space: pre-wrap;
+}
+
+.evidence {
+  background: var(--evidence);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  margin: 0.5rem 0;
+}
+
+.evidence header {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.evidence-class {
+  margin: 0.25rem 0;
+  font-style: italic;
+}
+
+.evidence-source {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.evidence dl {
+  margin: 0.25rem 0;
+}
+
+.evidence-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.evidence-row dt {
+  font-weight: 600;
+}
+
+.evidence-row dd {
+  margin: 0;
+}
+
+.chat-input {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.chat-input label {
+  flex: 1;
+  display: flex;
+}
+
+.chat-input input {
+  flex: 1;
+}
+
+.settings {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  max-width: 640px;
+}
+
+.plan-card,
+.job-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.digest {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  word-break: break-all;
+}

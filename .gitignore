@@ -8,6 +8,7 @@ build/
 .env
 *.log
 reports/
+node_modules/
 
 # Documento interno de planificación (PLAN §17 tarea 0.6, decisión D-07):
 # contiene rutas de máquina y referencias internas; no entra al historial
