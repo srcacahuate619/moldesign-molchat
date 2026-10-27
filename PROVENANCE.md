@@ -605,3 +605,13 @@ MolDesign es por API HTTP, no por copia de código.
   anti-traversal; `molchat-agent serve`
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/server/test_serve.py
+
+### scripts/check_ui_build.py
+
+- Origen: código nuevo en este repositorio (sin porte desde MolDesign)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (tarea 4.5): puerta de demo que rehúsa un
+  `ui/dist` ausente o más viejo que sus fuentes, con rebuild indicado
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/test_check_scripts.py

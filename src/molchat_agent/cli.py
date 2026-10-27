@@ -132,9 +132,9 @@ async def _dispatch(args: argparse.Namespace) -> int:
     if args.command == "doctor":
         return await _doctor(args)
     if args.command == "serve":
-        from .server.serve import run as serve_forever
+        from .server.serve import serve_async
 
-        return serve_forever(args.host, args.port, ui_dist=args.ui_dist)
+        return await serve_async(args.host, args.port, ui_dist=args.ui_dist)
     raise AssertionError("Comando no implementado")
 
 

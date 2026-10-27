@@ -1,4 +1,4 @@
-# Arquitectura — MolChat Agent (v1, Fase 1)
+# Arquitectura — MolChat Agent (v2, Fase 4)
 
 Núcleo agnóstico + puertos + adaptadores. El núcleo habla de capacidades,
 planes y artefactos; nunca de PDB, Vina o casos. Todo lo específico de
@@ -9,18 +9,17 @@ MolDesign vive detrás del puente HTTP y, desde la Fase 3, en tool-packs.
 ```text
 src/molchat_agent/
   config.py        único lector de os.environ (tarea 1.6)
-  plan.py          planes inmutables esquema /1, digest SHA-256
+  plan.py          planes inmutables /1 y /2 (bindings), digest SHA-256
   executor.py      ejecución auditada con aprobación ligada al hash
-  capabilities.py  allowlist de 6 herramientas HTTP (migra a tools/ en Fase 3)
+  tools/           tool-packs: catalog.py + moldesign.py (23 capacidades)
   bridge.py        transporte HTTP loopback/HTTPS, sin redirecciones
-  meta.py          shim obsoleto → providers.meta (se borra en 0.2)
-  providers/
-    base.py             puerto LLMProvider + salud + catálogo de solo lectura
-    registry.py         registro, perfiles y gate de consentimiento
-    fake.py             determinista, sin red (tests y demo sin claves)
-    meta.py             Muse Spark 1.3 Standard, reasoning configurable
-    openai_compatible.py cualquier endpoint estilo OpenAI (nube o loopback)
-    local_http.py       llama-server (:8400/v1) y Ollama (:11434), solo loopback
+  providers/       puerto LLMProvider: fake, meta, openai-compatible,
+                   llama-server, ollama (+ consentimiento por destino)
+  conversation/    turno: intenciones, respondedores, evidencia, memoria
+  orchestration/   store, jobs con backoff, presupuestos (Fase 3)
+  voice/           puerto SpeechToText + Whisper local de MolDesign (Fase 4)
+  server/          sidecar: auth, app, executions, serve (Fase 4, extra server)
+ui/                React+TS+Vite servida por el sidecar (Fase 4)
 ```
 
 ## Puerto `LLMProvider`
@@ -43,6 +42,16 @@ Reglas (PLAN §6.1, verificadas por tests):
 - `chat()` en streaming llega en la Fase 2; hoy levanta `NotImplementedError`
   explícito en todos los proveedores (frontera testeada).
 - `fake` es el proveedor por defecto en tests y demos sin claves.
+
+## Sidecar (Fase 4)
+
+`server/` expone el núcleo por HTTP loopback (`molchat-agent serve`, extra
+`server`): sesiones HMAC con permisos y caducidad (`auth.py`), API `/v1/*`
+con guard de Host/Origen (`app.py`), ejecuciones en segundo plano con
+cancelación explícita (`executions.py`) y cableado standalone (`serve.py`).
+`ui/` (React+TS+Vite) se sirve en el mismo origen; detalle operativo y API
+en [`SIDECAR.md`](SIDECAR.md). `voice/` mueve aquí la transcripción local
+(`bridge.transcribe_local` delega).
 
 ## Localidad y consentimiento
 
@@ -87,8 +96,5 @@ gestionan autorizaciones.
 
 - Almacén cifrado de claves por usuario (diseño de `provider_config_store`):
   hoy las claves viven solo en entorno/memoria. Fase 2/5.
-- `chat()` en streaming con el motor conversacional. Fase 2.
 - Handshake de contrato + catálogo vivo servido por la plataforma (CR-04).
   Hoy el catálogo es local y la suite de contrato lo valida.
-- Clases epistémicas y `epistemic_class` obligatoria en capacidades (§6.2).
-  Fase 3, con la migración a `tools/`.

@@ -136,3 +136,42 @@ def test_provenance_flags_wrong_license(tmp_path):
     result = _run(base, "check_provenance.py")
     assert result.returncode == 1
     assert "unexpected license" in result.stdout
+
+
+def _scaffold_ui(tmp_path: Path, *, built: bool, stale: bool) -> Path:
+    import time
+
+    scripts = tmp_path / "scripts"
+    scripts.mkdir(parents=True)
+    shutil.copy(SCRIPTS / "check_ui_build.py", scripts / "check_ui_build.py")
+    src = tmp_path / "ui" / "src"
+    src.mkdir(parents=True)
+    (src / "app.tsx").write_text("export {}\n", encoding="utf-8")
+    if built:
+        dist = tmp_path / "ui" / "dist"
+        dist.mkdir()
+        (dist / "index.html").write_text("<html></html>", encoding="utf-8")
+        if stale:
+            old = (dist / "index.html").stat().st_mtime - 60
+            import os
+
+            os.utime(dist / "index.html", (old, old))
+            time.sleep(0.01)
+    return tmp_path
+
+
+def test_ui_build_accepts_fresh_dist(tmp_path):
+    base = _scaffold_ui(tmp_path, built=True, stale=False)
+    result = _run(base, "check_ui_build.py")
+    assert result.returncode == 0, result.stdout
+
+
+def test_ui_build_flags_missing_and_stale(tmp_path):
+    base = _scaffold_ui(tmp_path, built=False, stale=False)
+    result = _run(base, "check_ui_build.py")
+    assert result.returncode == 1
+    assert "MISSING" in result.stdout
+    base = _scaffold_ui(tmp_path / "stale", built=True, stale=True)
+    result = _run(base, "check_ui_build.py")
+    assert result.returncode == 1
+    assert "STALE" in result.stdout

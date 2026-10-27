@@ -76,7 +76,8 @@ async def test_static_ui_served_and_traversal_blocked(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_api_only_without_built_ui(tmp_path):
+async def test_api_only_without_built_ui(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)  # no ./ui/dist fallback here
     served = build_server(MolChatConfig(
         memory_file=tmp_path / "mem.db", exec_store=tmp_path / "exec.db",
         ui_dist=str(tmp_path / "missing")))

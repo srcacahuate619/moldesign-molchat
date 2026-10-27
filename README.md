@@ -3,10 +3,10 @@
 **Agente independiente y auditable para coordinar flujos de química computacional
 en MolDesign desde texto o voz.**
 
-> Estado: **MVP técnico de integración (fase 1)**. El planificador de Meta y el
-> puente HTTP están implementados, pero aún requieren pruebas de integración
-> contra un MolDesign instalado y credenciales reales. No es un laboratorio
-> autónomo de producción ni hace afirmaciones clínicas.
+> Estado: **sidecar utilizable (fase 4)**. Conversación con evidencia,
+> planes con aprobación por hash, trabajos con cancelación y voz local con
+> confirmación, servidos por `molchat-agent serve` con UI propia. Revisa los
+> límites científicos y de seguridad antes de fiarte de cualquier número.
 
 ## Qué existe en esta versión
 
@@ -24,7 +24,11 @@ en MolDesign desde texto o voz.**
   de MolDesign, bajo una segunda autorización humana ligada al hash del plan y
   con el `proposal_hash` verificado por el servidor.
 - Registro de resultados, fallos y hashes de salida; parada ante error.
-- Entrada por audio WAV mediante el Whisper local de MolDesign (con sesión).
+- Entrada por audio WAV mediante el Whisper local de MolDesign (con sesión),
+  o push-to-talk en la UI con confirmación antes de entrar como turno.
+- Sidecar local (`molchat-agent serve`, extra `server`): API en loopback con
+  sesiones acuñadas y UI propia servida en el mismo origen. Ver
+  [`docs/SIDECAR.md`](docs/SIDECAR.md).
 
 ## Instalar en entorno de desarrollo
 
@@ -32,10 +36,20 @@ en MolDesign desde texto o voz.**
 python -m venv .venv
 python -m pip install -e '.[dev]'
 python -m pytest -q
+cd ui && npm install && npm test && npm run build && cd ..
 ```
 
 El backend de MolDesign debe estar iniciado para ejecutar herramientas reales.
 No necesitas clonar ni instalar todo su árbol científico dentro de este repo.
+
+## Sidecar (sin terminal, con UI)
+
+```bash
+MOLCHAT_PROVIDER=fake molchat-agent serve   # demo sin claves
+```
+
+Abre `http://127.0.0.1:8771`, pega la sesión impresa una sola vez y úsalo.
+Detalles, modos y API en [`docs/SIDECAR.md`](docs/SIDECAR.md).
 
 ## Configuración
 
@@ -111,8 +125,9 @@ antes de convertirse en un plan de laboratorio.
   no evaluadas automáticamente en aprobaciones científicas.
 - El backend local se restringe a loopback; para un servidor remoto se exige
   HTTPS y configuración explícita. No se siguen redirecciones HTTP.
-- Falta validar el puente con un runtime MolDesign instalado, realizar las
-  pruebas de voz extremo a extremo y desarrollar una interfaz visual propia.
+- Las propiedades por conversación usan un dataset demo local de 8 moléculas
+  (valores RDKit grabados); la cobertura completa espera la API de plataforma
+  (CR-01) y lo desconocido se abstiene en vez de inventar.
 
 Consulta [`docs/AUDITORIA.md`](docs/AUDITORIA.md) para el mapa de dependencias,
 contratos y licencias; [`docs/HOJA_DE_RUTA.md`](docs/HOJA_DE_RUTA.md) para los pasos

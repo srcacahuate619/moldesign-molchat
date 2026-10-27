@@ -96,6 +96,12 @@ def build_server(config: MolChatConfig | None = None,
 
 def run(host: str = "127.0.0.1", port: int = DEFAULT_PORT,
         *, ui_dist: str = "") -> int:
+    """Serve forever (sync entry; fails loudly inside a running loop)."""
+    return asyncio.run(serve_async(host, port, ui_dist=ui_dist))
+
+
+async def serve_async(host: str = "127.0.0.1", port: int = DEFAULT_PORT,
+                      *, ui_dist: str = "") -> int:
     """Serve forever. Prints the URL (and the standalone token) once."""
     try:
         import uvicorn
@@ -107,14 +113,18 @@ def run(host: str = "127.0.0.1", port: int = DEFAULT_PORT,
         raise ValueError(f"puerto no válido: {port}")
     served = build_server(ui_dist=ui_dist)
     print(f"MolChat sidecar en http://{host}:{port or '(efímero)'} "
-          f"({'con UI' if served.ui_dist else 'solo API; construye ui/ para la interfaz'})")
+          f"({'con UI' if served.ui_dist else 'solo API; construye ui/ para la interfaz'})",
+          flush=True)
     if served.token is not None:
-        print("Sesión standalone (se muestra una sola vez; no la registres):")
-        print(f"  {served.token}")
+        print("Sesión standalone (se muestra una sola vez; no la registres):", flush=True)
+        print(f"  {served.token}", flush=True)
     else:
-        print("Modo host: las sesiones las acuña MolDesign (MOLCHAT_HOST_SECRET).")
+        print("Modo host: las sesiones las acuña MolDesign (MOLCHAT_HOST_SECRET).",
+              flush=True)
+    server = uvicorn.Server(uvicorn.Config(
+        served.app, host=host, port=port or 0, log_level="warning"))
     try:
-        uvicorn.run(served.app, host=host, port=port or 0, log_level="warning")
+        await server.serve()
     finally:
-        asyncio.run(served.bridge.__aexit__(None, None, None))
+        await served.bridge.__aexit__(None, None, None)
     return 0
