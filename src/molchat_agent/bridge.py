@@ -137,23 +137,8 @@ class MolDesignBridge:
         """Use MolDesign's authenticated local Whisper endpoint."""
         if not self._token:
             raise BridgeError("La transcripción requiere una sesión MolDesign")
-        if not audio_bytes or len(audio_bytes) > 15_000_000:
-            raise ValueError("Audio vacío o superior al límite local de 15 MB")
-        if lang not in ("es", "en"):
-            raise ValueError("Esta primera integración admite es/en")
-        try:
-            response = await self._client.post(
-                "/ai/speech-to-text", params={"lang": lang}, content=audio_bytes,
-                headers={"Authorization": f"Bearer {self._token}",
-                         "Content-Type": "audio/wav", "Accept": "application/json"},
-                timeout=90.0,
-            )
-            if response.status_code >= 400 or response.is_redirect:
-                raise BridgeError(f"Transcripción local falló (HTTP {response.status_code})")
-            value = response.json().get("text", "")
-            if not isinstance(value, str):
-                raise BridgeError("Formato de transcripción inesperado")
-            return value
-        except (httpx.RequestError, ValueError) as exc:
-            raise BridgeError("No se pudo transcribir el audio local") from exc
+        from .voice.moldesign_whisper import MolDesignWhisper  # noqa: PLC0415
+
+        return await MolDesignWhisper(self._client, self._token).transcribe(
+            audio_bytes, lang=lang)
 

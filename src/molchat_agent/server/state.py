@@ -16,6 +16,7 @@ from ..conversation.engine import ConversationEngine
 from ..conversation.memory import MemoryStore
 from ..conversation.tools import ToolBackend
 from ..providers.registry import ProviderRegistry
+from ..voice.stt import SpeechToText
 from .executions import ExecutionManager
 
 
@@ -32,6 +33,7 @@ class ServerState:
     allowed_origins: tuple[str, ...] = ()
     provider_id: str | None = None
     executions: ExecutionManager | None = None
+    stt: SpeechToText | None = None
     user_id: str | None = None
     revoked: set[str] = field(default_factory=set)
 

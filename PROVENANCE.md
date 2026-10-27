@@ -581,3 +581,15 @@ MolDesign es por API HTTP, no por copia de código.
   `cancelled` con su reporte final
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/server/test_executions.py
+
+### src/molchat_agent/voice/stt.py, src/molchat_agent/voice/moldesign_whisper.py, src/molchat_agent/voice/__init__.py, tests/voice/__init__.py, tests/voice/test_whisper.py, tests/server/test_transcribe.py
+
+- Origen: `transcribe_local` migrado desde `bridge.py` (código nuevo Fase 0);
+  puerto y endpoint nuevos en este repositorio
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (tarea 4.3): puerto `SpeechToText`, backend
+  Whisper local de MolDesign, `POST /v1/transcribe` con permiso `transcribe`
+  y topes; devuelve texto para confirmar, nunca ejecuta
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/voice/test_whisper.py, tests/server/test_transcribe.py

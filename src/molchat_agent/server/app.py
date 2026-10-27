@@ -21,11 +21,13 @@ from starlette.responses import JSONResponse, StreamingResponse
 from starlette.routing import Route
 
 from .. import __version__
+from ..bridge import BridgeError
 from ..conversation.memory import Conversation, ConversationNotFound
 from ..plan import Plan
 from ..providers.base import ProviderDisabled, ProviderError
 from ..providers.registry import ConsentDenied
 from ..tools import PlanValidationError, capability, catalog
+from ..voice.stt import AUDIO_LIMIT, LANGS
 from .auth import AuthError, Session, parse_bearer, verify
 from .events import SSE_HEADERS, encode_event
 from .executions import TERMINAL as EXEC_TERMINAL
@@ -87,6 +89,7 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
     need_chat = require("chat")
     need_plan = require("plan")
     need_cancel = require("cancel")
+    need_transcribe = require("transcribe")
 
     async def read_json(request: Request) -> Any:
         try:
@@ -278,6 +281,35 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
             return _error(404, "ejecución no encontrada")
         return JSONResponse({"cancelled": changed, "detail": detail})
 
+    async def transcribe(request: Request) -> JSONResponse:
+        await need_transcribe(request)
+        if state.stt is None:
+            return _error(503, "transcripción no disponible en este sidecar")
+        content_type = request.headers.get("content-type", "")
+        if not content_type.startswith("audio/"):
+            return _error(415, "se requiere audio (audio/wav u otro audio/*)")
+        lang = request.query_params.get("lang", "es")
+        if lang not in LANGS:
+            return _error(400, "esta primera integración admite es/en")
+        try:
+            length = int(request.headers.get("content-length", "0"))
+        except ValueError:
+            return _error(400, "longitud no válida")
+        if length > AUDIO_LIMIT:
+            return _error(413, "audio superior a 15 MB")
+        audio = await request.body()
+        if not audio:
+            return _error(400, "audio vacío")
+        if len(audio) > AUDIO_LIMIT:
+            return _error(413, "audio superior a 15 MB")
+        try:
+            text = await state.stt.transcribe(bytes(audio), lang=lang)
+        except ValueError as exc:
+            return _error(400, str(exc))
+        except BridgeError as exc:
+            raise HTTPException(502, f"la transcripción falló: {exc}") from exc
+        return JSONResponse({"text": text, "lang": lang})
+
     async def http_error(_request: Request, exc: Exception) -> JSONResponse:
         assert isinstance(exc, HTTPException)
         return _error(exc.status_code, str(exc.detail))
@@ -301,6 +333,7 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
             Route("/v1/executions/{exec_id}", get_execution, methods=["GET"]),
             Route("/v1/executions/{exec_id}/events", execution_events, methods=["GET"]),
             Route("/v1/executions/{exec_id}/cancel", cancel_execution, methods=["POST"]),
+            Route("/v1/transcribe", transcribe, methods=["POST"]),
         ],
         exception_handlers={HTTPException: http_error, Exception: unhandled},
     )
