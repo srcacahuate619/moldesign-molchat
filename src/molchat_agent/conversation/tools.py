@@ -43,8 +43,10 @@ class ToolBackend(Protocol):
 class QualityBackend:
     """Fixture-backed backend for tests and the quality suite."""
 
-    def __init__(self, fixtures_path: str | Path) -> None:
+    def __init__(self, fixtures_path: str | Path, *,
+                 source: str = "fixtures RDKit grabados") -> None:
         payload = json.loads(Path(fixtures_path).read_text(encoding="utf-8"))
+        self._source = source
         self._by_smiles: dict[str, dict] = {}
         self.calls: list[tuple[str, str]] = []
         for entry in payload["molecules"]:
@@ -62,7 +64,8 @@ class QualityBackend:
             raise ToolError(f"sin datos registrados para {smiles!r}")
         return MoleculeRecord(name=record["name"], smiles=record["smiles"],
                               props=dict(record["props"]),
-                              druglikeness=record["druglikeness"])
+                              druglikeness=record["druglikeness"],
+                              source=self._source)
 
     def name_for(self, smiles: str) -> str | None:
         record = self._by_smiles.get((smiles or "").strip())

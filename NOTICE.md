@@ -43,6 +43,8 @@ equivale a copiar ni a enlazar su código.
 
 - `httpx` (BSD-3-Clause): cliente HTTP. Compatibilidad preliminar; revisar avisos
   transitivos al distribuir un ejecutable.
+- `starlette`, `uvicorn` (BSD-3-Clause): API HTTP del sidecar (extra `server`).
+  Solo se usan en `molchat_agent.server`; el núcleo sigue dependiendo de `httpx`.
 - Meta Model API (Muse Spark): servicio remoto opcional. La licencia GPL del
   cliente no cambia las condiciones del modelo ni del servicio; no se
   redistribuyen pesos.

@@ -1,0 +1,287 @@
+"""Sidecar HTTP API: health, chat SSE, conversations, plans, executions.
+
+Security posture (MP-06): loopback bind (enforced by ``serve``), Bearer
+session per call, scopes per endpoint, Origin allowlist with CORS echo,
+Host allowlist against DNS rebinding, JSON/audio payload caps. Only
+``/v1/health`` and ``/v1/version`` answer without credentials. Errors are
+JSON ``{"error": ...}``; unexpected failures never leak internals.
+"""
+
+from __future__ import annotations
+
+import json
+from typing import Any, AsyncIterator
+from urllib.parse import urlsplit
+
+from starlette.applications import Starlette
+from starlette.exceptions import HTTPException
+from starlette.requests import Request
+from starlette.responses import JSONResponse, StreamingResponse
+from starlette.routing import Route
+
+from .. import __version__
+from ..conversation.memory import Conversation, ConversationNotFound
+from ..tools import catalog
+from .auth import AuthError, Session, parse_bearer, verify
+from .events import SSE_HEADERS, encode_event
+from .state import AccountMismatch, ServerState
+
+CONTRACT = "moldesign.molchat/1"
+
+MAX_JSON_BODY = 1_000_000
+MAX_CHAT_TEXT = 8000
+MAX_MESSAGES_PER_CONVERSATION = 200
+
+LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
+
+
+def _error(status: int, message: str) -> JSONResponse:
+    return JSONResponse({"error": message}, status_code=status)
+
+
+def _origin_allowed(origin: str, allowed: tuple[str, ...]) -> bool:
+    if origin in allowed:
+        return True
+    try:
+        host = urlsplit(origin).hostname or ""
+    except ValueError:
+        return False
+    return host.lower() in LOOPBACK_HOSTS
+
+
+def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = None,
+               ) -> Any:
+    """Build the sidecar ASGI app (Starlette routes behind the host/origin guard)."""
+    hosts = frozenset(allowed_hosts) if allowed_hosts is not None \
+        else frozenset({"127.0.0.1", "localhost", "::1"})
+
+    def require(*scopes: str):  # type: ignore[no-untyped-def]
+        async def dependency(request: Request) -> Session:
+            token = parse_bearer(request.headers.get("authorization"))
+            if token is None:
+                raise HTTPException(401, "falta la sesión del host")
+            try:
+                session = verify(state.secret, token)
+            except AuthError as exc:
+                raise HTTPException(401, str(exc)) from exc
+            if state.is_revoked(session.jti):
+                raise HTTPException(401, "sesión revocada")
+            try:
+                state.pin_user(session.sub)
+            except AccountMismatch as exc:
+                raise HTTPException(403, str(exc)) from exc
+            if not session.allows(*scopes):
+                raise HTTPException(403, "permisos insuficientes")
+            return session
+
+        return dependency
+
+    need_read = require("read")
+    need_chat = require("chat")
+
+    async def read_json(request: Request) -> Any:
+        try:
+            length = int(request.headers.get("content-length", "0"))
+        except ValueError:
+            raise HTTPException(400, "longitud no válida")
+        if length > MAX_JSON_BODY:
+            raise HTTPException(413, "cuerpo superior a 1 MB")
+        try:
+            body = await request.body()
+        except Exception as exc:
+            raise HTTPException(400, "no se pudo leer el cuerpo") from exc
+        if len(body) > MAX_JSON_BODY:
+            raise HTTPException(413, "cuerpo superior a 1 MB")
+        if not body:
+            return {}
+        try:
+            return json.loads(body)
+        except ValueError as exc:
+            raise HTTPException(400, "JSON no válido") from exc
+
+    async def health(_request: Request) -> JSONResponse:
+        return JSONResponse({"status": "ok", "version": __version__, "contract": CONTRACT})
+
+    async def version(_request: Request) -> JSONResponse:
+        return JSONResponse({"molchat": __version__, "contract": CONTRACT,
+                             "plan_schemas": ["/1", "/2"]})
+
+    async def get_catalog(request: Request) -> JSONResponse:
+        await need_read(request)
+        return JSONResponse([c.as_catalog_entry() for c in catalog().values()])
+
+    def summarize(conv: Conversation) -> dict[str, Any]:
+        return {"id": conv.id, "summary": conv.summary, "updated_at": conv.updated_at,
+                "message_count": len(conv.messages)}
+
+    async def create_conversation(request: Request) -> JSONResponse:
+        session = await need_chat(request)
+        conv_id = state.memory.create_conversation(session.sub)
+        return JSONResponse({"id": conv_id}, status_code=201)
+
+    async def list_conversations(request: Request) -> JSONResponse:
+        session = await need_chat(request)
+        return JSONResponse(
+            [summarize(c) for c in state.memory.list_conversations(session.sub)])
+
+    async def get_conversation(request: Request) -> JSONResponse:
+        session = await need_chat(request)
+        conv = state.memory.get_conversation(request.path_params["conv_id"], session.sub)
+        if conv is None:
+            return _error(404, "conversación no encontrada")
+        messages = conv.messages[-MAX_MESSAGES_PER_CONVERSATION:]
+        payload = summarize(conv)
+        payload["messages"] = messages
+        payload["truncated"] = len(conv.messages) > len(messages)
+        return JSONResponse(payload)
+
+    async def delete_conversation(request: Request) -> JSONResponse:
+        session = await need_chat(request)
+        deleted = state.memory.delete_conversation(
+            request.path_params["conv_id"], session.sub)
+        if not deleted:
+            return _error(404, "conversación no encontrada")
+        return JSONResponse({"deleted": True})
+
+    async def chat(request: Request) -> StreamingResponse:
+        session = await need_chat(request)
+        payload = await read_json(request)
+        if not isinstance(payload, dict):
+            return _error(400, "el cuerpo debe ser un objeto")
+        text = payload.get("text", "")
+        if not isinstance(text, str) or not text.strip():
+            return _error(400, "texto vacío")
+        if len(text) > MAX_CHAT_TEXT:
+            return _error(413, "texto superior a 8000 caracteres")
+        conv_id = payload.get("conversation_id")
+        if conv_id is not None and not isinstance(conv_id, str):
+            return _error(400, "conversation_id no válido")
+        engine = state.engine_for(session.sub)
+        if conv_id is None:
+            conv_id = state.memory.create_conversation(session.sub)
+        elif state.memory.get_conversation(conv_id, session.sub) is None:
+            return _error(404, "conversación no encontrada")
+
+        async def stream() -> AsyncIterator[bytes]:
+            yield encode_event({"type": "conversation", "id": conv_id})
+            try:
+                async for event in engine.turn_stream(conv_id, text):
+                    yield encode_event(_public_event(event))
+            except ConversationNotFound:
+                yield encode_event({"type": "error",
+                                    "error": "conversación no encontrada"})
+            except Exception:  # noqa: BLE001 - stream must end cleanly, never leak
+                yield encode_event({"type": "error", "error": "error interno del turno"})
+
+        return StreamingResponse(stream(), media_type="text/event-stream",
+                                 headers=dict(SSE_HEADERS))
+
+    async def revoke(request: Request) -> JSONResponse:
+        token = parse_bearer(request.headers.get("authorization"))
+        if token is None:
+            raise HTTPException(401, "falta la sesión del host")
+        try:
+            session = verify(state.secret, token)
+        except AuthError as exc:
+            raise HTTPException(401, str(exc)) from exc
+        state.revoke(session.jti)
+        return JSONResponse({"revoked": True})
+
+    async def http_error(_request: Request, exc: Exception) -> JSONResponse:
+        assert isinstance(exc, HTTPException)
+        return _error(exc.status_code, str(exc.detail))
+
+    async def unhandled(_request: Request, _exc: Exception) -> JSONResponse:
+        return _error(500, "error interno")
+
+    app = Starlette(
+        routes=[
+            Route("/v1/health", health, methods=["GET"]),
+            Route("/v1/version", version, methods=["GET"]),
+            Route("/v1/catalog", get_catalog, methods=["GET"]),
+            Route("/v1/conversations", create_conversation, methods=["POST"]),
+            Route("/v1/conversations", list_conversations, methods=["GET"]),
+            Route("/v1/conversations/{conv_id}", get_conversation, methods=["GET"]),
+            Route("/v1/conversations/{conv_id}", delete_conversation, methods=["DELETE"]),
+            Route("/v1/chat", chat, methods=["POST"]),
+            Route("/v1/session/revoke", revoke, methods=["POST"]),
+        ],
+        exception_handlers={HTTPException: http_error, Exception: unhandled},
+    )
+    return _Guard(app, state, hosts)
+
+
+class _Guard:
+    """Host/Origin enforcement + CORS echo, as pure ASGI (no version coupling)."""
+
+    def __init__(self, app: Any, state: ServerState, hosts: frozenset[str]) -> None:
+        self._app = app
+        self._state = state
+        self._hosts = hosts
+
+    async def __call__(self, scope: dict, receive: Any, send: Any) -> None:
+        if scope.get("type") != "http":
+            await self._app(scope, receive, send)
+            return
+        headers = {k.decode("latin-1").lower(): v.decode("latin-1")
+                   for k, v in scope.get("headers", [])}
+        host = _hostname(headers.get("host", ""))
+        if host not in self._hosts:
+            await _error(403, "host no permitido")(scope, receive, send)
+            return
+        origin = headers.get("origin")
+        if origin is not None and not _origin_allowed(origin, self._state.allowed_origins):
+            await _error(403, "origen no permitido")(scope, receive, send)
+            return
+        if scope.get("method") == "OPTIONS":
+            response = JSONResponse({}, status_code=204)
+            self._add_cors(response.headers, origin)
+            await response(scope, receive, send)
+            return
+        await self._app(scope, receive, self._cors_sender(send, origin))
+
+    def _cors_sender(self, send: Any, origin: str | None):  # type: ignore[no-untyped-def]
+        async def sender(message: dict) -> None:
+            if message["type"] == "http.response.start" and origin is not None \
+                    and _origin_allowed(origin, self._state.allowed_origins):
+                headers = dict(message.get("headers", []))
+                headers[b"access-control-allow-origin"] = origin.encode("latin-1")
+                headers[b"vary"] = b"Origin"
+                headers[b"access-control-allow-headers"] = b"authorization, content-type"
+                headers[b"access-control-allow-methods"] = b"GET, POST, DELETE, OPTIONS"
+                message = {**message, "headers": list(headers.items())}
+            await send(message)
+
+        return sender
+
+    def _add_cors(self, headers: Any, origin: str | None) -> None:
+        if origin is not None and _origin_allowed(origin, self._state.allowed_origins):
+            headers["Access-Control-Allow-Origin"] = origin
+            headers["Vary"] = "Origin"
+            headers["Access-Control-Allow-Headers"] = "authorization, content-type"
+            headers["Access-Control-Allow-Methods"] = "GET, POST, DELETE, OPTIONS"
+
+
+def _hostname(value: str) -> str:
+    try:
+        return (urlsplit("//" + value).hostname or "").lower()
+    except ValueError:
+        return ""
+
+
+def _public_event(event: dict[str, Any]) -> dict[str, Any]:
+    """Serialize an engine event (Evidence/set are not JSON-native)."""
+    if event.get("type") != "result":
+        return event
+    result = event["result"]
+    return {"type": "result", "result": {
+        "text": result.text,
+        "intent": result.intent_name,
+        "evidence": [{"tool": e.tool, "label": e.label,
+                      "epistemic_class": e.epistemic_class.value,
+                      "source": e.source, "values": e.values, "error": e.error}
+                     for e in result.evidence],
+        "latency_ms": result.latency_ms,
+        "used_llm": result.used_llm,
+        "verified_values": sorted(result.verified_values),
+    }}

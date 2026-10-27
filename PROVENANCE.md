@@ -558,3 +558,14 @@ MolDesign es por API HTTP, no por copia de código.
   acuña ni se verifica nada
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/server/test_auth.py
+
+### src/molchat_agent/server/app.py, src/molchat_agent/server/events.py, src/molchat_agent/server/state.py, tests/server/test_app.py
+
+- Origen: código nuevo en este repositorio (sin porte desde MolDesign)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (tarea 4.1): API del sidecar (salud, catálogo,
+  conversaciones, chat SSE) con guard ASGI de Host/Origen, sesiones por
+  llamada y proceso monousuario ligado a la cuenta
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/server/test_app.py
