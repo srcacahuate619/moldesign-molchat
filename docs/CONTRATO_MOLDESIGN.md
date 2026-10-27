@@ -53,7 +53,7 @@ Excluidas con motivo (abstención por ausencia, no simulación):
 - `dossier/preparacion`: endpoint en desarrollo (`readiness FEP`); solo
   `preview` (PDF) y `package` (ZIP).
 
-## Peticiones de contrato a MolDesign (CR-01…CR-05, formales desde Fase 3)
+## Peticiones de contrato a MolDesign (CR-01…CR-07, formales desde Fase 3)
 
 | ID | Petición | Motivación | Estado |
 |---|---|---|---|
@@ -62,6 +62,8 @@ Excluidas con motivo (abstención por ausencia, no simulación):
 | CR-03 | Endpoint de eventos (SSE/WebSocket) de cambio de estado de evaluaciones y trabajos de Molcy | Jobs sin polling ciego; el polling es el fallback implementado | Pendiente |
 | CR-04 | Handshake de agente: versión de contrato + catálogo de capacidades servido por la plataforma | Evita catálogos duplicados que divergen | Pendiente |
 | CR-05 | Superficie versionada de análogos/ADMET/MolGraph | Fase 5 completa | Pendiente |
+| CR-06 | Idempotencia y reconciliación de operaciones con efectos: clave de idempotencia por cuenta, deduplicación, rechazo de reutilizar una clave con parámetros distintos, y reconciliar intención persistida ↔ operación ↔ trabajo aunque se pierda la respuesta | Sin esto, reintentar puede duplicar un cálculo; MolChat envía `X-Idempotency-Key`, persiste intención+clave y registra `ambiguous` sin reenvío | Pendiente (lado MolChat implementado) |
+| CR-07 | Creación HTTP de propuesta de docking revisable (sin lanzar el cálculo) que devuelva identidad, `proposal_hash` y parámetros efectivos. Hoy `/ai/proposals` solo permite leer/aprobar/rechazar. Nunca sustituirla por `submit` directo | La demo Fase 3 («crear propuesta → aprobación humana → trabajo») depende de esta superficie; es trabajo en el repo de MolDesign | Pendiente (bloqueo explícito: sin ella no hay `create_docking_proposal`) |
 
 Cada CR, cuando MolDesign la implemente, entra como capacidad con sus tests
 de contrato. Hasta entonces la capacidad **no existe**: el agente se abstiene.

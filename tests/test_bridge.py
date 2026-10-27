@@ -125,3 +125,34 @@ async def test_post_with_query_params_sends_no_json_body():
             "molecule_id": "12345678-1234-1234-1234-123456789012", "name": "demo"})
     assert result == {"saved": True}
 
+
+@pytest.mark.asyncio
+async def test_idempotency_key_travels_as_header():
+    def handle(request):
+        assert request.headers["X-Idempotency-Key"] == "key-1"
+        return httpx.Response(200, json={"cancelled": True})
+
+    async with httpx.AsyncClient(base_url="http://127.0.0.1:8000",
+                                 transport=httpx.MockTransport(handle)) as client:
+        bridge = MolDesignBridge(token="test", client=client)
+        result = await bridge.call("cancel_evaluation", {"task_id": "t1"},
+                                   idempotency_key="key-1")
+    assert result == {"cancelled": True}
+
+
+@pytest.mark.asyncio
+async def test_transport_loss_is_distinct_from_error_responses():
+    from molchat_agent.bridge import BridgeError, BridgeTransportError
+
+    def handle(_request):
+        raise httpx.ConnectError("corte")
+
+    async with httpx.AsyncClient(base_url="http://127.0.0.1:8000",
+                                 transport=httpx.MockTransport(handle)) as client:
+        bridge = MolDesignBridge(token="test", client=client)
+        with pytest.raises(BridgeTransportError):
+            await bridge.call("list_targets", {})
+        # ...but still a BridgeError for generic handlers.
+        with pytest.raises(BridgeError):
+            await bridge.call("list_targets", {})
+

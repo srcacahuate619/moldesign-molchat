@@ -16,8 +16,8 @@ from pathlib import Path
 from typing import Any, Iterator
 
 STATES = ("planned", "in_review", "approved", "running", "waiting_job",
-          "done", "blocked", "failed", "cancelled")
-TERMINAL = frozenset({"done", "blocked", "failed", "cancelled"})
+          "done", "blocked", "failed", "cancelled", "ambiguous")
+TERMINAL = frozenset({"done", "blocked", "failed", "cancelled", "ambiguous"})
 JOB_ACTIVE = ("submitted", "running", "waiting")
 JOB_TERMINAL = frozenset({"done", "failed", "cancelled"})
 
@@ -101,6 +101,16 @@ class ExecutionStore:
                     last_status_json TEXT,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL
+                )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS idempotency (
+                    key TEXT PRIMARY KEY,
+                    digest TEXT NOT NULL,
+                    step_id TEXT NOT NULL,
+                    params_hash TEXT NOT NULL,
+                    state TEXT NOT NULL,
+                    created_at TEXT NOT NULL
                 )
             """)
 
@@ -201,3 +211,23 @@ class ExecutionStore:
             rows = conn.execute(
                 "SELECT digest FROM executions WHERE state IN ('running', 'waiting_job')").fetchall()
         return [row[0] for row in rows]
+
+    def claim_key(self, key: str, digest: str, step_id: str, params_hash: str
+                  ) -> str:
+        """Claim an idempotency key before sending (single transaction).
+
+        Returns "claimed" (first use), "duplicate" (same key + same params:
+        must NOT resend), or "conflict" (same key, different params: refuse).
+        """
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT params_hash FROM idempotency WHERE key = ?", (key,)).fetchone()
+            if row is not None:
+                return "duplicate" if row[0] == params_hash else "conflict"
+            conn.execute("INSERT INTO idempotency VALUES (?, ?, ?, ?, 'sent', ?)",
+                         (key, digest, step_id, params_hash, _now()))
+            return "claimed"
+
+    def mark_key(self, key: str, state: str) -> None:
+        with self._connect() as conn:
+            conn.execute("UPDATE idempotency SET state = ? WHERE key = ?", (state, key))

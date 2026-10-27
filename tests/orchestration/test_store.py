@@ -77,3 +77,10 @@ def test_budget_trips():
     tracker.check_job_start()
     with pytest.raises(BudgetExceeded, match="concurrentes"):
         tracker.check_job_start()
+
+
+def test_claim_key_states(store):
+    assert store.claim_key("k", "d", "s1", "h1") == "claimed"
+    assert store.claim_key("k", "d", "s1", "h1") == "duplicate"
+    assert store.claim_key("k", "d", "s1", "h2") == "conflict"
+    store.mark_key("k", "ambiguous")  # recorded, no error

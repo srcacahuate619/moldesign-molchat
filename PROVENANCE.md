@@ -533,3 +533,17 @@ MolDesign es por API HTTP, no por copia de código.
   positivos con id), script de demo operada A/B/C/D con SKIPs honestos
 - Licencia resultante: GPL-3.0-or-later
 - Tests: son los tests (manuales con backend real)
+
+### src/molchat_agent/bridge.py, src/molchat_agent/orchestration/store.py, docs/CONTRATO_MOLDESIGN.md
+
+- Origen: código nuevo en este repositorio (sin porte desde MolDesign)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (tareas 3.8/3.9, MP-04/MP-05 adoptados):
+  `BridgeTransportError` distinto de error-respuesta, cabecera
+  `X-Idempotency-Key`, tabla de claves con claim atómico, estado
+  `ambiguous` sin reenvío, reporte con decisión humana enlazada,
+  CR-06/CR-07 registradas
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/test_executor.py, tests/test_bridge.py,
+  tests/orchestration/test_store.py

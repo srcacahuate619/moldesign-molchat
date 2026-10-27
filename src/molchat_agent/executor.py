@@ -10,17 +10,17 @@ executor behaves exactly as before.
 from __future__ import annotations
 
 import base64
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from hashlib import sha256
 import json
 from pathlib import Path
 from typing import Any
 
-from .bridge import MolDesignBridge
+from .bridge import BridgeTransportError, MolDesignBridge
 from .orchestration.budget import Budget, BudgetExceeded, BudgetTracker
 from .orchestration.jobs import JobTracker
-from .orchestration.store import ExecutionStore
+from .orchestration.store import TERMINAL as STORE_TERMINAL, ExecutionStore
 from .plan import BindingError, Plan, is_binding, resolve_binding
 from .tools import PlanValidationError, capability
 
@@ -45,10 +45,12 @@ class ExecutionReport:
     plan_digest: str
     outcomes: list[StepOutcome]
     state: str
+    approvals: dict[str, Any] = field(default_factory=lambda: {"digest": None, "steps": []})
 
     def as_dict(self) -> dict[str, Any]:
         return {"schema": "moldesign.molchat.execution/1", "plan": self.plan,
                 "plan_digest": self.plan_digest, "state": self.state,
+                "approvals": self.approvals,
                 "outcomes": [o.as_dict() for o in self.outcomes]}
 
 
@@ -82,6 +84,10 @@ class AgentExecutor:
         frozen = Plan.from_dict(plan.as_dict())
         digest = frozen.digest
         if self.store is not None:
+            current = self.store.get_state(digest)
+            if current in STORE_TERMINAL:
+                # Already decided: idempotent no-op, never a second send.
+                return self._stored_report(digest)
             self.store.save_plan(digest, frozen.as_dict(),
                                  "approved" if approval_digest else "planned")
             self.store.set_state(digest, "running")
@@ -100,16 +106,15 @@ class AgentExecutor:
         if plan_dict is None:
             raise KeyError(f"plan desconocido: {digest}")
         state = self.store.get_state(digest)
+        if state in STORE_TERMINAL:
+            return self._stored_report(digest)
         stored = self.store.outcomes(digest)
+        frozen = Plan.from_dict(plan_dict)
+        results = {o["id"]: o["result"] for o in stored if o["state"] == "completed"}
         outcomes = [StepOutcome(id=o["id"], capability=o.get("capability", ""),
                                 state=o["state"], timestamp=o.get("timestamp", _now()),
                                 result=o["result"], result_sha256=o.get("result_sha256"),
                                 error=o.get("error")) for o in stored]
-        if state in ("done", "blocked", "failed", "cancelled"):
-            report_state = {"done": "completed"}.get(state, state)
-            return ExecutionReport(plan_dict, digest, outcomes, report_state)
-        frozen = Plan.from_dict(plan_dict)
-        results = {o["id"]: o["result"] for o in stored if o["state"] == "completed"}
         pending = {job["step_id"]: job
                    for job in self.store.pending_jobs(digest)}
         self.store.set_state(digest, "running", "reanudación")
@@ -117,10 +122,34 @@ class AgentExecutor:
                                      approved_steps or set(), pending,
                                      BudgetTracker(self.budget))
 
+    def _stored_report(self, digest: str) -> ExecutionReport:
+        assert self.store is not None
+        plan_dict = self.store.get_plan(digest)
+        assert plan_dict is not None
+        stored = self.store.outcomes(digest)
+        outcomes = [StepOutcome(id=o["id"], capability=o.get("capability", ""),
+                                state=o["state"], timestamp=o.get("timestamp", _now()),
+                                result=o["result"], result_sha256=o.get("result_sha256"),
+                                error=o.get("error")) for o in stored]
+        state = self.store.get_state(digest)
+        assert state is not None
+        return ExecutionReport(plan_dict, digest, outcomes,
+                               {"done": "completed"}.get(state, state))
+
     async def _run_steps(self, frozen: Plan, digest: str, results: dict[str, Any],
                          outcomes: list[StepOutcome], approval_digest: str | None,
                          approved_steps: set[str], pending_jobs: dict[str, dict],
                          tracker: BudgetTracker) -> ExecutionReport:
+        report = await self._run_steps_inner(
+            frozen, digest, results, outcomes, approval_digest, approved_steps,
+            pending_jobs, tracker)
+        report.approvals = {"digest": approval_digest, "steps": sorted(approved_steps)}
+        return report
+
+    async def _run_steps_inner(self, frozen: Plan, digest: str, results: dict[str, Any],
+                               outcomes: list[StepOutcome], approval_digest: str | None,
+                               approved_steps: set[str], pending_jobs: dict[str, dict],
+                               tracker: BudgetTracker) -> ExecutionReport:
         done_ids = {o.id for o in outcomes if o.state == "completed"}
         for step in frozen.steps:
             if step.id in done_ids:
@@ -146,6 +175,17 @@ class AgentExecutor:
                 return self._terminal(frozen, digest, outcomes, "blocked", step,
                                       f"Binding sin resolver: {exc}")
             pending = pending_jobs.pop(step.id, None)
+            idempotency_key, verdict = self._effectful_key(
+                digest, step, tool.risk, arguments)
+            if verdict == "duplicate":
+                return self._terminal(
+                    frozen, digest, outcomes, "ambiguous", step,
+                    "Operación ya enviada con la misma clave y parámetros: "
+                    "sin reenvío automático. Inspecciona o reconcilia primero.")
+            if verdict == "conflict":
+                return self._terminal(
+                    frozen, digest, outcomes, "blocked", step,
+                    "Clave de idempotencia con otros parámetros: rehusado.")
             try:
                 if pending is not None and self.jobs is not None:
                     job = await self.jobs.follow_evaluation(
@@ -159,8 +199,27 @@ class AgentExecutor:
                     outcome_state = {"done": "completed", "failed": "failed",
                                      "cancelled": "cancelled"}[job.outcome]
                 else:
-                    value = await self.bridge.call(step.capability, arguments)
+                    value = await self.bridge.call(
+                        step.capability, arguments, idempotency_key=idempotency_key)
                     outcome_state = "completed"
+                    self._mark_key(idempotency_key, "acked")
+            except BridgeTransportError as exc:
+                # No response received. On effectful steps the outcome is
+                # UNKNOWN (ambiguous, never auto-resent); reads just fail.
+                if tool.risk != "read":
+                    self._mark_key(idempotency_key, "ambiguous")
+                    outcomes.append(StepOutcome(
+                        step.id, step.capability, "ambiguous", _now(),
+                        error=f"Respuesta perdida tras enviar {tool.name}: {exc}. "
+                              "Sin reenvío automático; reconcilia antes de repetir."))
+                    self._record(digest, outcomes[-1])
+                    self._set_state(digest, "ambiguous")
+                    return ExecutionReport(frozen.as_dict(), digest, outcomes, "ambiguous")
+                outcomes.append(StepOutcome(step.id, step.capability, "failed", _now(),
+                                            error=f"{type(exc).__name__}: {exc}"))
+                self._record(digest, outcomes[-1])
+                self._set_state(digest, "failed")
+                return ExecutionReport(frozen.as_dict(), digest, outcomes, "failed")
             except Exception as exc:
                 # Abort on errors. Never silently re-run write-capable tools.
                 outcomes.append(StepOutcome(step.id, step.capability, "failed", _now(),
@@ -188,7 +247,15 @@ class AgentExecutor:
                                                 sha, "blocked",
                                                 "El preflight encontró bloqueantes técnicos; requiere intervención")
             if outcome_state == "completed":
-                followed = await self._maybe_follow(digest, step, tool.risk, value)
+                try:
+                    followed = await self._maybe_follow(digest, step, tool.risk, value)
+                except Exception as exc:
+                    outcomes.append(StepOutcome(
+                        step.id, step.capability, "failed", _now(),
+                        error=f"seguimiento del trabajo falló: {exc}"))
+                    self._record(digest, outcomes[-1])
+                    self._set_state(digest, "failed")
+                    return ExecutionReport(frozen.as_dict(), digest, outcomes, "failed")
                 if followed is not None:
                     outcome_state, report_value, sha, follow_error = followed
                     if outcome_state in ("failed", "cancelled", "blocked"):
@@ -208,6 +275,27 @@ class AgentExecutor:
             results[step.id] = value
         self._set_state(digest, "done")
         return ExecutionReport(frozen.as_dict(), digest, outcomes, "completed")
+
+    def _effectful_key(self, digest: str, step: Any, risk: str,
+                         arguments: dict[str, Any]) -> tuple[str | None, str]:
+        """(key, verdict) for an effectful step; reads get (None, "claimed").
+
+        Without a store the key is still generated and sent (future CR-06
+        server dedup) but nothing is claimed locally.
+        """
+        if risk == "read":
+            return None, "claimed"
+        key = f"{digest}:{step.id}"
+        if self.store is None:
+            return key, "claimed"
+        params_hash = sha256(json.dumps(
+            arguments, sort_keys=True, ensure_ascii=False,
+            separators=(",", ":")).encode("utf-8")).hexdigest()
+        return key, self.store.claim_key(key, digest, step.id, params_hash)
+
+    def _mark_key(self, key: str | None, state: str) -> None:
+        if key is not None and self.store is not None:
+            self.store.mark_key(key, state)
 
     def _resolve_arguments(self, tool_name: str, arguments: dict[str, Any],
                            results: dict[str, Any]) -> dict[str, Any]:

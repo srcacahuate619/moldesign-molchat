@@ -19,6 +19,15 @@ class BridgeError(RuntimeError):
     """A MolDesign service call failed without exposing credentials."""
 
 
+class BridgeTransportError(BridgeError):
+    """No response was received at all (transport lost, timeout, disconnect).
+
+    A subclass of BridgeError, but the executor treats it differently on
+    effectful steps: an error RESPONSE is definitive (failed), a lost
+    response is unknown (ambiguous, never auto-resent).
+    """
+
+
 def validate_base_url(value: str, *, allow_remote: bool = False) -> str:
     url = urlsplit(value)
     local = url.hostname in ("127.0.0.1", "localhost", "::1")
@@ -63,12 +72,15 @@ class MolDesignBridge:
         if self._owns_client:
             await self._client.aclose()
 
-    async def call(self, name: str, arguments: dict[str, Any]) -> Any:
+    async def call(self, name: str, arguments: dict[str, Any],
+                   *, idempotency_key: str | None = None) -> Any:
         tool = capability(name)
         method, path, query, body, response_kind = tool.request(arguments)
         headers = {"Accept": "application/json"}
         if self._token:
             headers["Authorization"] = f"Bearer {self._token}"
+        if idempotency_key is not None:
+            headers["X-Idempotency-Key"] = idempotency_key
         if tool.risk == "approval_required" and not self._token:
             raise BridgeError("Se requiere una sesión autenticada para aprobar")
         if response_kind == "sse":
@@ -90,7 +102,9 @@ class MolDesignBridge:
             if response_kind == "bytes":
                 return response.content
             return response.json()
-        except (httpx.RequestError, ValueError) as exc:
+        except httpx.RequestError as exc:
+            raise BridgeTransportError(f"Sin respuesta de MolDesign en {name}") from exc
+        except ValueError as exc:
             raise BridgeError(f"No se pudo obtener una respuesta JSON de {name}") from exc
 
     async def _collect_sse(self, name: str, path: str, query: dict[str, Any],
@@ -116,7 +130,7 @@ class MolDesignBridge:
                     except ValueError:
                         events.append({"text": payload})
         except httpx.RequestError as exc:
-            raise BridgeError(f"No se pudo leer el stream de {name}") from exc
+            raise BridgeTransportError(f"No se pudo leer el stream de {name}") from exc
         return {"events": events}
 
     async def transcribe_local(self, audio_bytes: bytes, *, lang: str = "es") -> str:
