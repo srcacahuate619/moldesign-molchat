@@ -20,7 +20,7 @@ _MOLCY_ID = FieldSpec(str, max_length=36, pattern=r"[A-Za-z0-9-]{4,36}")
 _MOLCY_JOB = FieldSpec(str, max_length=36, pattern=r"[0-9a-fA-F-]{36}")
 _ORIGEN = FieldSpec(str, max_length=8, pattern=r"moldex|receptor")
 _ESCENA = FieldSpec(str, max_length=10, pattern=r"resultado|receptor|busqueda|ensamble")
-_FORMATO = FieldSpec(str, max_length=15,
+_FORMATO = FieldSpec(str, max_length=16,
                      pattern=r"horizontal|vertical|previsualizacion")
 _TASK_ID = FieldSpec(str, max_length=128, pattern=r"[a-zA-Z0-9_-]+")
 

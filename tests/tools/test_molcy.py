@@ -19,6 +19,16 @@ def test_endpoint_contracts(name, method, path, risk):
     assert cap.risk == risk
 
 
+@pytest.mark.parametrize("formato", ["horizontal", "vertical", "previsualizacion"])
+def test_request_accepts_every_platform_format(formato):
+    # "previsualizacion" is 16 chars: a max_length=15 spec rejected it live
+    # (Fase 5 supervisor run) while the platform accepted the same request.
+    _, _, _, body, _ = capability("request_case_video").request({
+        "origen": "receptor", "id": "1HSG", "escena": "receptor",
+        "formato": formato})
+    assert body["formato"] == formato
+
+
 def test_request_builds_nuevo_trabajo_body():
     method, path, query, body, response = capability("request_case_video").request({
         "origen": "moldex", "id": "12345678-1234-1234-1234-123456789012",
