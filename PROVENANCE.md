@@ -715,3 +715,16 @@ MolDesign es por API HTTP, no por copia de código.
   términos; script operador con SKIP honesto sin audios
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/voice/test_vocabulary.py, tests/voice/test_local_whisper.py
+
+### src/molchat_agent/orchestration/hypothesis.py, tests/orchestration/test_hypothesis.py, scripts/demo_fase5.py
+
+- Origen: código nuevo en este repositorio (sin porte desde MolDesign)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (tarea 5.2): ciclo acotado (cribado con
+  planes auditados, ranking determinista documentado, plan create→approve
+  con bindings, aprobación exacta por huella, comparación codificada,
+  síntesis opcional, expediente propio declarado no-caso); demo operada
+  de 2 rondas + vídeo Molcy del mejor con acta
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/orchestration/test_hypothesis.py; demo viva con backend CR
