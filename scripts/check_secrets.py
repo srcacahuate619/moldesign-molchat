@@ -52,8 +52,13 @@ DUMMY_PREFIX = re.compile(
 # A UNC path appears in source text raw or escaped, so 2-4 leading
 # backslashes are accepted. (Examples are not written literally here:
 # this file is scanned by this very checker.)
+# The UNC branch excludes a backslash-u followed by four hex digits (a JS
+# unicode escape) and requires an alphanumeric server first character:
+# minified bundles are full of escape chains whose naive UNC shape matches
+# otherwise (the XML name validator React ships has both shapes). A server
+# with that exact name, or starting with a sign, is not a real machine path.
 MACHINE_PATH = re.compile(
-    r"(?<![A-Za-z])[A-Za-z]:[/\\]|\\{2,4}[\w.$-]+\\+[\w.$-]+|/(?:home|Users)/[\w.~-]+"
+    r"(?<![A-Za-z])[A-Za-z]:[/\\]|\\{2,4}(?!u[0-9a-fA-F]{4})[A-Za-z0-9][\w.$-]*\\+[\w.$-]+|/(?:home|Users)/[\w.~-]+"
 )
 
 

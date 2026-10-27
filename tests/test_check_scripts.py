@@ -98,6 +98,14 @@ def test_secrets_flags_drive_paths_and_unc(tmp_path):
     assert result.stdout.count("machine-local path") == 4, result.stdout
 
 
+def test_secrets_ignores_js_unicode_escapes(tmp_path):
+    escapes = BS * 2 + "u00C0-" + BS * 2 + "u00D6" + BS * 2 + "u00D8"
+    tail = BS * 2 + "uFFFD" + BS * 2 + "-.0-9" + BS * 2 + "u00B7"
+    base = _scaffold(tmp_path, {"src/pkg/mod.py": f"var r='{escapes}{tail}';\n"})
+    result = _run(base, "check_secrets.py")
+    assert result.returncode == 0, result.stdout
+
+
 def test_secrets_scans_nested_plan_but_not_root_plan(tmp_path):
     payload = _assign("password", "correcthorsebatterystaple1")
     base = _scaffold(tmp_path, {"PLAN.md": payload, "sub/PLAN.md": payload})

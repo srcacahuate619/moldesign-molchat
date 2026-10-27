@@ -729,7 +729,7 @@ MolDesign es por API HTTP, no por copia de código.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/orchestration/test_hypothesis.py; demo viva con backend CR
 
-### scripts/make_manifest.py, packaging/molchat-manifest.schema.json, src/molchat_agent/__main__.py, tests/test_make_manifest.py, tests/test_main_entry.py
+### scripts/make_manifest.py, packaging/molchat-manifest.schema.json, src/molchat_agent/__main__.py, tests/test_make_manifest.py, tests/test_main_entry.py, scripts/check_secrets.py, tests/test_check_scripts.py
 
 - Origen: scripts/stage_molcy_motor.py, tools/molcy/molcy-manifest.json y
   backend/services/molcy/motor.py (brújula: blobs desde commit, árbol limpio,
@@ -741,7 +741,10 @@ MolDesign es por API HTTP, no por copia de código.
   (paquete + build UI + LICENSE/NOTICE/pyproject) con manifiesto
   moldesign.molchat/1; la UI viaja desde disco solo si el build está fresco
   y sus fuentes commiteadas; versión única pyproject/__init__; --check
-  verifica conjunto exacto, hashes, licencia, secretos y forma del esquema
+  verifica conjunto exacto, hashes, licencia, secretos y forma del esquema.
+  Caza del primer --write real: la rama UNC del detector chocaba con los
+  escapes unicode del bundle React; se endureció (excluye backslash-u+hex
+  y exige servidor alfanumérico) con regresión
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/test_make_manifest.py (repos git scaffold + forma),
-  tests/test_main_entry.py
+  tests/test_main_entry.py, tests/test_check_scripts.py
