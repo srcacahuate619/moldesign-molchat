@@ -70,6 +70,14 @@ def build_parser() -> argparse.ArgumentParser:
                              "(requiere --grant-consent previo)")
     doctor.add_argument("--revoke", metavar="PROVEEDOR", default=None,
                         help="Retirar los consentimientos de un proveedor")
+
+    serve = commands.add_parser("serve", help="Levantar el sidecar (solo loopback)")
+    serve.add_argument("--host", default="127.0.0.1",
+                       help="Interfaz de escucha: solo loopback (127.0.0.1/localhost/::1)")
+    serve.add_argument("--port", type=int, default=8771,
+                       help="Puerto (0 = efímero)")
+    serve.add_argument("--ui-dist", default="",
+                       help="Directorio con la UI construida (por defecto ./ui/dist)")
     return parser
 
 
@@ -123,6 +131,10 @@ async def _dispatch(args: argparse.Namespace) -> int:
         return 0
     if args.command == "doctor":
         return await _doctor(args)
+    if args.command == "serve":
+        from .server.serve import run as serve_forever
+
+        return serve_forever(args.host, args.port, ui_dist=args.ui_dist)
     raise AssertionError("Comando no implementado")
 
 

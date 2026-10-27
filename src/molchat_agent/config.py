@@ -45,6 +45,9 @@ class MolChatConfig:
     host_secret: str | None = None  # shared HMAC secret with the MolDesign host
     allowed_origins: tuple[str, ...] = ()  # extra UI origins besides loopback
     session_ttl_s: int = 3600  # standalone session lifetime
+    memory_file: Path = field(default_factory=lambda: Path.home() / ".molchat" / "sidecar_memory.db")
+    exec_store: Path = field(default_factory=lambda: Path.home() / ".molchat" / "sidecar_exec.db")
+    ui_dist: str = ""  # built UI directory (else ./ui/dist, else API-only)
 
     def redacted(self) -> dict[str, str]:
         """Config summary safe to print: secrets become set/unset, never values."""
@@ -72,6 +75,9 @@ class MolChatConfig:
             "host_secret": secret(self.host_secret),
             "allowed_origins": ",".join(self.allowed_origins) or "(loopback only)",
             "session_ttl_s": str(self.session_ttl_s),
+            "memory_file": str(self.memory_file),
+            "exec_store": str(self.exec_store),
+            "ui_dist": self.ui_dist or "(auto)",
         }
 
 
@@ -93,6 +99,8 @@ def load_config(env: Mapping[str, str] | None = None) -> MolChatConfig:
         raise ValueError(f"MOLCHAT_PROFILE debe ser uno de {list(PROFILES)}: {profile!r}")
 
     consents = text("MOLCHAT_CONSENTS_FILE")
+    memory_file = text("MOLCHAT_MEMORY_FILE")
+    exec_store = text("MOLCHAT_EXEC_STORE")
     origins = tuple(o for o in
                     (part.strip() for part in text("MOLCHAT_ALLOWED_ORIGINS").split(","))
                     if o)
@@ -123,4 +131,7 @@ def load_config(env: Mapping[str, str] | None = None) -> MolChatConfig:
         host_secret=secret("MOLCHAT_HOST_SECRET"),
         allowed_origins=origins,
         session_ttl_s=session_ttl,
+        memory_file=Path(memory_file) if memory_file else Path.home() / ".molchat" / "sidecar_memory.db",
+        exec_store=Path(exec_store) if exec_store else Path.home() / ".molchat" / "sidecar_exec.db",
+        ui_dist=text("MOLCHAT_UI_DIST"),
     )

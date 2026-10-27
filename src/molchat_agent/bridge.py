@@ -65,6 +65,15 @@ class MolDesignBridge:
             allow_remote=config.moldesign_allow_remote,
         )
 
+    @property
+    def client(self) -> httpx.AsyncClient:
+        """Shared HTTP client (the sidecar reuses it for STT)."""
+        return self._client
+
+    @property
+    def token(self) -> str | None:
+        return self._token
+
     async def __aenter__(self) -> "MolDesignBridge":
         return self
 

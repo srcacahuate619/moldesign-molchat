@@ -593,3 +593,15 @@ MolDesign es por API HTTP, no por copia de código.
   y topes; devuelve texto para confirmar, nunca ejecuta
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/voice/test_whisper.py, tests/server/test_transcribe.py
+
+### src/molchat_agent/server/serve.py, tests/server/test_serve.py
+
+- Origen: código nuevo en este repositorio (sin porte desde MolDesign)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (tarea 4.4): cableado standalone
+  (config→registry→memoria→bridge→ejecuciones→STT), bind solo-loopback
+  verificado, token standalone acuñado una vez, UI estática servida con
+  anti-traversal; `molchat-agent serve`
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/server/test_serve.py

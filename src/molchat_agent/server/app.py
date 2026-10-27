@@ -11,13 +11,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+from pathlib import Path
 from typing import Any, AsyncIterator
 from urllib.parse import urlsplit
 
 from starlette.applications import Starlette
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
-from starlette.responses import JSONResponse, StreamingResponse
+from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
 
 from .. import __version__
@@ -40,6 +41,20 @@ MAX_CHAT_TEXT = 8000
 MAX_MESSAGES_PER_CONVERSATION = 200
 EXEC_SNAPSHOT_S = 0.5
 EXEC_SNAPSHOT_LIMIT = 720  # 6 minutes of snapshots, then the stream closes
+MAX_STATIC_FILE = 20_000_000
+
+_STATIC_TYPES = {
+    ".html": "text/html; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".json": "application/json",
+    ".map": "application/json",
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".ico": "image/x-icon",
+    ".txt": "text/plain; charset=utf-8",
+    ".woff2": "font/woff2",
+}
 
 LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 
@@ -59,7 +74,7 @@ def _origin_allowed(origin: str, allowed: tuple[str, ...]) -> bool:
 
 
 def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = None,
-               ) -> Any:
+               ui_dist: Path | None = None) -> Any:
     """Build the sidecar ASGI app (Starlette routes behind the host/origin guard)."""
     hosts = frozenset(allowed_hosts) if allowed_hosts is not None \
         else frozenset({"127.0.0.1", "localhost", "::1"})
@@ -310,6 +325,30 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
             raise HTTPException(502, f"la transcripción falló: {exc}") from exc
         return JSONResponse({"text": text, "lang": lang})
 
+    def static_file(name: str) -> Response:
+        if ui_dist is None:
+            return JSONResponse(
+                {"message": "API del sidecar; construye ui/ (`npm run build`) "
+                            "para servir la interfaz aquí.",
+                 "health": "/v1/health"}, status_code=200)
+        root = ui_dist.resolve()
+        target = (root / name).resolve() if name else root / "index.html"
+        if target != root and root not in target.parents:
+            return _error(404, "no encontrado")  # type: ignore[return-value]
+        if target.is_dir():
+            target = target / "index.html"
+        if not target.is_file() or target.stat().st_size > MAX_STATIC_FILE:
+            return _error(404, "no encontrado")  # type: ignore[return-value]
+        media = _STATIC_TYPES.get(target.suffix.lower(), "application/octet-stream")
+        return Response(target.read_bytes(), media_type=media,
+                        headers={"Cache-Control": "no-store"})
+
+    async def ui_root(_request: Request) -> Response:
+        return static_file("")
+
+    async def ui_asset(request: Request) -> Response:
+        return static_file(request.path_params["path"])
+
     async def http_error(_request: Request, exc: Exception) -> JSONResponse:
         assert isinstance(exc, HTTPException)
         return _error(exc.status_code, str(exc.detail))
@@ -334,6 +373,8 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
             Route("/v1/executions/{exec_id}/events", execution_events, methods=["GET"]),
             Route("/v1/executions/{exec_id}/cancel", cancel_execution, methods=["POST"]),
             Route("/v1/transcribe", transcribe, methods=["POST"]),
+            Route("/", ui_root, methods=["GET"]),
+            Route("/{path:path}", ui_asset, methods=["GET"]),
         ],
         exception_handlers={HTTPException: http_error, Exception: unhandled},
     )

@@ -1,0 +1,120 @@
+"""Standalone wiring: config -> state -> app -> uvicorn (loopback only).
+
+``molchat-agent serve`` runs the sidecar against a local MolDesign without
+touching its frontend (PLAN 4.4, the hackathon demo mode). Bind is loopback
+only, always: a non-loopback ``--host`` is refused loudly, never silently
+reinterpreted.
+"""
+
+from __future__ import annotations
+
+import asyncio
+from dataclasses import dataclass
+from importlib import resources
+from pathlib import Path
+from typing import Any
+
+from ..bridge import MolDesignBridge
+from ..config import MolChatConfig, load_config
+from ..conversation.memory import MemoryStore
+from ..conversation.tools import QualityBackend
+from ..orchestration.store import ExecutionStore
+from ..providers import build_registry
+from ..voice.moldesign_whisper import MolDesignWhisper
+from .app import create_app
+from .auth import mint, standalone_secret
+from .executions import ExecutionManager
+from .state import ServerState
+
+DEFAULT_PORT = 8771
+LOOPBACK = frozenset({"127.0.0.1", "localhost", "::1"})
+DEMO_SOURCE = "demo dataset (8 moléculas; CR-01 pendiente)"
+
+
+@dataclass
+class ServedSidecar:
+    app: Any
+    state: ServerState
+    bridge: MolDesignBridge
+    secret: bytes
+    token: str | None  # standalone token (printed once); None in hosted mode
+    ui_dist: Path | None
+
+
+def validate_bind_host(host: str) -> str:
+    if (host or "").lower() not in LOOPBACK:
+        raise ValueError(f"el sidecar solo escucha en loopback, no en {host!r}")
+    return host
+
+
+def find_ui_dist(explicit: str = "") -> Path | None:
+    """Locate the built UI: explicit flag/env, then ./ui/dist, else None."""
+    candidates = [Path(explicit)] if explicit else []
+    candidates.append(Path.cwd() / "ui" / "dist")
+    for candidate in candidates:
+        if candidate.is_dir() and (candidate / "index.html").is_file():
+            return candidate
+    return None
+
+
+def demo_data_path() -> Path:
+    return resources.files("molchat_agent.conversation.data") / "demo_molecules.json"
+
+
+def build_server(config: MolChatConfig | None = None,
+                 *, ui_dist: str = "") -> ServedSidecar:
+    """Wire every sidecar dependency from config (no sockets opened)."""
+    config = config or load_config()
+    if config.host_secret:
+        secret = config.host_secret.encode("utf-8")
+        token: str | None = None  # hosted mode: the host mints sessions
+    else:
+        secret = standalone_secret()
+        token = mint(secret, "operador-local",
+                     {"read", "chat", "plan", "approve", "cancel", "transcribe"},
+                     config.session_ttl_s)
+    registry = build_registry(config)
+    bridge = MolDesignBridge(
+        base_url=config.moldesign_base_url, token=config.moldesign_token,
+        allow_remote=config.moldesign_allow_remote)
+    store = ExecutionStore(config.exec_store)
+    state = ServerState(
+        secret=secret, registry=registry,
+        memory=MemoryStore(config.memory_file),
+        backend=QualityBackend(demo_data_path(), source=DEMO_SOURCE),
+        allowed_origins=config.allowed_origins,
+        provider_id=config.provider,
+        executions=ExecutionManager(bridge, store),
+        stt=MolDesignWhisper(bridge.client, config.moldesign_token)
+        if config.moldesign_token else None,
+    )
+    found = find_ui_dist(ui_dist or config.ui_dist)
+    app = create_app(state, ui_dist=found)
+    return ServedSidecar(app=app, state=state, bridge=bridge, secret=secret,
+                         token=token, ui_dist=found)
+
+
+def run(host: str = "127.0.0.1", port: int = DEFAULT_PORT,
+        *, ui_dist: str = "") -> int:
+    """Serve forever. Prints the URL (and the standalone token) once."""
+    try:
+        import uvicorn
+    except ImportError as exc:
+        raise SystemExit(
+            "falta el extra 'server': pip install 'moldesign-molchat[server]'") from exc
+    validate_bind_host(host)
+    if not 0 <= port <= 65535:
+        raise ValueError(f"puerto no válido: {port}")
+    served = build_server(ui_dist=ui_dist)
+    print(f"MolChat sidecar en http://{host}:{port or '(efímero)'} "
+          f"({'con UI' if served.ui_dist else 'solo API; construye ui/ para la interfaz'})")
+    if served.token is not None:
+        print("Sesión standalone (se muestra una sola vez; no la registres):")
+        print(f"  {served.token}")
+    else:
+        print("Modo host: las sesiones las acuña MolDesign (MOLCHAT_HOST_SECRET).")
+    try:
+        uvicorn.run(served.app, host=host, port=port or 0, log_level="warning")
+    finally:
+        asyncio.run(served.bridge.__aexit__(None, None, None))
+    return 0
