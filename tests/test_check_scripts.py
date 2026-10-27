@@ -135,6 +135,17 @@ def test_provenance_flags_uncovered_file(tmp_path):
     assert "uncovered file: src/pkg/extra.py" in result.stdout
 
 
+def test_provenance_flags_uncovered_conformance_file(tmp_path):
+    base = _scaffold(tmp_path, {
+        "PROVENANCE.md": LEDGER,
+        "src/pkg/mod.py": "VALUE = 1\n",
+        "conformance/runner.py": "VALUE = 2\n",
+    })
+    result = _run(base, "check_provenance.py")
+    assert result.returncode == 1
+    assert "uncovered file: conformance/runner.py" in result.stdout
+
+
 def test_provenance_flags_wrong_license(tmp_path):
     ledger = LEDGER.replace("-or-later", "-only")
     base = _scaffold(tmp_path, {

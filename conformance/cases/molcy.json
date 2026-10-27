@@ -1,0 +1,19 @@
+{
+  "pack": "molcy",
+  "openapi": "/openapi.json",
+  "capabilities": [
+    {"name": "molcy_fuentes", "valid_args": {}, "live_read": true},
+    {"name": "request_case_video",
+     "valid_args": {"origen": "moldex",
+                    "id": "12345678-1234-1234-1234-123456789012",
+                    "escena": "resultado", "formato": "horizontal"}},
+    {"name": "molcy_job_status",
+     "valid_args": {"job_id": "12345678-1234-1234-1234-123456789012"},
+     "bogus_args": {"job_id": "87654321-4321-4321-4321-210987654321"}},
+    {"name": "get_video_acta",
+     "valid_args": {"job_id": "12345678-1234-1234-1234-123456789012"},
+     "bogus_args": {"job_id": "87654321-4321-4321-4321-210987654321"}},
+    {"name": "cancel_molcy_job",
+     "valid_args": {"job_id": "12345678-1234-1234-1234-123456789012"}}
+  ]
+}
