@@ -628,3 +628,19 @@ MolDesign es por API HTTP, no por copia de código.
   `ui/dist` ausente o más viejo que sus fuentes, con rebuild indicado
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/test_check_scripts.py
+
+### src/molchat_agent/tools/moldesign.py, src/molchat_agent/bridge.py, src/molchat_agent/executor.py, src/molchat_agent/orchestration/store.py, tests/contract/test_live_cr.py
+
+- Origen: código nuevo en este repositorio; endpoints verificados en la rama
+  feat/molchat-plataforma-cr del repo de MolDesign (CR-06/CR-07), sin copiar código
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (Fase 5, adopción CR): capacidades
+  `create_docking_proposal` (write, 409-bloqueantes→blocked) y
+  `reconcile_operation`; cabecera verificada `Idempotency-Key`;
+  `BridgeError` con status/detail; reconciliación al perder respuesta
+  (COMPLETADA adopta, FALLIDA/PENDIENTE mantienen ambiguous) y `resume()`
+  que reabre `ambiguous` vía `store.reopen()` solo al adoptar
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/test_executor.py, tests/test_bridge.py, tests/tools/,
+  tests/orchestration/test_store.py, tests/contract/test_live_cr.py (vivo)

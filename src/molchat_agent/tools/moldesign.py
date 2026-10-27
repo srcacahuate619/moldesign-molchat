@@ -25,6 +25,7 @@ _TARGET = FieldSpec(str, max_length=10, pattern=r"[A-Za-z0-9_-]{4,10}")
 _UUID = FieldSpec(str, max_length=36, pattern=r"[0-9a-fA-F-]{36}")
 _TASK_ID = FieldSpec(str, max_length=128, pattern=r"[a-zA-Z0-9_-]+")
 _MOLECULE_ID = _UUID
+_IDEMPOTENCY_KEY = FieldSpec(str, max_length=200, pattern=r"[A-Za-z0-9_.:\-]+")
 
 
 def _dossier_body(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -200,6 +201,26 @@ def _register_all() -> None:
                    "GET", "/rescoring/ram", {}, {},
                    epistemic_class=EpistemicClass.PERSISTED,
                    provenance="MolDesign GET /rescoring/ram"),
+        # Fase 5 (CR-07/CR-06, rama feat/molchat-plataforma-cr): proposal
+        # creation exists now; reconcile reads what a lost response left.
+        Capability("create_docking_proposal",
+                   "Crear propuesta revisable sin lanzar cálculo (409 si el preflight bloquea)",
+                   "POST", "/ai/proposals",
+                   {"smiles": _SMILES},
+                   {"target_pdb_id": _TARGET,
+                    "chain": FieldSpec(str, max_length=4)},
+                   risk="write",
+                   epistemic_class=EpistemicClass.PERSISTED,
+                   provenance="MolDesign POST /ai/proposals",
+                   outputs=("proposal_id", "proposal_hash", "estado", "id", "hash")),
+        Capability("reconcile_operation",
+                   "Qué operación y trabajo existen para una clave de idempotencia",
+                   "GET", "/ai/idempotency/{idempotency_key}",
+                   {"idempotency_key": _IDEMPOTENCY_KEY}, {},
+                   path_fields=("idempotency_key",),
+                   epistemic_class=EpistemicClass.PERSISTED,
+                   provenance="MolDesign GET /ai/idempotency/{idempotency_key}",
+                   outputs=("operation", "status", "proposal_id", "task_id")),
     ]
     for capability in std:
         register(capability)

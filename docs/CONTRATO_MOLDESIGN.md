@@ -1,11 +1,12 @@
-# Contrato MolChat ↔ MolDesign (v2, `moldesign.molchat/1`, Fase 3)
+# Contrato MolChat ↔ MolDesign (v3, `moldesign.molchat/1`, Fase 5)
 
 Toda comunicación agente↔plataforma es HTTP con este contrato. El catálogo
 vivo servido por la plataforma (CR-04) no existe aún: el catálogo es local
-(`tools/moldesign.py`, 23 capacidades) y la suite de contrato lo valida
-contra un MolDesign instalado.
+(`tools/moldesign.py`, 25 capacidades) y la suite de contrato lo valida
+contra un MolDesign instalado. CR-06/CR-07 viven en la rama
+`feat/molchat-plataforma-cr` (worktree de plataforma, sin merge a main).
 
-## Capacidades (23)
+## Capacidades (25)
 
 | Capacidad | Endpoint | Riesgo | Notas |
 |---|---|---|---|
@@ -14,7 +15,7 @@ contra un MolDesign instalado.
 | `list_evaluations` | `GET /history/evaluations` | read | `page?`, `page_size?`, `target_pdb_id?` |
 | `evaluation_status` | `GET /evaluation/status/{task_id}` | read | `PENDING\|STARTED\|SUCCESS\|FAILURE\|RETRY` |
 | `get_docking_proposal` | `GET /ai/proposals/{proposal_id}` | read | `{id, estado, expira_en_s, hash, resumen}` |
-| `approve_docking_proposal` | `POST /ai/proposals/{proposal_id}/approve` | approval_required | Revalida hash+estado; devuelve `{task_id, …}` |
+| `approve_docking_proposal` | `POST /ai/proposals/{proposal_id}/approve` | approval_required | Revalida hash+estado; devuelve `{task_id, …}`; con `Idempotency-Key` replays sin relanzar (CR-06) |
 | `list_engines` | `GET /evaluation/engines` | read | Inventario de motores |
 | `get_evaluation_result` | `GET /evaluation/result/{molecule_id}` | read | `molecule_id` UUID; `?task_id=` opcional (MP-05) |
 | `get_interactions` | `GET /evaluation/interactions/{molecule_id}` | read | `pose_rank?` 1–20 |
@@ -31,24 +32,28 @@ contra un MolDesign instalado.
 | `get_history_stats` | `GET /history/stats` | read | Contadores propios |
 | `save_molecule` | `POST /history/save/{molecule_id}` | write | `?name=`, `?task_id=` |
 | `rescoring_health`, `rescoring_info`, `rescoring_ram` | `GET /rescoring/…` | read | Estado del servicio |
+| `create_docking_proposal` | `POST /ai/proposals` | write | CR-07: crea revisable sin lanzar; 409 con preflight si bloquea; `smiles`, `target_pdb_id?`, `chain?` |
+| `reconcile_operation` | `GET /ai/idempotency/{key}` | read | CR-06: `{operation, status, proposal_id?, task_id?, response?}`; 404 si no existe |
 
 Reglas: sin redirecciones; tope 5 MB por respuesta; loopback por defecto y
 remoto solo HTTPS con `MOLDESIGN_ALLOW_REMOTE=1`. El servidor impone identidad
 y revalida `proposal_hash` y estado antes de ejecutar. `check_preflight`
 expone `technical_blockers` (lista), `warnings` y `not_evaluated`: con
 bloqueantes, el ejecutor se detiene (`blocked`), nunca aprueba.
+Operaciones con efectos viajan con cabecera `Idempotency-Key`
+(`{huella}:{paso}`); ante respuesta perdida el ejecutor reconcilia la clave
+(CR-06): `COMPLETADA` adopta la respuesta grabada, `FALLIDA`/`PENDIENTE` o
+ausencia mantienen `ambiguous` sin reenvío. `resume()` sobre un plan
+`ambiguous` reintenta reconciliar y continúa solo si adopta.
 
 No es herramienta del modelo: `POST /evaluation/submit` (entrada directa).
-Las propuestas se crean en el flujo de MolDesign y aquí solo se leen/aprueban.
+Las propuestas se crean con `create_docking_proposal` y se aprueban con
+`approve_docking_proposal`; el submit directo nunca es un paso del plan.
 
 Excluidas con motivo (abstención por ausencia, no simulación):
 
-- `create_docking_proposal`: crear propuestas es in-process
-  (`propuestas_de_docking.proponer`, vía `run_docking` interno); no existe
-  `POST /ai/proposals`. La creación HTTP de propuestas está propuesta como
-  contrato adicional, pendiente de aceptación en la revisión interna.
 - `start_batch`: `POST /evaluation/batch` exige multipart con fichero; el
-  agente no tiene bytes de fichero legítimos en Fase 3. `batch_status`,
+  agente no tiene bytes de fichero legítimos. `batch_status`,
   `cancel_batch` y `export_batch` sí existen (por id).
 - `dossier/preparacion`: endpoint en desarrollo (`readiness FEP`); solo
   `preview` (PDF) y `package` (ZIP).
@@ -62,13 +67,13 @@ Excluidas con motivo (abstención por ausencia, no simulación):
 | CR-03 | Endpoint de eventos (SSE/WebSocket) de cambio de estado de evaluaciones y trabajos de Molcy | Jobs sin polling ciego; el polling es el fallback implementado | Pendiente |
 | CR-04 | Handshake de agente: versión de contrato + catálogo de capacidades servido por la plataforma | Evita catálogos duplicados que divergen | Pendiente |
 | CR-05 | Superficie versionada de análogos/ADMET/MolGraph | Fase 5 completa | Pendiente |
-| CR-06 | Idempotencia y reconciliación de operaciones con efectos: clave de idempotencia por cuenta, deduplicación, rechazo de reutilizar una clave con parámetros distintos, y reconciliar intención persistida ↔ operación ↔ trabajo aunque se pierda la respuesta | Sin esto, reintentar puede duplicar un cálculo; MolChat envía `X-Idempotency-Key`, persiste intención+clave y registra `ambiguous` sin reenvío | Pendiente (lado MolChat implementado) |
-| CR-07 | Creación HTTP de propuesta de docking revisable (sin lanzar el cálculo) que devuelva identidad, `proposal_hash` y parámetros efectivos. Hoy `/ai/proposals` solo permite leer/aprobar/rechazar. Nunca sustituirla por `submit` directo | La demo Fase 3 («crear propuesta → aprobación humana → trabajo») depende de esta superficie; es trabajo en el repo de MolDesign | Pendiente (bloqueo explícito: sin ella no hay `create_docking_proposal`) |
+| CR-06 | Idempotencia y reconciliación de operaciones con efectos: clave de idempotencia por cuenta, deduplicación, rechazo de reutilizar una clave con parámetros distintos, y reconciliar intención persistida ↔ operación ↔ trabajo aunque se pierda la respuesta | Cabecera `Idempotency-Key` en create/approve + `GET /ai/idempotency/{key}` con estados `PENDIENTE/COMPLETADA/FALLIDA`; MolChat adopta replays y reabre `ambiguous` al reconciliar | Implementada en rama `feat/molchat-plataforma-cr` (Fase 5) |
+| CR-07 | Creación HTTP de propuesta de docking revisable (sin lanzar el cálculo) que devuelva identidad, `proposal_hash` y parámetros efectivos. Nunca sustituirla por `submit` directo | `POST /ai/proposals` (201 + propuesta, 409 con preflight si bloquea, 422 inválida); desbloquea el circuito crear→aprobar→trabajo | Implementada en rama `feat/molchat-plataforma-cr` (Fase 5) |
 
 Cada CR, cuando MolDesign la implemente, entra como capacidad con sus tests
 de contrato. Hasta entonces la capacidad **no existe**: el agente se abstiene.
 
-## Suite de contrato (27 peticiones)
+## Suite de contrato (33 peticiones)
 
 ```bash
 MOLDESIGN_BASE_URL=http://127.0.0.1:8000 MOLDESIGN_TOKEN=<cuenta-de-pruebas> \
@@ -79,7 +84,9 @@ Cuenta de pruebas: cuenta propia de MolDesign, sin datos privados; PDB/SMILES
 públicos (`1HSG`, `CCO`, aspirina). La suite salta —no falla— sin backend o
 sin token válido; una vez alcanzable, los fallos son veredictos reales.
 `MOLCHAT_CONTRACT_MOLECULE_ID` (UUID con resultado) habilita los positivos
-por molécula; sin él esos casos saltan.
+por molécula; sin él esos casos saltan. Los casos 28–33 exigen el backend
+con CR-06/CR-07 (rama `feat/molchat-plataforma-cr`); el 33 además exige
+`MOLCHAT_CONTRACT_MAY_LAUNCH=1` (lanza cómputo real).
 
 | # | Petición | Esperado |
 |---|---|---|
@@ -98,6 +105,12 @@ por molécula; sin él esos casos saltan.
 | 23 | `save_molecule` inexistente | `BridgeError` (sin escrituras) |
 | 24 | `stream_evaluation` inexistente | `BridgeError` o lista de eventos |
 | 25–27 | Positivos por molécula (con `MOLCHAT_CONTRACT_MOLECULE_ID`) | Dict o 404 limpio; dossier bytes o 404 |
+| 28 | `create_docking_proposal` CCO/7E2Y | 201 con `proposal_id`, `proposal_hash`, `estado=pendiente` |
+| 29 | `create_docking_proposal` con SMILES inválido | `BridgeError` (422) |
+| 30 | create con la misma `Idempotency-Key` dos veces | Mismo `proposal_id` (replay, sin duplicar) |
+| 31 | `reconcile_operation` tras crear | `COMPLETADA` con `proposal_id` y `response` |
+| 32 | `reconcile_operation` de clave inexistente | `BridgeError` (404) |
+| 33 | approve con clave dos veces (con `MOLCHAT_CONTRACT_MAY_LAUNCH=1`) | Mismo `task_id` (replay, sin segundo cómputo) |
 
 ## Paridad de planificadores (puerta de la Fase 1)
 

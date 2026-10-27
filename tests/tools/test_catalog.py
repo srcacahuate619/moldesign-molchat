@@ -20,6 +20,7 @@ EXPECTED = {
     "batch_status", "cancel_batch", "export_batch", "get_ai_report",
     "stream_ai_report", "get_case_dossier", "get_sar", "get_history_stats",
     "save_molecule", "rescoring_health", "rescoring_info", "rescoring_ram",
+    "create_docking_proposal", "reconcile_operation",
 }
 
 

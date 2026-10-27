@@ -107,6 +107,11 @@ class AgentExecutor:
             raise KeyError(f"plan desconocido: {digest}")
         state = self.store.get_state(digest)
         if state in STORE_TERMINAL:
+            if state == "ambiguous":
+                recovered = await self._resume_ambiguous(
+                    digest, plan_dict, approval_digest, approved_steps)
+                if recovered is not None:
+                    return recovered
             return self._stored_report(digest)
         stored = self.store.outcomes(digest)
         frozen = Plan.from_dict(plan_dict)
@@ -136,20 +141,63 @@ class AgentExecutor:
         return ExecutionReport(plan_dict, digest, outcomes,
                                {"done": "completed"}.get(state, state))
 
+    async def _try_reconcile(self, key: str | None) -> dict[str, Any] | None:
+        """Ask the platform what a lost response left (CR-06). None if unknown."""
+        if key is None:
+            return None
+        try:
+            vista = await self.bridge.call(
+                "reconcile_operation", {"idempotency_key": key})
+        except Exception:  # noqa: BLE001 - reconcile failing keeps ambiguity
+            return None
+        return vista if isinstance(vista, dict) else None
+
+    async def _resume_ambiguous(
+        self, digest: str, plan_dict: dict[str, Any],
+        approval_digest: str | None, approved_steps: set[str] | None,
+    ) -> ExecutionReport | None:
+        """Recover an ambiguous plan via reconcile. None when still unknown."""
+        assert self.store is not None
+        stored = self.store.outcomes(digest)
+        ambiguous = [o for o in stored if o["state"] == "ambiguous"]
+        if not ambiguous:
+            return None
+        adopted: dict[str, Any] = {}
+        for outcome in ambiguous:
+            vista = await self._try_reconcile(f"{digest}:{outcome['id']}")
+            if vista is None or vista.get("status") != "COMPLETADA" \
+                    or not isinstance(vista.get("response"), dict):
+                return None  # still unknown: keep the stored ambiguous report
+            adopted[outcome["id"]] = vista["response"]
+        frozen = Plan.from_dict(plan_dict)
+        results = {o["id"]: o["result"] for o in stored if o["state"] == "completed"}
+        outcomes = [StepOutcome(id=o["id"], capability=o.get("capability", ""),
+                                state=o["state"], timestamp=o.get("timestamp", _now()),
+                                result=o["result"], result_sha256=o.get("result_sha256"),
+                                error=o.get("error")) for o in stored
+                    if o["state"] != "ambiguous"]
+        pending = {job["step_id"]: job for job in self.store.pending_jobs(digest)}
+        self.store.reopen(digest, "reconciliación CR-06")
+        return await self._run_steps(frozen, digest, results, outcomes, approval_digest,
+                                     approved_steps or set(), pending,
+                                     BudgetTracker(self.budget), adopted)
+
     async def _run_steps(self, frozen: Plan, digest: str, results: dict[str, Any],
                          outcomes: list[StepOutcome], approval_digest: str | None,
                          approved_steps: set[str], pending_jobs: dict[str, dict],
-                         tracker: BudgetTracker) -> ExecutionReport:
+                         tracker: BudgetTracker,
+                         adopted: dict[str, Any] | None = None) -> ExecutionReport:
         report = await self._run_steps_inner(
             frozen, digest, results, outcomes, approval_digest, approved_steps,
-            pending_jobs, tracker)
+            pending_jobs, tracker, adopted or {})
         report.approvals = {"digest": approval_digest, "steps": sorted(approved_steps)}
         return report
 
     async def _run_steps_inner(self, frozen: Plan, digest: str, results: dict[str, Any],
                                outcomes: list[StepOutcome], approval_digest: str | None,
                                approved_steps: set[str], pending_jobs: dict[str, dict],
-                               tracker: BudgetTracker) -> ExecutionReport:
+                               tracker: BudgetTracker,
+                               adopted: dict[str, Any]) -> ExecutionReport:
         done_ids = {o.id for o in outcomes if o.state == "completed"}
         for step in frozen.steps:
             if step.id in done_ids:
@@ -175,58 +223,86 @@ class AgentExecutor:
                 return self._terminal(frozen, digest, outcomes, "blocked", step,
                                       f"Binding sin resolver: {exc}")
             pending = pending_jobs.pop(step.id, None)
-            idempotency_key, verdict = self._effectful_key(
-                digest, step, tool.risk, arguments)
-            if verdict == "duplicate":
-                return self._terminal(
-                    frozen, digest, outcomes, "ambiguous", step,
-                    "Operación ya enviada con la misma clave y parámetros: "
-                    "sin reenvío automático. Inspecciona o reconcilia primero.")
-            if verdict == "conflict":
-                return self._terminal(
-                    frozen, digest, outcomes, "blocked", step,
-                    "Clave de idempotencia con otros parámetros: rehusado.")
-            try:
-                if pending is not None and self.jobs is not None:
-                    job = await self.jobs.follow_evaluation(
-                        pending["remote_id"], digest=digest, step_id=step.id,
-                        job_id=pending["job_id"]) if pending["kind"] == "evaluation" else \
-                        await self.jobs.follow_batch(
-                        pending["remote_id"], digest=digest, step_id=step.id,
-                        job_id=pending["job_id"])
-                    value: Any = {"resumed_job": job.remote_id, "final": job.status,
-                                  "polls": job.polls}
-                    outcome_state = {"done": "completed", "failed": "failed",
-                                     "cancelled": "cancelled"}[job.outcome]
-                else:
-                    value = await self.bridge.call(
-                        step.capability, arguments, idempotency_key=idempotency_key)
-                    outcome_state = "completed"
-                    self._mark_key(idempotency_key, "acked")
-            except BridgeTransportError as exc:
-                # No response received. On effectful steps the outcome is
-                # UNKNOWN (ambiguous, never auto-resent); reads just fail.
-                if tool.risk != "read":
-                    self._mark_key(idempotency_key, "ambiguous")
-                    outcomes.append(StepOutcome(
-                        step.id, step.capability, "ambiguous", _now(),
-                        error=f"Respuesta perdida tras enviar {tool.name}: {exc}. "
-                              "Sin reenvío automático; reconcilia antes de repetir."))
+            if step.id in adopted:
+                # Reconciled earlier (CR-06): adopt the recorded response as
+                # the result. Nothing is sent; the claim is untouched.
+                value = adopted[step.id]
+                outcome_state = "completed"
+                self._mark_key(f"{digest}:{step.id}", "reconciled")
+            else:
+                idempotency_key, verdict = self._effectful_key(
+                    digest, step, tool.risk, arguments)
+                if verdict == "duplicate":
+                    return self._terminal(
+                        frozen, digest, outcomes, "ambiguous", step,
+                        "Operación ya enviada con la misma clave y parámetros: "
+                        "sin reenvío automático. Inspecciona o reconcilia primero.")
+                if verdict == "conflict":
+                    return self._terminal(
+                        frozen, digest, outcomes, "blocked", step,
+                        "Clave de idempotencia con otros parámetros: rehusado.")
+                try:
+                    if pending is not None and self.jobs is not None:
+                        job = await self.jobs.follow_evaluation(
+                            pending["remote_id"], digest=digest, step_id=step.id,
+                            job_id=pending["job_id"]) if pending["kind"] == "evaluation" else \
+                            await self.jobs.follow_batch(
+                            pending["remote_id"], digest=digest, step_id=step.id,
+                            job_id=pending["job_id"])
+                        value = {"resumed_job": job.remote_id, "final": job.status,
+                                      "polls": job.polls}
+                        outcome_state = {"done": "completed", "failed": "failed",
+                                         "cancelled": "cancelled"}[job.outcome]
+                    else:
+                        value = await self.bridge.call(
+                            step.capability, arguments, idempotency_key=idempotency_key)
+                        outcome_state = "completed"
+                        self._mark_key(idempotency_key, "acked")
+                except BridgeTransportError as exc:
+                    # No response received. Reads just fail; effectful steps
+                    # reconcile first (CR-06, a read): a COMPLETADA key adopts
+                    # its recorded response — not a resend.
+                    if tool.risk == "read":
+                        outcomes.append(StepOutcome(
+                            step.id, step.capability, "failed", _now(),
+                            error=f"{type(exc).__name__}: {exc}"))
+                        self._record(digest, outcomes[-1])
+                        self._set_state(digest, "failed")
+                        return ExecutionReport(frozen.as_dict(), digest, outcomes, "failed")
+                    vista = await self._try_reconcile(idempotency_key)
+                    status = vista.get("status") if vista else None
+                    adopted_response = vista.get("response") if vista else None
+                    if status == "COMPLETADA" and isinstance(adopted_response, dict):
+                        value = adopted_response
+                        outcome_state = "completed"
+                        self._mark_key(idempotency_key, "reconciled")
+                    else:
+                        self._mark_key(idempotency_key, "ambiguous")
+                        note = ("la plataforma confirma que el efecto no se produjo; "
+                                "repetir con un plan nuevo es seguro (nueva clave)") \
+                            if status == "FALLIDA" else \
+                            "Sin reenvío automático; reconcilia antes de repetir."
+                        outcomes.append(StepOutcome(
+                            step.id, step.capability, "ambiguous", _now(),
+                            error=f"Respuesta perdida tras enviar {tool.name}: {exc}. {note}"))
+                        self._record(digest, outcomes[-1])
+                        self._set_state(digest, "ambiguous")
+                        return ExecutionReport(frozen.as_dict(), digest, outcomes, "ambiguous")
+                except Exception as exc:
+                    # Abort on errors. Never silently re-run write-capable tools.
+                    if step.capability == "create_docking_proposal" \
+                            and getattr(exc, "status_code", None) == 409:
+                        detail = (getattr(exc, "detail", None) or "").lower()
+                        if "bloque" in detail or "preflight" in detail:
+                            return self._terminal(
+                                frozen, digest, outcomes, "blocked", step,
+                                "El preflight del servidor bloquea esta evaluación: "
+                                "no se creó ninguna propuesta aprobable.")
+                    outcomes.append(StepOutcome(step.id, step.capability, "failed", _now(),
+                                                error=f"{type(exc).__name__}: {exc}"))
                     self._record(digest, outcomes[-1])
-                    self._set_state(digest, "ambiguous")
-                    return ExecutionReport(frozen.as_dict(), digest, outcomes, "ambiguous")
-                outcomes.append(StepOutcome(step.id, step.capability, "failed", _now(),
-                                            error=f"{type(exc).__name__}: {exc}"))
-                self._record(digest, outcomes[-1])
-                self._set_state(digest, "failed")
-                return ExecutionReport(frozen.as_dict(), digest, outcomes, "failed")
-            except Exception as exc:
-                # Abort on errors. Never silently re-run write-capable tools.
-                outcomes.append(StepOutcome(step.id, step.capability, "failed", _now(),
-                                            error=f"{type(exc).__name__}: {exc}"))
-                self._record(digest, outcomes[-1])
-                self._set_state(digest, "failed")
-                return ExecutionReport(frozen.as_dict(), digest, outcomes, "failed")
+                    self._set_state(digest, "failed")
+                    return ExecutionReport(frozen.as_dict(), digest, outcomes, "failed")
             report_value, sha = _wrap_result(value)
             # Scientific decision remains in MolDesign. Its actual preflight
             # contract exposes technical_blockers, warnings and not_evaluated;

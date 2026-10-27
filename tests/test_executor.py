@@ -365,6 +365,13 @@ def _approve_plan():
          "rationale": ""}]})
 
 
+def _create_plan():
+    return Plan.from_dict({"goal": "Proponer", "planner": "manual", "steps": [
+        {"id": "s1", "capability": "create_docking_proposal",
+         "arguments": {"smiles": "CCO", "target_pdb_id": "7E2Y"},
+         "rationale": ""}]})
+
+
 @pytest.mark.asyncio
 async def test_lost_response_on_write_is_ambiguous_without_resend(tmp_path):
     """MP-04: lost response after create -> ambiguous, single send."""
@@ -547,4 +554,170 @@ async def test_reevaluate_does_not_alter_prior_evidence(tmp_path):
     assert path_a.read_bytes() == bytes_before
     stored = ExecutionStore(db).outcomes(plan_a.digest)
     assert stored[0]["result"] == {"affinity_kcal": -8.1}
+
+
+@pytest.mark.asyncio
+async def test_create_blocked_by_server_preflight_maps_to_blocked():
+    from molchat_agent.bridge import BridgeError
+
+    class BlockedBridge(ScriptedBridge):
+        async def call(self, capability, args, **kwargs):
+            raise BridgeError("MolDesign devolvió HTTP 409 en create_docking_proposal",
+                              status_code=409,
+                              detail="El preflight del servidor bloquea esta evaluación")
+
+    plan = _create_plan()
+    report = await AgentExecutor(BlockedBridge({})).execute(
+        plan, approval_digest=plan.digest, approved_steps={"s1"})
+    assert report.state == "blocked"
+    assert "no se creó ninguna propuesta" in (report.outcomes[0].error or "")
+
+
+@pytest.mark.asyncio
+async def test_create_conflict_409_without_blockers_is_failed():
+    from molchat_agent.bridge import BridgeError
+
+    class ConflictBridge(ScriptedBridge):
+        async def call(self, capability, args, **kwargs):
+            raise BridgeError("MolDesign devolvió HTTP 409 en create_docking_proposal",
+                              status_code=409,
+                              detail="Ya hay una operación en curso con esta clave.")
+
+    plan = _create_plan()
+    report = await AgentExecutor(ConflictBridge({})).execute(
+        plan, approval_digest=plan.digest, approved_steps={"s1"})
+    assert report.state == "failed"
+
+
+@pytest.mark.asyncio
+async def test_lost_response_with_completed_key_adopts_replay(tmp_path):
+    """CR-06: lost response + COMPLETADA -> adopt replay, single send."""
+    from molchat_agent.bridge import BridgeError, BridgeTransportError
+    from molchat_agent.orchestration.store import ExecutionStore
+
+    proposal = {"proposal_id": "p-7", "proposal_hash": "sha256:" + "d" * 64,
+                "estado": "pendiente"}
+
+    class LossyBridge(ScriptedBridge):
+        async def call(self, capability, args, **kwargs):
+            if capability == "create_docking_proposal":
+                self.calls.append((capability, dict(args)))
+                raise BridgeTransportError("conexión cortada")
+            return await super().call(capability, args, **kwargs)
+
+    bridge = LossyBridge({"reconcile_operation": {
+        "operation": "crear_propuesta", "status": "COMPLETADA",
+        "proposal_id": "p-7", "response": proposal}})
+    store = ExecutionStore(tmp_path / "exec.db")
+    plan = _create_plan()
+    report = await AgentExecutor(bridge, store=store).execute(
+        plan, approval_digest=plan.digest, approved_steps={"s1"})
+    assert report.state == "completed"
+    assert report.outcomes[0].result == proposal
+    sends = [c for c in bridge.calls if c[0] == "create_docking_proposal"]
+    assert len(sends) == 1  # adopted, never resent
+    assert ("reconcile_operation", {"idempotency_key": f"{plan.digest}:s1"}) \
+        in bridge.calls
+
+
+@pytest.mark.asyncio
+async def test_lost_response_with_failed_key_is_ambiguous_but_retryable(tmp_path):
+    from molchat_agent.bridge import BridgeTransportError
+    from molchat_agent.orchestration.store import ExecutionStore
+
+    class LossyBridge(ScriptedBridge):
+        async def call(self, capability, args, **kwargs):
+            if capability == "create_docking_proposal":
+                self.calls.append((capability, dict(args)))
+                raise BridgeTransportError("corte")
+            return await super().call(capability, args, **kwargs)
+
+    bridge = LossyBridge({"reconcile_operation": {
+        "operation": "crear_propuesta", "status": "FALLIDA", "error": "x"}})
+    plan = _create_plan()
+    report = await AgentExecutor(bridge, store=ExecutionStore(tmp_path / "exec.db")).execute(
+        plan, approval_digest=plan.digest, approved_steps={"s1"})
+    assert report.state == "ambiguous"
+    assert "plan nuevo" in (report.outcomes[0].error or "")
+
+
+@pytest.mark.asyncio
+async def test_lost_response_with_pending_key_stays_ambiguous(tmp_path):
+    from molchat_agent.bridge import BridgeError, BridgeTransportError
+    from molchat_agent.orchestration.store import ExecutionStore
+
+    class LossyBridge(ScriptedBridge):
+        async def call(self, capability, args, **kwargs):
+            if capability == "create_docking_proposal":
+                self.calls.append((capability, dict(args)))
+                raise BridgeTransportError("corte")
+            if capability == "reconcile_operation":
+                self.calls.append((capability, dict(args)))
+                return {"operation": "crear_propuesta", "status": "PENDIENTE"}
+            raise BridgeError("no esperada")
+
+    plan = _create_plan()
+    report = await AgentExecutor(LossyBridge({}),
+                                 store=ExecutionStore(tmp_path / "exec.db")).execute(
+        plan, approval_digest=plan.digest, approved_steps={"s1"})
+    assert report.state == "ambiguous"
+    assert "Sin reenvío" in (report.outcomes[0].error or "")
+
+
+@pytest.mark.asyncio
+async def test_resume_ambiguous_recovers_when_completed(tmp_path):
+    """CR-06 recovery: resume reconciles the ambiguous step and continues."""
+    from molchat_agent.bridge import BridgeTransportError
+    from molchat_agent.orchestration.store import ExecutionStore
+
+    proposal = {"proposal_id": "p-9", "proposal_hash": "sha256:" + "e" * 64,
+                "estado": "pendiente"}
+    state = {"reconcile": {"operation": "crear_propuesta", "status": "PENDIENTE"}}
+
+    class FlakyBridge(ScriptedBridge):
+        async def call(self, capability, args, **kwargs):
+            self.calls.append((capability, dict(args)))
+            if capability == "create_docking_proposal":
+                raise BridgeTransportError("corte")
+            if capability == "reconcile_operation":
+                return state["reconcile"]
+            return {"ok": True}
+
+    db = tmp_path / "exec.db"
+    plan = _create_plan()
+    first = await AgentExecutor(FlakyBridge({}), store=ExecutionStore(db)).execute(
+        plan, approval_digest=plan.digest, approved_steps={"s1"})
+    assert first.state == "ambiguous"
+    # Later the platform finished: resume adopts and completes, no resend.
+    state["reconcile"] = {"operation": "crear_propuesta", "status": "COMPLETADA",
+                          "proposal_id": "p-9", "response": proposal}
+    bridge2 = FlakyBridge({})
+    second = await AgentExecutor(bridge2, store=ExecutionStore(db)).resume(
+        plan.digest, approval_digest=plan.digest, approved_steps={"s1"})
+    assert second.state == "completed"
+    assert second.outcomes[0].result == proposal
+    assert [c for c in bridge2.calls if c[0] == "create_docking_proposal"] == []
+
+
+@pytest.mark.asyncio
+async def test_resume_ambiguous_without_recovery_keeps_report(tmp_path):
+    from molchat_agent.bridge import BridgeError, BridgeTransportError
+    from molchat_agent.orchestration.store import ExecutionStore
+
+    class LossyBridge(ScriptedBridge):
+        async def call(self, capability, args, **kwargs):
+            if capability == "create_docking_proposal":
+                raise BridgeTransportError("corte")
+            raise BridgeError("MolDesign devolvió HTTP 404 en reconcile_operation",
+                              status_code=404)
+
+    db = tmp_path / "exec.db"
+    plan = _create_plan()
+    first = await AgentExecutor(LossyBridge({}), store=ExecutionStore(db)).execute(
+        plan, approval_digest=plan.digest, approved_steps={"s1"})
+    assert first.state == "ambiguous"
+    second = await AgentExecutor(LossyBridge({}), store=ExecutionStore(db)).resume(
+        plan.digest, approval_digest=plan.digest, approved_steps={"s1"})
+    assert second.state == "ambiguous"
+    assert len(second.outcomes) == 1
 

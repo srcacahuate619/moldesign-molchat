@@ -84,3 +84,14 @@ def test_claim_key_states(store):
     assert store.claim_key("k", "d", "s1", "h1") == "duplicate"
     assert store.claim_key("k", "d", "s1", "h2") == "conflict"
     store.mark_key("k", "ambiguous")  # recorded, no error
+
+
+def test_reopen_only_from_ambiguous(store):
+    digest = "sha256:" + "e" * 64
+    store.save_plan(digest, {"goal": "g"}, "ambiguous")
+    store.reopen(digest, "recuperación")
+    assert store.get_state(digest) == "running"
+    assert store.transitions(digest)[-1]["detail"] == "recuperación"
+    store.set_state(digest, "done")
+    with pytest.raises(ValueError, match="solo ambiguous"):
+        store.reopen(digest)

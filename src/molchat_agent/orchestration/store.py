@@ -231,3 +231,19 @@ class ExecutionStore:
     def mark_key(self, key: str, state: str) -> None:
         with self._connect() as conn:
             conn.execute("UPDATE idempotency SET state = ? WHERE key = ?", (state, key))
+
+    def reopen(self, digest: str, detail: str = "") -> None:
+        """ambiguous -> running: the only escape from a terminal state.
+
+        Used solely by CR-06 recovery (adopting a recorded response, never
+        resending). Every other terminal state stays final.
+        """
+        current = self.get_state(digest)
+        if current != "ambiguous":
+            raise ValueError(f"solo ambiguous se reabre, no {current}")
+        with self._connect() as conn:
+            conn.execute("UPDATE executions SET state = 'running', updated_at = ?"
+                         " WHERE digest = ?", (_now(), digest))
+            conn.execute("INSERT INTO transitions (digest, from_state, to_state, created_at, detail)"
+                         " VALUES (?, 'ambiguous', 'running', ?, ?)",
+                         (digest, _now(), detail))

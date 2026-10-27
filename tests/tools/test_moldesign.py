@@ -31,6 +31,8 @@ from molchat_agent.tools import capability
     ("rescoring_health", "GET", "/rescoring/health", "read"),
     ("rescoring_info", "GET", "/rescoring/info", "read"),
     ("rescoring_ram", "GET", "/rescoring/ram", "read"),
+    ("create_docking_proposal", "POST", "/ai/proposals", "write"),
+    ("reconcile_operation", "GET", "/ai/idempotency/{idempotency_key}", "read"),
 ])
 def test_endpoint_contracts(name, method, path, risk):
     cap = capability(name)
@@ -39,9 +41,9 @@ def test_endpoint_contracts(name, method, path, risk):
     assert cap.risk == risk
 
 
-@pytest.mark.parametrize("name", ["create_docking_proposal", "start_batch"])
+@pytest.mark.parametrize("name", ["start_batch"])
 def test_unavailable_capabilities_do_not_exist(name):
-    """No endpoint (proposals) or no agent bytes (batch file): abstain by absence."""
+    """Multipart batch file: no agent bytes; abstain by absence."""
     from molchat_agent.tools import PlanValidationError, catalog
     assert name not in catalog()
     with pytest.raises(PlanValidationError):

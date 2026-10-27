@@ -18,6 +18,12 @@ from .config import load_config
 class BridgeError(RuntimeError):
     """A MolDesign service call failed without exposing credentials."""
 
+    def __init__(self, message: str, *, status_code: int | None = None,
+                 detail: str | None = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code  # HTTP status when a response arrived
+        self.detail = detail  # server detail, truncated, for 4xx mapping
+
 
 class BridgeTransportError(BridgeError):
     """No response was received at all (transport lost, timeout, disconnect).
@@ -40,6 +46,19 @@ def validate_base_url(value: str, *, allow_remote: bool = False) -> str:
     if not local and (not allow_remote or url.scheme != "https"):
         raise ValueError("Sólo loopback; un servidor remoto exige HTTPS y autorización expresa")
     return value.rstrip("/")
+
+
+def _error_detail(response: Any) -> str | None:
+    """Best-effort server detail for 4xx mapping (truncated, never raises)."""
+    try:
+        payload = response.json()
+    except ValueError:
+        return None
+    detail = payload.get("detail") if isinstance(payload, dict) else None
+    if detail is None:
+        return None
+    text = detail if isinstance(detail, str) else json.dumps(detail, ensure_ascii=False)
+    return text[:300]
 
 
 class MolDesignBridge:
@@ -89,7 +108,7 @@ class MolDesignBridge:
         if self._token:
             headers["Authorization"] = f"Bearer {self._token}"
         if idempotency_key is not None:
-            headers["X-Idempotency-Key"] = idempotency_key
+            headers["Idempotency-Key"] = idempotency_key
         if tool.risk == "approval_required" and not self._token:
             raise BridgeError("Se requiere una sesión autenticada para aprobar")
         if response_kind == "sse":
@@ -103,7 +122,9 @@ class MolDesignBridge:
                     kwargs["json"] = body
                 response = await self._client.post(path, headers=headers, **kwargs)
             if response.status_code >= 400:
-                raise BridgeError(f"MolDesign devolvió HTTP {response.status_code} en {name}")
+                raise BridgeError(f"MolDesign devolvió HTTP {response.status_code} en {name}",
+                                  status_code=response.status_code,
+                                  detail=_error_detail(response))
             if response.is_redirect:
                 raise BridgeError("MolDesign respondió con una redirección inesperada")
             if len(response.content) > 5_000_000:
