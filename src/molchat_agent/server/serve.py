@@ -20,6 +20,7 @@ from ..conversation.memory import MemoryStore
 from ..conversation.tools import QualityBackend
 from ..orchestration.store import ExecutionStore
 from ..providers import build_registry
+from ..voice.local_whisper import ChainSTT, LocalWhisperSTT, faster_whisper_available
 from ..voice.moldesign_whisper import MolDesignWhisper
 from .app import create_app
 from .auth import mint, standalone_secret
@@ -57,6 +58,24 @@ def find_ui_dist(explicit: str = "") -> Path | None:
     return None
 
 
+def _build_stt(config: MolChatConfig, bridge: MolDesignBridge):  # type: ignore[no-untyped-def]
+    """STT chain: platform Whisper first, local faster-whisper as fallback.
+
+    The platform endpoint is the default (PLAN §12), but a MolDesign build
+    without faster-whisper answers 501; the sidecar's own local model keeps
+    voice working without touching the platform. No backend at all -> None
+    (the transcribe endpoint then answers 503, never invents text).
+    """
+    backends: list = []
+    if config.moldesign_token:
+        backends.append(MolDesignWhisper(bridge.client, config.moldesign_token))
+    if faster_whisper_available():
+        backends.append(LocalWhisperSTT(config.whisper_model))
+    if not backends:
+        return None
+    return backends[0] if len(backends) == 1 else ChainSTT(backends)
+
+
 def demo_data_path() -> Path:
     return resources.files("molchat_agent.conversation.data") / "demo_molecules.json"
 
@@ -85,8 +104,7 @@ def build_server(config: MolChatConfig | None = None,
         allowed_origins=config.allowed_origins,
         provider_id=config.provider,
         executions=ExecutionManager(bridge, store),
-        stt=MolDesignWhisper(bridge.client, config.moldesign_token)
-        if config.moldesign_token else None,
+        stt=_build_stt(config, bridge),
     )
     found = find_ui_dist(ui_dist or config.ui_dist)
     app = create_app(state, ui_dist=found)

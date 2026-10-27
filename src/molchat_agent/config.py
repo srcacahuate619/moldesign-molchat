@@ -48,6 +48,7 @@ class MolChatConfig:
     memory_file: Path = field(default_factory=lambda: Path.home() / ".molchat" / "sidecar_memory.db")
     exec_store: Path = field(default_factory=lambda: Path.home() / ".molchat" / "sidecar_exec.db")
     ui_dist: str = ""  # built UI directory (else ./ui/dist, else API-only)
+    whisper_model: str = "tiny"  # local faster-whisper fallback model
 
     def redacted(self) -> dict[str, str]:
         """Config summary safe to print: secrets become set/unset, never values."""
@@ -78,6 +79,7 @@ class MolChatConfig:
             "memory_file": str(self.memory_file),
             "exec_store": str(self.exec_store),
             "ui_dist": self.ui_dist or "(auto)",
+            "whisper_model": self.whisper_model,
         }
 
 
@@ -134,4 +136,5 @@ def load_config(env: Mapping[str, str] | None = None) -> MolChatConfig:
         memory_file=Path(memory_file) if memory_file else Path.home() / ".molchat" / "sidecar_memory.db",
         exec_store=Path(exec_store) if exec_store else Path.home() / ".molchat" / "sidecar_exec.db",
         ui_dist=text("MOLCHAT_UI_DIST"),
+        whisper_model=text("MOLCHAT_WHISPER_MODEL", "tiny"),
     )

@@ -26,7 +26,10 @@ def test_standalone_build_mints_a_verifiable_token(tmp_path):
     assert served.token is not None
     session = verify(served.secret, served.token)
     assert session.allows("read", "chat", "plan", "approve", "cancel", "transcribe")
-    assert served.state.stt is None  # no MolDesign token: honest 503 later
+    # STT: local faster-whisper fallback when importable (Fase 4 closure);
+    # None only when neither the platform token nor the local model exists.
+    from molchat_agent.voice.local_whisper import faster_whisper_available
+    assert (served.state.stt is None) == (not faster_whisper_available())
 
 
 def test_hosted_build_uses_shared_secret_and_no_token(tmp_path):

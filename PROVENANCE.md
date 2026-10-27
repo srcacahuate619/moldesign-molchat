@@ -594,6 +594,19 @@ MolDesign es por API HTTP, no por copia de código.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/voice/test_whisper.py, tests/server/test_transcribe.py
 
+### src/molchat_agent/voice/local_whisper.py, tests/voice/test_local_whisper.py
+
+- Origen: código nuevo en este repositorio (completado por el supervisor al
+  cerrar la Fase 4: la instancia de revisión respondía 501 sin
+  faster-whisper en la plataforma)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo: STT local con faster-whisper (puerto
+  `SpeechToText`, §12 «STT propio opcional») y `ChainSTT` — plataforma
+  primero, local de respaldo; `serve` lo cablea tras el backend de MolDesign
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/voice/test_local_whisper.py
+
 ### src/molchat_agent/server/serve.py, tests/server/test_serve.py
 
 - Origen: código nuevo en este repositorio (sin porte desde MolDesign)
