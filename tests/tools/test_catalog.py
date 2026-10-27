@@ -84,7 +84,7 @@ def test_dossier_builds_minimal_projection():
     method, path, query, body, response = capability("get_case_dossier").request(
         {"molecule_id": "12345678-1234-1234-1234-123456789012",
          "format": "package", "task_id": "task-9"})
-    assert path == "/dossier/12345678-1234-1234-1234-123456789012/package"
+    assert path == "/evaluation/dossier/12345678-1234-1234-1234-123456789012/package"
     assert query == {}
     assert body["run"] == {"task_id": "task-9"}
     assert body["case_id"].startswith("molchat-")

@@ -2,11 +2,11 @@
 
 Toda comunicación agente↔plataforma es HTTP con este contrato. El catálogo
 vivo servido por la plataforma (CR-04) no existe aún: el catálogo es local
-(`tools/moldesign.py` + `tools/molcy.py`, 30 capacidades) y la suite de
+(`tools/moldesign.py` + `tools/molcy.py`, 31 capacidades) y la suite de
 contrato lo valida contra un MolDesign instalado. CR-06/CR-07 viven en la
 rama `feat/molchat-plataforma-cr` (worktree de plataforma, sin merge a main).
 
-## Capacidades (30)
+## Capacidades (31)
 
 | Capacidad | Endpoint | Riesgo | Notas |
 |---|---|---|---|
@@ -27,7 +27,7 @@ rama `feat/molchat-plataforma-cr` (worktree de plataforma, sin merge a main).
 | `export_batch` | `GET /evaluation/batch/{batch_id}/{export,csv}` | read | Binario (bytes); solo lote completado |
 | `get_ai_report` | `POST /evaluation/ai-report/{molecule_id}` | read | POST verificado (genera+cachea); clase `inference` |
 | `stream_ai_report` | `GET /evaluation/ai-report/{molecule_id}/stream` | read | SSE |
-| `get_case_dossier` | `POST /dossier/{molecule_id}/{preview,package}` | read | Binario; proyección mínima generada |
+| `get_case_dossier` | `POST /evaluation/dossier/{molecule_id}/{preview,package}` | read | Binario; proyección mínima generada |
 | `get_sar` | `GET /sar/{molecule_id}` | read | `?task_id=` opcional |
 | `get_history_stats` | `GET /history/stats` | read | Contadores propios |
 | `save_molecule` | `POST /history/save/{molecule_id}` | write | `?name=`, `?task_id=` |

@@ -24,7 +24,7 @@ from molchat_agent.tools import capability
     ("export_batch", "GET", "/evaluation/batch/{batch_id}/{format}", "read"),
     ("get_ai_report", "POST", "/evaluation/ai-report/{molecule_id}", "read"),
     ("stream_ai_report", "GET", "/evaluation/ai-report/{molecule_id}/stream", "read"),
-    ("get_case_dossier", "POST", "/dossier/{molecule_id}/{format}", "read"),
+    ("get_case_dossier", "POST", "/evaluation/dossier/{molecule_id}/{format}", "read"),
     ("get_sar", "GET", "/sar/{molecule_id}", "read"),
     ("get_history_stats", "GET", "/history/stats", "read"),
     ("save_molecule", "POST", "/history/save/{molecule_id}", "write"),

@@ -748,3 +748,35 @@ MolDesign es por API HTTP, no por copia de código.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/test_make_manifest.py (repos git scaffold + forma),
   tests/test_main_entry.py, tests/test_check_scripts.py
+
+### conformance/__init__.py, conformance/runner.py, conformance/cases/moldesign.json, conformance/cases/molcy.json, tests/test_conformance.py
+
+- Origen: código nuevo en este repositorio (sin porte desde MolDesign)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (tarea 6.2): kit de conformidad §6.4 con
+  casos por pack; patas offline (integridad, validación, lecturas sin
+  efecto ni clave, gate awaiting_approval, errores como abstención) y
+  vivas (1b superficie vía OpenAPI con expansión de enums y
+  pending_surface auditable, 3b oráculo de estado, 5b bogus); --register
+  para packs de terceros. Cobertura de procedencia extendida a
+  conformance/ (sin porte)
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/test_conformance.py (offline completo, mock-live,
+  pack extranjero, skips honestos), tests/test_check_scripts.py
+
+### src/molchat_agent/tools/moldesign.py, tests/tools/test_moldesign.py, tests/tools/test_catalog.py, docs/CONTRATO_MOLDESIGN.md
+
+- Origen: corrección sobre código propio; verdad verificada en
+  backend/api/routers/evaluation.py (monta dossier bajo /evaluation) y en
+  el OpenAPI vivo de una instancia de escritorio
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: fix cazado por el check 1b antes de existir el kit:
+  get_case_dossier declaraba POST /dossier/... pero la plataforma sirve
+  POST /evaluation/dossier/... (el prefijo del router se monta dentro de
+  /evaluation); el positivo de contrato toleraba 404 y lo enmascaraba.
+  Corregida ruta + provenance + doc; titular de conteo 30→31 (la tabla
+  ya listaba 31 con la fila triple de rescoring)
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/tools/, tests/test_conformance.py, 1b en vivo
