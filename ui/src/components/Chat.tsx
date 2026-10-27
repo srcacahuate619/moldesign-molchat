@@ -9,6 +9,7 @@ import {
 } from "../lib/api";
 import type { StringKey } from "../lib/i18n";
 import EvidenceBlock from "./EvidenceBlock";
+import VoiceButton from "./VoiceButton";
 
 interface Message {
   role: "user" | "assistant";
@@ -19,10 +20,12 @@ interface Message {
 
 export default function Chat({
   token,
+  lang,
   t,
   onSessionInvalid,
 }: {
   token: string;
+  lang: string;
   t: (key: StringKey) => string;
   onSessionInvalid: () => void;
 }) {
@@ -33,6 +36,7 @@ export default function Chat({
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastText, setLastText] = useState<string | null>(null);
+  const [pendingVoice, setPendingVoice] = useState<string | null>(null);
   const aborter = useRef<(() => void) | null>(null);
   const streaming = status !== null;
 
@@ -210,6 +214,34 @@ export default function Chat({
             )}
           </p>
         )}
+        {pendingVoice !== null && (
+          <div className="plan-card" role="group" aria-label={t("voice.confirm")}>
+            <p className="muted">{t("voice.confirm")}</p>
+            <p>
+              <textarea
+                rows={2}
+                value={pendingVoice}
+                onChange={(event) => setPendingVoice(event.target.value)}
+                aria-label={t("voice.confirm")}
+              />
+            </p>
+            <p>
+              <button
+                onClick={() => {
+                  const text = pendingVoice;
+                  setPendingVoice(null);
+                  send(text);
+                }}
+                disabled={!pendingVoice.trim() || streaming}
+              >
+                {t("voice.send")}
+              </button>{" "}
+              <button onClick={() => setPendingVoice(null)}>
+                {t("voice.discard")}
+              </button>
+            </p>
+          </div>
+        )}
         <form
           className="chat-input"
           onSubmit={(event) => {
@@ -217,6 +249,14 @@ export default function Chat({
             send(input);
           }}
         >
+          <VoiceButton
+            token={token}
+            lang={lang}
+            t={t}
+            disabled={streaming}
+            onTranscript={(text) => setPendingVoice(text)}
+            onError={(message) => setError(message)}
+          />
           <label>
             <span className="visually-hidden">{t("chat.input")}</span>
             <input

@@ -24,6 +24,7 @@ function renderChat() {
   return render(
     <Chat
       token="test-token"
+      lang="es"
       t={(key) => strings("es")[key]}
       onSessionInvalid={() => {}}
     />,

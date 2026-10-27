@@ -93,7 +93,7 @@ export default function App() {
         </nav>
       </header>
       {tab === "chat" && (
-        <Chat token={token} t={t} onSessionInvalid={sessionInvalid} />
+        <Chat token={token} lang={locale} t={t} onSessionInvalid={sessionInvalid} />
       )}
       {tab === "plans" && (
         <Plans
