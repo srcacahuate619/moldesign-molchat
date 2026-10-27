@@ -9,6 +9,7 @@ JSON ``{"error": ...}``; unexpected failures never leak internals.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any, AsyncIterator
 from urllib.parse import urlsplit
@@ -21,9 +22,13 @@ from starlette.routing import Route
 
 from .. import __version__
 from ..conversation.memory import Conversation, ConversationNotFound
-from ..tools import catalog
+from ..plan import Plan
+from ..providers.base import ProviderDisabled, ProviderError
+from ..providers.registry import ConsentDenied
+from ..tools import PlanValidationError, capability, catalog
 from .auth import AuthError, Session, parse_bearer, verify
 from .events import SSE_HEADERS, encode_event
+from .executions import TERMINAL as EXEC_TERMINAL
 from .state import AccountMismatch, ServerState
 
 CONTRACT = "moldesign.molchat/1"
@@ -31,6 +36,8 @@ CONTRACT = "moldesign.molchat/1"
 MAX_JSON_BODY = 1_000_000
 MAX_CHAT_TEXT = 8000
 MAX_MESSAGES_PER_CONVERSATION = 200
+EXEC_SNAPSHOT_S = 0.5
+EXEC_SNAPSHOT_LIMIT = 720  # 6 minutes of snapshots, then the stream closes
 
 LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 
@@ -78,6 +85,8 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
 
     need_read = require("read")
     need_chat = require("chat")
+    need_plan = require("plan")
+    need_cancel = require("cancel")
 
     async def read_json(request: Request) -> Any:
         try:
@@ -187,6 +196,88 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
         state.revoke(session.jti)
         return JSONResponse({"revoked": True})
 
+    async def propose_plan(request: Request) -> JSONResponse:
+        await need_plan(request)
+        payload = await read_json(request)
+        if not isinstance(payload, dict):
+            return _error(400, "el cuerpo debe ser un objeto")
+        goal = payload.get("goal", "")
+        if not isinstance(goal, str) or not goal.strip():
+            return _error(400, "objetivo vacío")
+        provider_id = payload.get("provider_id") or state.provider_id
+        if provider_id is not None and not isinstance(provider_id, str):
+            return _error(400, "provider_id no válido")
+        try:
+            plan = await state.registry.plan(goal, provider_id=provider_id)
+        except (ConsentDenied, ProviderDisabled) as exc:
+            raise HTTPException(403, str(exc)) from exc
+        except ProviderError as exc:
+            raise HTTPException(502, f"el proveedor falló: {exc}") from exc
+        return JSONResponse({"plan": plan.as_dict(), "digest": plan.digest})
+
+    async def submit_execution(request: Request) -> JSONResponse:
+        session = await need_plan(request)
+        if state.executions is None:
+            return _error(503, "ejecución no disponible en este sidecar")
+        payload = await read_json(request)
+        if not isinstance(payload, dict) or not isinstance(payload.get("plan"), dict):
+            return _error(400, "se requiere un plan como objeto")
+        try:
+            plan = Plan.from_dict(payload["plan"])
+        except PlanValidationError as exc:
+            return _error(400, f"plan no válido: {exc}")
+        if any(capability(s.capability).risk != "read" for s in plan.steps) \
+                and not session.allows("approve"):
+            raise HTTPException(403, "el plan tiene pasos sensibles: falta permiso approve")
+        approved = payload.get("approved_steps", [])
+        if not isinstance(approved, list) or not all(isinstance(s, str) for s in approved):
+            return _error(400, "approved_steps debe ser una lista de ids")
+        digest = payload.get("approval_digest")
+        if digest is not None and not isinstance(digest, str):
+            return _error(400, "approval_digest no válido")
+        record = state.executions.submit(
+            plan, approval_digest=digest, approved_steps=set(approved))
+        return JSONResponse(state.executions.view(record), status_code=202)
+
+    async def get_execution(request: Request) -> JSONResponse:
+        await need_read(request)
+        if state.executions is None:
+            return _error(503, "ejecución no disponible en este sidecar")
+        record = state.executions.get(request.path_params["exec_id"])
+        if record is None:
+            return _error(404, "ejecución no encontrada")
+        return JSONResponse(state.executions.view(record))
+
+    async def execution_events(request: Request) -> StreamingResponse:
+        await need_read(request)
+        if state.executions is None:
+            return _error(503, "ejecución no disponible en este sidecar")  # type: ignore[return-value]
+        record = state.executions.get(request.path_params["exec_id"])
+        if record is None:
+            return _error(404, "ejecución no encontrada")  # type: ignore[return-value]
+        manager = state.executions
+
+        async def stream() -> AsyncIterator[bytes]:
+            for _ in range(EXEC_SNAPSHOT_LIMIT):
+                current = manager.get(record.id)
+                assert current is not None
+                yield encode_event({"type": "snapshot", **manager.view(current)})
+                if current.state in EXEC_TERMINAL:
+                    return
+                await asyncio.sleep(EXEC_SNAPSHOT_S)
+
+        return StreamingResponse(stream(), media_type="text/event-stream",
+                                 headers=dict(SSE_HEADERS))
+
+    async def cancel_execution(request: Request) -> JSONResponse:
+        await need_cancel(request)
+        if state.executions is None:
+            return _error(503, "ejecución no disponible en este sidecar")
+        changed, detail = await state.executions.cancel(request.path_params["exec_id"])
+        if detail == "not-found":
+            return _error(404, "ejecución no encontrada")
+        return JSONResponse({"cancelled": changed, "detail": detail})
+
     async def http_error(_request: Request, exc: Exception) -> JSONResponse:
         assert isinstance(exc, HTTPException)
         return _error(exc.status_code, str(exc.detail))
@@ -205,6 +296,11 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
             Route("/v1/conversations/{conv_id}", delete_conversation, methods=["DELETE"]),
             Route("/v1/chat", chat, methods=["POST"]),
             Route("/v1/session/revoke", revoke, methods=["POST"]),
+            Route("/v1/plans", propose_plan, methods=["POST"]),
+            Route("/v1/executions", submit_execution, methods=["POST"]),
+            Route("/v1/executions/{exec_id}", get_execution, methods=["GET"]),
+            Route("/v1/executions/{exec_id}/events", execution_events, methods=["GET"]),
+            Route("/v1/executions/{exec_id}/cancel", cancel_execution, methods=["POST"]),
         ],
         exception_handlers={HTTPException: http_error, Exception: unhandled},
     )

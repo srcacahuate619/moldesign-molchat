@@ -569,3 +569,15 @@ MolDesign es por API HTTP, no por copia de código.
   llamada y proceso monousuario ligado a la cuenta
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/server/test_app.py
+
+### src/molchat_agent/server/executions.py, tests/server/test_executions.py
+
+- Origen: código nuevo en este repositorio (sin porte desde MolDesign)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo (tarea 4.1): propuesta de planes por proveedor
+  y ejecuciones en segundo plano con snapshots SSE; la cancelación cancela
+  los trabajos remotos y marca `cancelling` hasta que el runner aterriza
+  `cancelled` con su reporte final
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/server/test_executions.py

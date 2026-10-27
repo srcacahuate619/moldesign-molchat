@@ -16,6 +16,7 @@ from ..conversation.engine import ConversationEngine
 from ..conversation.memory import MemoryStore
 from ..conversation.tools import ToolBackend
 from ..providers.registry import ProviderRegistry
+from .executions import ExecutionManager
 
 
 class AccountMismatch(ValueError):
@@ -30,6 +31,7 @@ class ServerState:
     backend: ToolBackend
     allowed_origins: tuple[str, ...] = ()
     provider_id: str | None = None
+    executions: ExecutionManager | None = None
     user_id: str | None = None
     revoked: set[str] = field(default_factory=set)
 
