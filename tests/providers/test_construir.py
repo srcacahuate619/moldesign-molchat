@@ -21,6 +21,13 @@ def test_deepseek_solo_llega_a_su_host():
     assert proveedor.config.api_key == "test-deepseek-1234567890"
 
 
+def test_baseten_usa_el_modelo_y_endpoint_del_hackathon():
+    proveedor = construir(catalogo.por_id("baseten-hackathon"), api_key="test-baseten-key")
+    assert proveedor.config.base_url == "https://inference.baseten.co/v1"
+    assert proveedor.config.model == "meta-models/muse-spark-open-1026"
+    assert proveedor._headers()["Authorization"] == "Bearer test-baseten-key"
+
+
 def test_cada_clave_del_entorno_va_a_su_proveedor():
     registro = build_registry(load_config({
         "OPENAI_API_KEY": "sk-openai-aaaaaaaa",

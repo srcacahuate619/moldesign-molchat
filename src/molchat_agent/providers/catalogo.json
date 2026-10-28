@@ -16,6 +16,19 @@
       "que_sale": "El texto del chat y los resultados de MolDesign que el chat cita."
     },
     {
+      "id": "baseten-hackathon",
+      "nombre": "Baseten (Muse Spark Hackathon)",
+      "familia": "openai_chat",
+      "base_url": "https://inference.baseten.co/v1",
+      "requiere_clave": true,
+      "remoto": true,
+      "modelo_por_defecto": "meta-models/muse-spark-open-1026",
+      "modelos_ejemplo": ["meta-models/muse-spark-open-1026"],
+      "prefijo_clave": "",
+      "documentacion": "https://docs.baseten.co/",
+      "que_sale": "El texto del chat y los resultados de MolDesign que el chat cita."
+    },
+    {
       "id": "anthropic",
       "nombre": "Anthropic (Claude)",
       "familia": "anthropic",
