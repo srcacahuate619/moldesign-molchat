@@ -32,6 +32,17 @@ function renderChat() {
 }
 
 describe("Chat error turn with idempotent retry", () => {
+  it("keeps history closed until requested in the compact panel", async () => {
+    mockList.mockResolvedValue([{ id: "test-conversation", summary: "Mi conversación", message_count: 2 }]);
+    renderChat();
+    await waitFor(() => expect(mockList).toHaveBeenCalled());
+    expect(screen.queryByText(/Mi conversación/)).not.toBeInTheDocument();
+    const toggle = screen.getByRole("button", { name: /mostrar historial/i });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(toggle);
+    expect(screen.getByText(/Mi conversación/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /ocultar historial/i })).toHaveAttribute("aria-expanded", "true");
+  });
   it("shows retry after a failed turn and resends once", async () => {
     mockList.mockResolvedValue([]);
     mockStream.mockImplementation(

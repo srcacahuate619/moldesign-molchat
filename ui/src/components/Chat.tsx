@@ -10,6 +10,7 @@ import {
 import type { StringKey } from "../lib/i18n";
 import EvidenceBlock from "./EvidenceBlock";
 import VoiceButton from "./VoiceButton";
+import { BotIcon, HistoryIcon, PlusIcon, SendIcon } from "./Icons";
 
 interface Message {
   role: "user" | "assistant";
@@ -37,6 +38,7 @@ export default function Chat({
   const [error, setError] = useState<string | null>(null);
   const [lastText, setLastText] = useState<string | null>(null);
   const [pendingVoice, setPendingVoice] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
   const aborter = useRef<(() => void) | null>(null);
   const streaming = status !== null;
 
@@ -149,35 +151,45 @@ export default function Chat({
 
   return (
     <div className="chat">
-      <aside className="chat-side">
+      <div className="chat-toolbar">
+        <button type="button" className="tool-button" onClick={() => setShowHistory(!showHistory)}
+          aria-expanded={showHistory} aria-controls="chat-history"
+          aria-label={t(showHistory ? "chat.hideHistory" : "chat.showHistory")}>
+          <HistoryIcon /><span>{t("chat.history")}</span>
+        </button>
         <button
+          type="button" className="tool-button"
           onClick={() => {
             aborter.current?.();
             setActiveId(null);
             setMessages([]);
             setError(null);
             setStatus(null);
+            setShowHistory(false);
           }}
         >
-          {t("chat.new")}
+          <PlusIcon /><span>{t("chat.new")}</span>
         </button>
+      </div>
+      {showHistory && <aside className="chat-side" id="chat-history" aria-label={t("chat.history")}>
+        {conversations.length === 0 && <p className="muted history-empty">{t("chat.historyEmpty")}</p>}
         <ul>
           {conversations.map((conv) => (
             <li key={conv.id}>
               <button
                 className={conv.id === activeId ? "active" : ""}
-                onClick={() => void select(conv.id)}
+                onClick={() => { void select(conv.id); setShowHistory(false); }}
               >
                 {conv.summary || conv.id.slice(0, 8)} ({conv.message_count})
               </button>
             </li>
           ))}
         </ul>
-      </aside>
+      </aside>}
       <section className="chat-main">
         <ol className="messages" aria-live="polite">
           {messages.length === 0 && !streaming && (
-            <li className="muted">{t("chat.empty")}</li>
+            <li className="chat-empty"><span className="empty-icon"><BotIcon /></span><strong>{t("app.title")}</strong><span>{t("chat.empty")}</span></li>
           )}
           {messages.map((message, index) => (
             <li key={index} className={`message ${message.role}`}>
@@ -266,8 +278,8 @@ export default function Chat({
               disabled={streaming}
             />
           </label>
-          <button type="submit" disabled={streaming || !input.trim()}>
-            {t("chat.send")}
+          <button type="submit" className="send-button" aria-label={t("chat.send")} title={t("chat.send")} disabled={streaming || !input.trim()}>
+            <SendIcon /><span className="visually-hidden">{t("chat.send")}</span>
           </button>
         </form>
       </section>

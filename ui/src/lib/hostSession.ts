@@ -47,15 +47,16 @@ export function isTrustedHostOrigin(origin: string): boolean {
 
 export function isSessionMessage(
   value: unknown,
-): value is { type: string; token: string; locale?: "es" | "en" } {
+): value is { type: string; token: string; locale?: "es" | "en"; theme?: "dark" | "light" } {
   if (typeof value !== "object" || value === null) return false;
   const record = value as Record<string, unknown>;
   if (record["type"] !== SESSION_ENVELOPE) return false;
   if (typeof record["token"] !== "string" || record["token"].length === 0)
     return false;
-  const keys = Object.keys(record);
-  if (keys.length === 2) return true; // hosts anteriores sin idioma
-  return keys.length === 3 && (record["locale"] === "es" || record["locale"] === "en");
+  if (Object.keys(record).some((key) => !["type", "token", "locale", "theme"].includes(key))) return false;
+  if ("locale" in record && record["locale"] !== "es" && record["locale"] !== "en") return false;
+  if ("theme" in record && record["theme"] !== "dark" && record["theme"] !== "light") return false;
+  return true;
 }
 
 /**
@@ -77,7 +78,7 @@ export function announceReady(target: PostTarget | null = null): boolean {
  * function for effect cleanup.
  */
 export function listenForSession(
-  onToken: (token: string, locale?: "es" | "en") => void,
+  onToken: (token: string, locale?: "es" | "en", theme?: "dark" | "light") => void,
   scope: ListenScope | null = null,
   expectedParent: PostTarget | null = null,
 ): () => void {
@@ -88,7 +89,8 @@ export function listenForSession(
   const listener = (event: { origin: string; data: unknown; source: unknown }) => {
     if (event.source !== parent || !isTrustedHostOrigin(event.origin)) return;
     if (!isSessionMessage(event.data)) return;
-    if (event.data.locale) onToken(event.data.token, event.data.locale);
+    if (event.data.theme) onToken(event.data.token, event.data.locale, event.data.theme);
+    else if (event.data.locale) onToken(event.data.token, event.data.locale);
     else onToken(event.data.token);
   };
   holder.addEventListener("message", listener);

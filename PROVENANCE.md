@@ -831,3 +831,12 @@ MolDesign es por API HTTP, no por copia de código.
 - Transformación: pruebas de versión, identidad, capacidades y abstención del cliente
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/conversation/test_platform_backend.py y pruebas de contrato en vivo
+
+### ui/src/components/Icons.tsx
+
+- Origen: iconos vectoriales nuevos para la interfaz de este repositorio
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua, con colaboración de un agente de código
+- Transformación: símbolos de interfaz locales, sin recursos remotos
+- Licencia resultante: GPL-3.0-or-later
+- Tests: pruebas de componentes de ui/src/components

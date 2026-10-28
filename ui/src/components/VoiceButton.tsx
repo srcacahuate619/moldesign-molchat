@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { api } from "../lib/api";
 import type { StringKey } from "../lib/i18n";
 import { isVoiceSupported, startRecording, toWavMono16 } from "../lib/voice";
+import { MicIcon, StopIcon } from "./Icons";
 
 export default function VoiceButton({
   token,
@@ -58,8 +59,10 @@ export default function VoiceButton({
       disabled={disabled || working}
       aria-pressed={recording}
       title={recording ? t("voice.stop") : t("voice.record")}
+      aria-label={recording ? t("voice.stop") : t("voice.record")}
+      className={recording ? "voice-button recording" : "voice-button"}
     >
-      {recording ? "⏹" : "🎙"}
+      {recording ? <StopIcon /> : <MicIcon />}
     </button>
   );
 }

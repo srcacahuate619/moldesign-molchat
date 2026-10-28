@@ -45,6 +45,21 @@ describe("host session handshake", () => {
     expect(isSessionMessage(null)).toBe(false);
     expect(isSessionMessage({ type: "molchat-host-session", token: "test-mh1.x.y", locale: "en" })).toBe(true);
     expect(isSessionMessage({ type: "molchat-host-session", token: "test-mh1.x.y", locale: "fr" })).toBe(false);
+    expect(isSessionMessage({ type: "molchat-host-session", token: "test-mh1.x.y", locale: "es", theme: "dark" })).toBe(true);
+    expect(isSessionMessage({ type: "molchat-host-session", token: "test-mh1.x.y", locale: "en", theme: "light" })).toBe(true);
+    expect(isSessionMessage({ type: "molchat-host-session", token: "test-mh1.x.y", locale: "es", theme: "blue" })).toBe(false);
+    expect(isSessionMessage({ type: "molchat-host-session", token: "test-mh1.x.y", theme: "dark", extra: true })).toBe(false);
+  });
+
+  it("passes the host theme with the session from the verified parent", () => {
+    const listeners: Array<(event: unknown) => void> = [];
+    const scope = { addEventListener: (_t: string, l: (event: unknown) => void) => listeners.push(l), removeEventListener: () => {} };
+    const parent = { postMessage: vi.fn() };
+    const onToken = vi.fn();
+    listenForSession(onToken, scope as unknown as Parameters<typeof listenForSession>[1], parent);
+    listeners.forEach(l => l({ origin: "http://tauri.localhost", source: parent,
+      data: { type: "molchat-host-session", token: "test-mh1.x.y", locale: "es", theme: "dark" } }));
+    expect(onToken).toHaveBeenCalledWith("test-mh1.x.y", "es", "dark");
   });
 
   it("passes the host language only from the verified parent", () => {
