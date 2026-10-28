@@ -89,6 +89,17 @@ def test_default_profile_allows_everything_registered():
     assert registry.get("stub-remote") is not None
 
 
+def test_openai_compatible_options_reach_registered_provider(tmp_path):
+    config = load_config({"MOLCHAT_PROFILE": "default",
+                          "MOLCHAT_CONSENTS_FILE": str(tmp_path / "consents.json"),
+                          "OPENAI_COMPAT_BASE_URL": "https://cloud.example/v1",
+                          "OPENAI_COMPAT_JSON_MODE": "object",
+                          "OPENAI_COMPAT_DISABLE_THINKING": "1"})
+    provider = build_registry(config).get("openai-compatible")
+    assert provider.json_mode == "object"
+    assert provider.disable_thinking is True
+
+
 def test_active_defaults_to_meta_then_fake():
     assert _registry_with_stubs(HACKATHON_PROFILE).active_id == "meta"
     registry = ProviderRegistry()

@@ -1,0 +1,8 @@
+cff-version: 1.2.0
+message: "Si este software es útil para tu trabajo, cita este repositorio y la revisión utilizada."
+title: "MolChat Agent"
+type: software
+authors:
+  - name: "MolChat contributors"
+repository-code: "https://github.com/srcacahuate619/moldesign-molchat"
+license: GPL-3.0-or-later

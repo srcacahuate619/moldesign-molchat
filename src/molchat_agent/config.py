@@ -36,6 +36,8 @@ class MolChatConfig:
     openai_compat_base_url: str = ""
     openai_compat_api_key: str | None = None
     openai_compat_model: str = ""
+    openai_compat_json_mode: str = "schema"
+    openai_compat_disable_thinking: bool = False
     llama_server_url: str = "http://127.0.0.1:8400/v1"
     llama_server_model: str = ""
     ollama_url: str = "http://127.0.0.1:11434"
@@ -75,6 +77,8 @@ class MolChatConfig:
             "openai_compat_base_url": self.openai_compat_base_url or "(unset)",
             "openai_compat_api_key": secret(self.openai_compat_api_key),
             "openai_compat_model": self.openai_compat_model or "(unset)",
+            "openai_compat_json_mode": self.openai_compat_json_mode,
+            "openai_compat_disable_thinking": str(self.openai_compat_disable_thinking),
             "llama_server_url": self.llama_server_url,
             "llama_server_model": self.llama_server_model or "(unset)",
             "ollama_url": self.ollama_url,
@@ -140,6 +144,8 @@ def load_config(env: Mapping[str, str] | None = None) -> MolChatConfig:
         openai_compat_base_url=text("OPENAI_COMPAT_BASE_URL"),
         openai_compat_api_key=secret("OPENAI_COMPAT_API_KEY"),
         openai_compat_model=text("OPENAI_COMPAT_MODEL"),
+        openai_compat_json_mode=text("OPENAI_COMPAT_JSON_MODE", "schema"),
+        openai_compat_disable_thinking=flag("OPENAI_COMPAT_DISABLE_THINKING"),
         llama_server_url=text("LLAMA_SERVER_URL", "http://127.0.0.1:8400/v1"),
         llama_server_model=text("LLAMA_SERVER_MODEL"),
         ollama_url=text("OLLAMA_URL", "http://127.0.0.1:11434"),

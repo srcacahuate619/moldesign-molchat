@@ -82,3 +82,36 @@ async def test_bad_model_output_becomes_provider_error_not_a_plan():
             base_url="http://127.0.0.1:8080/v1", model="m", client=client)
         with pytest.raises(ProviderError):
             await provider.plan("hola")
+
+
+@pytest.mark.asyncio
+async def test_http_error_is_reported_as_provider_error():
+    def handle(_):
+        return httpx.Response(400, json={"detail": "unsupported format"})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+        provider = OpenAICompatibleProvider(
+            base_url="http://127.0.0.1:8080/v1", model="m", client=client)
+        with pytest.raises(ProviderError, match="HTTP 400"):
+            await provider.plan("hola")
+
+
+@pytest.mark.asyncio
+async def test_object_mode_still_validates_untrusted_output():
+    seen = {}
+
+    def handle(request):
+        seen.update(json.loads(request.content))
+        bad_plan = {"steps": [{"capability": "evaluation_status",
+                     "arguments": {"task_id": "inventado"}, "rationale": ""}]}
+        return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps(bad_plan)}}]})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+        provider = OpenAICompatibleProvider(base_url="http://127.0.0.1:8080/v1",
+            model="demo", json_mode="object", disable_thinking=True, client=client)
+        with pytest.raises(ProviderError, match="explícitamente"):
+            await provider.plan("Revisa el estado de la evaluación en curso")
+    assert seen["response_format"] == {"type": "json_object"}
+    assert seen["chat_template_kwargs"] == {"enable_thinking": False}
+    assert seen["max_tokens"] <= 2048
+    assert '"steps"' in seen["messages"][0]["content"]

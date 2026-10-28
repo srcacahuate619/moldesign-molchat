@@ -793,3 +793,32 @@ MolDesign es por API HTTP, no por copia de código.
   Bearer y cae a la cadena local); standalone intacto
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/server/test_hosted_forwarding.py, tests/test_bridge.py
+
+### src/molchat_agent/tools/reference.py, examples/reference_backend/server.py, tests/test_reference_backend.py
+
+- Origen: código nuevo en este repositorio; ejemplo sintético independiente
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: catálogo de ejemplo y prueba de conformidad HTTP local
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/test_reference_backend.py
+
+### src/molchat_agent/providers/base.py, tests/providers/test_port.py, conformance/runner.py, scripts/check_provenance.py
+
+- Origen: cambios sobre código de este repositorio
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: comprobación conservadora de identificadores explícitos;
+  lectura fallida en vivo no cuenta como ausencia de mutación; cobertura del
+  ledger ampliada a ejemplos Python
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/providers/test_port.py, tests/test_reference_backend.py, tests/test_check_scripts.py
+
+### src/molchat_agent/providers/openai_compatible.py, src/molchat_agent/providers/registry.py, src/molchat_agent/config.py, tests/providers/test_openai_compatible.py, tests/providers/test_registry.py
+
+- Origen: cambios sobre código de este repositorio; configuración JSON consultada en la documentación pública de NVIDIA NIM
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: corrección de errores HTTP y opciones explícitas para modo JSON y razonamiento; se conserva la validación local
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/providers/test_openai_compatible.py, tests/providers/test_registry.py; pruebas de NVIDIA documentadas en docs/EVALUACION_NVIDIA.md

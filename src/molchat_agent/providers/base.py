@@ -9,6 +9,7 @@ filtering happens here, not in each provider.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, AsyncIterator, Literal, Protocol
@@ -17,6 +18,28 @@ from ..tools import PlanValidationError, catalog as get_catalog
 from ..plan import MAX_STEPS, Plan
 
 CatalogEntry = dict[str, Any]
+
+# Identifiers supplied to an untrusted planner have only one current source:
+# the goal text. Do not infer them from a model's general knowledge. This is
+# deliberately narrower than a semantic verifier and can reject valid plans.
+_EXPLICIT_IDENTIFIERS = frozenset({
+    "task_id", "proposal_id", "molecule_id", "batch_id", "case_id",
+    "target_pdb_id", "idempotency_key", "smiles",
+})
+
+
+def _check_explicit_identifiers(plan: Plan, goal: str) -> None:
+    for step in plan.steps:
+        for key, value in step.arguments.items():
+            if key not in _EXPLICIT_IDENTIFIERS or not isinstance(value, str):
+                continue
+            # SMILES is case-sensitive. Identifiers must occur as complete
+            # tokens; only PDB identifiers are compared case-insensitively.
+            flags = re.IGNORECASE if key == "target_pdb_id" else 0
+            pattern = r"(?<![\w-])" + re.escape(value) + r"(?![\w-])"
+            if re.search(pattern, goal, flags) is None:
+                raise ProviderError(
+                    f"{key}: el identificador no aparece explícitamente en el objetivo")
 
 
 class HealthStatus(Enum):
@@ -151,7 +174,10 @@ def plan_from_content(content: str, goal: str, planner: str,
                     raise ProviderError(
                         f"La respuesta usa {step.get('capability')!r}, fuera "
                         f"del catálogo enviado: {sorted(names)}")
-        return Plan.from_dict({"goal": goal, "steps": steps, "planner": planner})
+        plan = Plan.from_dict({"goal": goal, "steps": steps, "planner": planner})
+        if allowed is not None:
+            _check_explicit_identifiers(plan, goal)
+        return plan
     except (ValueError, KeyError, TypeError, AttributeError) as exc:
         raise ProviderError(f"El proveedor no entregó un plan válido: {exc}") from exc
     except PlanValidationError as exc:

@@ -7,16 +7,17 @@ computacional desde texto o voz.**
 MolChat es el agente que vive dentro de la plataforma MolDesign: conversa con
 el investigador, propone planes verificables, pide aprobación humana donde
 toca y sigue los trabajos científicos hasta su resultado con evidencia. Este
-repositorio es su fuente única (GPL-3.0-or-later); MolDesign lo incluye como
-programa independiente (sidecar) y conserva los motores, la identidad y las
+repositorio es su fuente prevista (GPL-3.0-or-later); la integración con
+MolDesign ejecuta un programa independiente (sidecar) y conserva los motores, la identidad y las
 autorizaciones. La ciencia nunca se duplica aquí: se consume por API HTTP
 versionada (`docs/CONTRATO_MOLDESIGN.md`).
 
-> Estado: **fases 0–5 cerradas y verificadas contra una MolDesign real**
+> Estado: **fases 0–5 verificadas contra una MolDesign real**
 > (contrato 27/27, ejecución completa sin terminal, voz de extremo a
 > extremo, ciclo de hipótesis de dos rondas con aprobación humana y vídeo
 > científico de Molcy del mejor resultado, con su acta de procedencia).
-> Revisa los límites científicos y de seguridad antes de fiarte de
+> La integración de fase 6 se probó en un worktree; el corte definitivo,
+> instalación limpia y rollback aún están pendientes. Revisa los límites científicos y de seguridad antes de fiarte de
 > cualquier número.
 
 ## Qué existe en esta versión
@@ -61,6 +62,19 @@ cd ui && npm install && npm test && npm run build && cd ..
 
 El backend de MolDesign debe estar iniciado para ejecutar herramientas reales.
 No necesitas clonar ni instalar todo su árbol científico dentro de este repo.
+La UI se construye desde este repositorio; el wheel de Python por sí solo no
+incluye `ui/dist`. La copia vendorizable se genera mediante el manifiesto
+descrito en [`docs/RELEASES.md`](docs/RELEASES.md).
+
+## Modos y adaptadores
+
+El modo standalone ejecuta el sidecar con una plataforma accesible; el modo
+host se ha probado en la integración de MolDesign aún pendiente de corte.
+Sin plataforma se pueden explorar conversación y planes de prueba, pero las
+herramientas reales fallan si su backend no está disponible. Un tercero puede
+probar el contrato HTTP con el backend sintético de
+[`docs/ADAPTADORES.md`](docs/ADAPTADORES.md); ese ejemplo no proporciona
+ciencia real ni sustituye aún la integración de dominio de la UI.
 
 ## Sidecar (sin terminal, con UI)
 
@@ -82,6 +96,9 @@ Detalles, modos y API en [`docs/SIDECAR.md`](docs/SIDECAR.md).
 | `MODEL_API_KEY` | Clave de Meta Model API para planificar con Muse Spark |
 | `MOLCHAT_PROFILE` | `hackathon` (Meta + locales) o `default` (todo, con consentimiento) |
 | `MOLCHAT_PROVIDER` | Proveedor activo (`meta` por defecto; `fake` para demo sin claves) |
+| `OPENAI_COMPAT_BASE_URL`, `OPENAI_COMPAT_MODEL`, `OPENAI_COMPAT_API_KEY` | Endpoint HTTPS, modelo y clave de un proveedor compatible, con consentimiento por destino |
+| `OPENAI_COMPAT_JSON_MODE` | `schema` por defecto; `object` para endpoints que solo admiten modo JSON (validación local obligatoria) |
+| `OPENAI_COMPAT_DISABLE_THINKING` | `1` envía `enable_thinking: false` a proveedores que admitan ese parámetro; desactivado por defecto |
 
 Los tokens se leen en el proceso. No se incluyen en el plan, los resultados
 ni los archivos del repositorio. No publiques `.env`.
@@ -138,6 +155,10 @@ antes de convertirse en un plan de laboratorio.
 - Un score de docking no prueba unión, eficacia ni seguridad clínica.
 - El planificador no calcula propiedades; éstas proceden exclusivamente de los
   motores y controles de MolDesign.
+- El planificador rechaza algunos identificadores que no figuran explícitamente
+  en el objetivo, pero puede contener otros argumentos o pasos inventados.
+  Revisa todos los pasos antes de ejecutarlos, incluso si son de lectura; la
+  validación no comprueba la intención completa.
 - Un preflight devuelve advertencias, bloqueantes y condiciones no evaluadas:
   el ejecutor se detiene ante bloqueantes técnicos, sin convertir las señales
   no evaluadas automáticamente en aprobaciones científicas.
@@ -160,4 +181,13 @@ frente al MolChat que vivía dentro de MolDesign; y
 [`docs/SEGURIDAD.md`](docs/SEGURIDAD.md) para el modelo de amenazas.
 
 **Licencia:** GNU GPL-3.0-or-later. Consulte `LICENSE` y `NOTICE.md`.
+
+Para citar el software, usa los metadatos de [`CITATION.cff`](CITATION.cff)
+e identifica además la versión o commit utilizado. La
+[hoja de ruta pública](docs/PLAN_PUBLICO.md) y la
+[política de versiones y compatibilidad](docs/RELEASES.md) recogen el estado
+de las próximas entregas.
+
+La [evaluación de NVIDIA](docs/EVALUACION_NVIDIA.md) recoge la configuración
+optativa, los resultados y los límites de la prueba con su API.
 

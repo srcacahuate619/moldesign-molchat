@@ -24,6 +24,7 @@ from .base import (
     HealthCheckResult,
     HealthStatus,
     ProviderConfig,
+    ProviderError,
     ProviderInfo,
     TurnContext,
     plan_from_content,
@@ -48,8 +49,14 @@ class OpenAICompatibleProvider:
 
     def __init__(self, *, api_key: str | None = None, base_url: str | None = None,
                  model: str | None = None, temperature: float = 0.1,
+                 json_mode: str | None = None, disable_thinking: bool | None = None,
                  client: httpx.AsyncClient | None = None) -> None:
         config = load_config()
+        self.json_mode = json_mode if json_mode is not None else config.openai_compat_json_mode
+        if self.json_mode not in ("schema", "object"):
+            raise ValueError("OPENAI_COMPAT_JSON_MODE debe ser schema u object.")
+        self.disable_thinking = (disable_thinking if disable_thinking is not None
+                                 else config.openai_compat_disable_thinking)
         resolved_base = (base_url if base_url is not None
                          else config.openai_compat_base_url).strip().rstrip("/")
         if resolved_base:
@@ -139,24 +146,41 @@ class OpenAICompatibleProvider:
 
     def _payload(self, goal: str, catalog: list[CatalogEntry] | None) -> dict[str, Any]:
         safe_tools = read_only_catalog(catalog)
-        return {
+        user_data: dict[str, Any] = {"goal": goal, "capabilities": safe_tools}
+        instruction = (
+            "Eres un planificador de química computacional. Propón SOLO una secuencia "
+            "de herramientas enumeradas en el catálogo. Nunca inventes IDs, SMILES, "
+            "datos de receptores ni resultados. Devuelve el plan como JSON con la "
+            "estructura indicada."
+        )
+        if self.json_mode == "object":
+            instruction += (
+                ' Responde exclusivamente con un objeto de la forma '
+                '{"steps":[{"capability":"nombre de herramienta",'
+                '"arguments":{},"rationale":"motivo"}]}. '
+                "No copies el objetivo ni el catálogo en la respuesta. Incluye solo "
+                "argumentos válidos y omite los opcionales no indicados; no uses null "
+                "ni texto vacío. Si falta un identificador necesario, no lo inventes."
+            )
+        payload: dict[str, Any] = {
             "model": self.config.model,
             "temperature": self.config.temperature,
+            "max_tokens": min(self.config.max_tokens, 2048),
             "messages": [
-                {"role": "system", "content": (
-                    "Eres un planificador de química computacional. Propón SOLO una secuencia "
-                    "de herramientas enumeradas en el catálogo. Nunca inventes IDs, SMILES, "
-                    "datos de receptores ni resultados. Devuelve el plan como JSON con la "
-                    "estructura indicada."
-                )},
+                {"role": "system", "content": instruction},
                 {"role": "user", "content": json.dumps(
-                    {"goal": goal, "capabilities": safe_tools}, ensure_ascii=False)},
+                    user_data, ensure_ascii=False)},
             ],
             "response_format": {"type": "json_schema", "json_schema": {
                 "name": "molchat_readonly_plan", "strict": False,
                 "schema": readonly_plan_schema(safe_tools),
             }},
         }
+        if self.json_mode == "object":
+            payload["response_format"] = {"type": "json_object"}
+        if self.disable_thinking:
+            payload["chat_template_kwargs"] = {"enable_thinking": False}
+        return payload
 
     async def plan(self, goal: str, catalog: list[CatalogEntry] | None = None) -> Plan:
         if not self.config.base_url:
@@ -188,11 +212,14 @@ class OpenAICompatibleProvider:
             raise ValueError("Falta OPENAI_COMPAT_MODEL; el endpoint no sabe qué servir.")
         messages = turn.messages or [{"role": "user", "content": turn.text}]
         try:
+            payload = {"model": self.config.model, "messages": messages,
+                       "temperature": self.config.temperature,
+                       "max_tokens": self.config.max_tokens}
+            if self.disable_thinking:
+                payload["chat_template_kwargs"] = {"enable_thinking": False}
             response = await self._http.post(
                 f"{self.config.base_url}/chat/completions",
-                json={"model": self.config.model, "messages": messages,
-                      "temperature": self.config.temperature,
-                      "max_tokens": self.config.max_tokens},
+                json=payload,
                 headers=self._headers())
             if response.status_code >= 400 or response.is_redirect:
                 raise ProviderError(

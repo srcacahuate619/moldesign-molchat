@@ -69,5 +69,12 @@ fabricados. Sin la regla "sin inventados", estos planes parecerían buenos.
 - Ningún modelo pequeño medido planifica limpio: o rompe el contrato (Qwen)
   o lo cumple con datos inventados (Bonsai). La planificación libre no es
   fiable en este rango; la capa determinista no es opcional.
-- El validador local (`Plan.from_dict` + allowlist) es el freno que
-  convierte esos fallos en abstención en vez de ejecución.
+- El validador local (`Plan.from_dict` + allowlist) rechaza errores de
+  contrato y capacidades fuera de la oferta. Una comprobación adicional exige
+  que ciertos identificadores (incluidos SMILES e IDs de trabajo) aparezcan
+  explícitamente en el objetivo recibido del usuario; puede rechazar planes
+  válidos que requieren resolver nombres o contexto. No cubre todos los campos
+  ni detecta pasos adicionales formalmente válidos.
+  El usuario debe revisar el plan y sus argumentos antes de ejecutarlo. La
+  reducción y medición de estos errores sigue pendiente; la cifra 0/4 es una
+  línea base, no una demostración de mejora.

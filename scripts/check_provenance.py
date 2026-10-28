@@ -1,7 +1,7 @@
 """Fail if PROVENANCE.md is missing, incomplete, or incoherent.
 
 Ledger gate (PLAN §21, Fase 0 puerta de salida): every ``src``/``tests``/
-``scripts``/``conformance`` Python file must be covered by a provenance
+``scripts``/``conformance``/``examples`` Python file must be covered by a provenance
 entry, every entry must carry the six mandatory fields, the resulting license must be
 ``GPL-3.0-or-later``, and any cited MolDesign commit must be well-formed and
 match the reference commit fixed in Fase 0.
@@ -28,7 +28,7 @@ REQUIRED_FIELDS = (
     "Tests",
 )
 COVERAGE_GLOBS = ("src/**/*.py", "tests/**/*.py", "scripts/*.py",
-                  "conformance/**/*.py")
+                  "conformance/**/*.py", "examples/**/*.py")
 SHA = re.compile(r"\b[0-9a-f]{40}\b")
 
 

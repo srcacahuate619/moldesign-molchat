@@ -387,6 +387,8 @@ def build_registry(config: MolChatConfig | None = None,
             api_key=config.openai_compat_api_key,
             base_url=config.openai_compat_base_url,
             model=config.openai_compat_model,
+            json_mode=config.openai_compat_json_mode,
+            disable_thinking=config.openai_compat_disable_thinking,
             client=transports.get("openai-compatible")))
     except ValueError as exc:
         registry.register(BrokenProvider("openai-compatible", str(exc)))

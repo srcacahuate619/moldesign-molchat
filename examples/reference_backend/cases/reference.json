@@ -1,0 +1,11 @@
+{
+  "pack": "reference",
+  "openapi": "/openapi.json",
+  "state_oracle": {"capability": "reference_count", "args": {}},
+  "capabilities": [
+    {"name": "reference_count", "valid_args": {}, "live_read": true},
+    {"name": "reference_status", "valid_args": {"record_id": "example-1"},
+     "live_read": true, "bogus_args": {"record_id": "missing-1"}},
+    {"name": "reference_submit", "valid_args": {"record_id": "example-1"}}
+  ]
+}

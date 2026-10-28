@@ -63,6 +63,26 @@ def test_plan_from_content_rejects_tools_outside_the_sent_catalog():
     assert plan.steps[0].capability == "approve_docking_proposal"
 
 
+@pytest.mark.parametrize("goal,task_id", [
+    ("Revisa la evaluación en curso", "TASK123456"),
+    ("Revisa la tarea TASK1234567", "TASK123456"),
+])
+def test_planner_rejects_task_ids_not_explicit_in_goal(goal, task_id):
+    content = json.dumps({"steps": [{"capability": "evaluation_status",
+                                     "arguments": {"task_id": task_id}, "rationale": ""}]})
+    with pytest.raises(ProviderError, match="explícitamente"):
+        plan_from_content(content, goal, "local", ["evaluation_status"])
+
+
+def test_planner_accepts_explicit_identifiers_but_preserves_smiles_case():
+    content = json.dumps({"steps": [{"capability": "check_preflight",
+        "arguments": {"smiles": "CCO", "target_pdb_id": "1HSG"}, "rationale": ""}]})
+    assert plan_from_content(content, "Audita CCO en 1hsg", "local",
+                             ["check_preflight"]).steps
+    with pytest.raises(ProviderError, match="smiles"):
+        plan_from_content(content, "Audita cco en 1hsg", "local", ["check_preflight"])
+
+
 @pytest.mark.asyncio
 async def test_fake_is_deterministic_and_read_only():
     provider = FakeProvider()

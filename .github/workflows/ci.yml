@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - run: python -m pip install -e '.[dev]' build
+      - run: python -m pytest -q
+        env:
+          PYTHONPATH: src:.
+      - run: python -m conformance.runner
+        env:
+          PYTHONPATH: src:.
+      - run: python scripts/check_provenance.py
+      - run: python scripts/check_secrets.py
+      - run: npm ci
+        working-directory: ui
+      - run: npm test
+        working-directory: ui
+      - run: npm run build
+        working-directory: ui
+      - run: python scripts/check_ui_build.py
+      - run: python -m build
+      - run: python scripts/make_manifest.py --write
+      - run: python scripts/make_manifest.py --check dist/molchat-vendorizable

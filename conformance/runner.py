@@ -371,6 +371,9 @@ async def check_reads_no_mutation_live(packs: list[Pack], bridge: MolDesignBridg
             report = await AgentExecutor(bridge).execute(
                 _plan_for(entry["name"], entry["valid_args"]))
             lines.append(f"{entry['name']}={report.state}")
+            if report.state != "completed":
+                return [Verdict("3b", entry["name"], "fail",
+                                f"live read did not complete: {report.state}")]
     try:
         after = await bridge.call(oracle["capability"], oracle.get("args", {}))
     except Exception as exc:  # noqa: BLE001 - same honesty as above
