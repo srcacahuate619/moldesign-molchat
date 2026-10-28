@@ -19,19 +19,19 @@ describe("host session handshake", () => {
 
   it("validates the closed session shape", () => {
     expect(
-      isSessionMessage({ type: "molchat-host-session", token: "mh1.x.y" }),
+      isSessionMessage({ type: "molchat-host-session", token: "test-mh1.x.y" }),
     ).toBe(true);
     expect(isSessionMessage({ type: "molchat-host-session" })).toBe(false);
     expect(
       isSessionMessage({ type: "molchat-host-session", token: "" }),
     ).toBe(false);
     expect(
-      isSessionMessage({ type: "nope", token: "mh1.x.y" }),
+      isSessionMessage({ type: "nope", token: "test-mh1.x.y" }),
     ).toBe(false);
     expect(
       isSessionMessage({
         type: "molchat-host-session",
-        token: "mh1.x.y",
+        token: "test-mh1.x.y",
         extra: 1,
       }),
     ).toBe(false);
@@ -68,19 +68,19 @@ describe("host session handshake", () => {
       listeners.forEach((l) => l({ origin, data }));
     emit("https://evil.example.com", {
       type: "molchat-host-session",
-      token: "mh1.evil.y",
+      token: "test-mh1.evil.y",
     });
     emit("http://127.0.0.1:18017", { type: "otra-cosa" });
     emit("http://127.0.0.1:18017", {
       type: "molchat-host-session",
-      token: "mh1.bien.firma",
+      token: "test-mh1.bien.firma",
     });
     expect(onToken).toHaveBeenCalledTimes(1);
-    expect(onToken).toHaveBeenCalledWith("mh1.bien.firma");
+    expect(onToken).toHaveBeenCalledWith("test-mh1.bien.firma");
     unlisten();
     emit("http://127.0.0.1:18017", {
       type: "molchat-host-session",
-      token: "mh1.tarde.firma",
+      token: "test-mh1.tarde.firma",
     });
     expect(onToken).toHaveBeenCalledTimes(1);
   });
