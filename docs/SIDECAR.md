@@ -23,10 +23,10 @@ Sesión standalone (se muestra una sola vez; no la registres):
 
 Abre la URL, pega la sesión en la pantalla de desbloqueo y úsalo: conversar,
 proponer planes, aprobar por hash, seguir trabajos, dictar con push-to-talk.
-Sin `MOLDESIGN_TOKEN` ni backend, la conversación determinista y los planes
-funcionan; las ejecuciones contra la plataforma fallan en alto con su causa
-(verificado 2026-10-27: `EXEC-FINAL: failed` con MolDesign apagado, sin
-números inventados).
+Sin `MOLDESIGN_TOKEN` ni backend, la interfaz puede abrir y los planes locales
+pueden prepararse; el cálculo de propiedades y las ejecuciones que necesitan
+MolDesign se abstienen con su causa. La conversación de producción no usa los
+datos de demostración como sustituto de un cálculo real.
 
 Con un MolDesign local y token, todo el circuito es real:
 

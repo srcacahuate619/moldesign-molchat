@@ -20,6 +20,17 @@ def test_only_loopback_binds():
             validate_bind_host(host)
 
 
+def test_modo_host_no_usa_token_fijo_heredado(tmp_path, monkeypatch):
+    # Una variable del entorno no debe sustituir la sesión de la cuenta activa.
+    monkeypatch.setattr('molchat_agent.server.serve.faster_whisper_available', lambda: False)
+    config = MolChatConfig(host_secret='test-host-secret', moldesign_token='test-old-token',
+                           memory_file=tmp_path / 'mem.db', exec_store=tmp_path / 'exec.db',
+                           consents_file=tmp_path / 'consents.json')
+    served = build_server(config)
+    assert served.bridge.token is None
+    assert served.state.stt is None
+
+
 def test_standalone_build_mints_a_verifiable_token(tmp_path):
     served = build_server(MolChatConfig(
         memory_file=tmp_path / "mem.db", exec_store=tmp_path / "exec.db"))

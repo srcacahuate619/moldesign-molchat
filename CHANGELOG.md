@@ -2,6 +2,8 @@
 
 ## No publicado
 
+- Negociación versionada con MolDesign; modo explícito para adaptadores genéricos.
+
 - Ejemplo de adaptador HTTP sintético con casos y comprobaciones en vivo.
 - Guía pública de adaptadores, hoja de ruta, política de versiones y CI.
 - La conformidad en vivo señala como fallo una lectura que no se completa.

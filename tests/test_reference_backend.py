@@ -28,7 +28,7 @@ async def test_reference_passes_offline_and_live(monkeypatch):
         verdicts = await runner.run(
             ROOT / "examples/reference_backend/cases", live=True,
             base_url=f"http://127.0.0.1:{server.server_port}",
-            token="example-session", allow_remote=False)
+            token="example-session", allow_remote=False, require_contract=False)
         assert not [v for v in verdicts if v.status == "fail"]
         assert all(any(v.check == check and v.status == "pass" for v in verdicts)
                    for check in ("1b", "3b", "5b"))

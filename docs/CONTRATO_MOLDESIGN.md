@@ -1,5 +1,10 @@
 # Contrato MolChat ↔ MolDesign (v3, `moldesign.molchat/1`, Fase 5)
 
+Para la negociación, identidad y formato de propiedades implementados en la
+integración local, ver [PROTOCOLO_MOLDESIGN.md](PROTOCOLO_MOLDESIGN.md).
+Las capacidades negociadas son una superficie nueva en desarrollo; las cifras
+históricas y estados de CR de este documento se conservan como registro de Fase 5.
+
 Toda comunicación agente↔plataforma es HTTP con este contrato. El catálogo
 vivo servido por la plataforma (CR-04) no existe aún: el catálogo es local
 (`tools/moldesign.py` + `tools/molcy.py`, 31 capacidades) y la suite de
@@ -67,10 +72,10 @@ Excluidas con motivo (abstención por ausencia, no simulación):
 
 | ID | Petición | Motivación | Estado |
 |---|---|---|---|
-| CR-01 | API versionada de propiedades/preparación (RDKit) con identidad impuesta por el servidor | Habilita Fase 5 sin duplicar RDKit en el agente | Pendiente |
+| CR-01 | API versionada de propiedades/preparación (RDKit) con identidad impuesta por el servidor | Habilita Fase 5 sin duplicar RDKit en el agente | Parcial en ramas locales: `properties/1`; preparación sigue pendiente |
 | CR-02 | Creación y consulta de **casos** como recurso (hoy el caso vive como proyección del cliente) | «Crear casos» desde MolChat exige un recurso direccionable | Pendiente |
 | CR-03 | Endpoint de eventos (SSE/WebSocket) de cambio de estado de evaluaciones y trabajos de Molcy | Jobs sin polling ciego; el polling es el fallback implementado | Pendiente |
-| CR-04 | Handshake de agente: versión de contrato + catálogo de capacidades servido por la plataforma | Evita catálogos duplicados que divergen | Pendiente |
+| CR-04 | Handshake de agente: versión de contrato + catálogo de capacidades servido por la plataforma | Evita catálogos duplicados que divergen | Parcial en ramas locales: versión y grupos de capacidad; catálogo detallado sigue local |
 | CR-05 | Superficie versionada de análogos/ADMET/MolGraph | Fase 5 completa | Pendiente |
 | CR-06 | Idempotencia y reconciliación de operaciones con efectos: clave de idempotencia por cuenta, deduplicación, rechazo de reutilizar una clave con parámetros distintos, y reconciliar intención persistida ↔ operación ↔ trabajo aunque se pierda la respuesta | Cabecera `Idempotency-Key` en create/approve + `GET /ai/idempotency/{key}` con estados `PENDIENTE/COMPLETADA/FALLIDA`; MolChat adopta replays y reabre `ambiguous` al reconciliar | Implementada en rama `feat/molchat-plataforma-cr` (Fase 5) |
 | CR-07 | Creación HTTP de propuesta de docking revisable (sin lanzar el cálculo) que devuelva identidad, `proposal_hash` y parámetros efectivos. Nunca sustituirla por `submit` directo | `POST /ai/proposals` (201 + propuesta, 409 con preflight si bloquea, 422 inválida); desbloquea el circuito crear→aprobar→trabajo | Implementada en rama `feat/molchat-plataforma-cr` (Fase 5) |

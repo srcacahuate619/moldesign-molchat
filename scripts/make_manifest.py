@@ -312,9 +312,9 @@ def construir_manifiesto(contenido: dict[str, bytes], origen: dict[str, str],
         "licencia_spdx": LICENCIA_SPDX,
         "licencia_texto": "LICENSE",
         "fuente": {"proyecto": "moldesign-molchat", **origen},
-        "invocacion": ("sidecar: proceso Python en loopback con PYTHONPATH en "
-                       "src/ vendorizado, `python -m molchat_agent serve` en "
-                       "puerto efímero, token del host con scopes"),
+        "invocacion": ("sidecar: proceso Python en loopback con paquete src "
+                       "vendorizado; el host resuelve el paquete en el intérprete, "
+                       "usa puerto efímero y token con scopes"),
         "no_se_enlaza": ("MolDesign no importa molchat_agent ni MolChat importa "
                          "MolDesign; se comunican por HTTP versionado "
                          f"({CONTRATO})."),

@@ -35,6 +35,75 @@ from molchat_agent.tools import Capability, EpistemicClass, FieldSpec  # noqa: E
 from molchat_agent.tools import catalog as real_catalog  # noqa: E402
 
 
+def test_adapter_policy_requires_explicit_generic_registration():
+    assert runner.contract_required("moldesign", []) is True
+    assert runner.contract_required("moldesign", ["some_pack"]) is True
+    assert runner.contract_required("generic", ["example_pack"]) is False
+    with pytest.raises(ValueError, match="registr"):
+        runner.contract_required("generic", [])
+    with pytest.raises(ValueError):
+        runner.contract_required("unknown", ["example_pack"])
+
+
+def test_incompatible_moldesign_contract_is_a_failure_not_a_skip():
+    class Incompatible:
+        async def ensure_contract(self, capability):
+            assert capability == "platform-actions/1"
+            raise runner.BridgeError("incompatible")
+
+    coroutine = runner.check_platform_protocol(Incompatible(), True)
+    with pytest.raises(StopIteration) as returned:
+        coroutine.send(None)  # el doble no necesita red ni bucle de eventos
+    verdict = returned.value.value
+    assert verdict.status == "fail"
+    assert verdict.check == "protocol"
+
+
+def test_generic_adapter_does_not_claim_moldesign_negotiation():
+    class Generic:
+        async def ensure_contract(self, capability):
+            raise AssertionError("el contrato de MolDesign no pertenece a este ejemplo")
+
+    coroutine = runner.check_platform_protocol(Generic(), False)
+    with pytest.raises(StopIteration) as returned:
+        coroutine.send(None)
+    assert returned.value.value is None
+
+
+def test_reference_transport_requires_explicit_generic_mode(monkeypatch):
+    # MockTransport responde de inmediato: se comprueba el puente real sin red.
+    import importlib
+    catalog_module = importlib.import_module("molchat_agent.tools.catalog")
+    monkeypatch.setattr(catalog_module, "_REGISTRY", real_catalog())
+    reference = importlib.import_module("molchat_agent.tools.reference")
+    importlib.reload(reference)
+    seen = []
+
+    def respond(request):
+        seen.append(request.url.path)
+        if request.url.path == "/reference/records/example-1":
+            return httpx.Response(200, json={"record_id": "example-1", "label": "synthetic"})
+        return httpx.Response(404, json={"detail": "not found"})
+
+    client = httpx.AsyncClient(base_url="http://127.0.0.1:8099",
+                               transport=httpx.MockTransport(respond))
+    try:
+        strict = MolDesignBridge(client=client, token="test-session")
+        with pytest.raises(runner.BridgeError):
+            strict.call("reference_status", {"record_id": "example-1"}).send(None)
+        assert seen == ["/molchat-host/contract"]
+
+        seen.clear()
+        generic = MolDesignBridge(client=client, token="test-session", require_contract=False)
+        with pytest.raises(StopIteration) as returned:
+            generic.call("reference_status", {"record_id": "example-1"}).send(None)
+        assert returned.value.value["record_id"] == "example-1"
+        assert seen == ["/reference/records/example-1"]
+    finally:
+        with pytest.raises(StopIteration):
+            client.aclose().send(None)
+
+
 def _packs():
     packs, verdicts = runner.load_packs(ROOT / "conformance" / "cases")
     assert packs and not [v for v in verdicts if v.status == "fail"]
@@ -148,7 +217,7 @@ def test_register_flag_imports_third_party_modules(tmp_path, monkeypatch, capsys
 def _live_bridge(handler):
     client = httpx.AsyncClient(base_url="http://127.0.0.1:18017",
                                transport=httpx.MockTransport(handler))
-    return MolDesignBridge(base_url="http://127.0.0.1:18017",
+    return MolDesignBridge(require_contract=False, base_url="http://127.0.0.1:18017",
                            token="test-token", client=client)
 
 

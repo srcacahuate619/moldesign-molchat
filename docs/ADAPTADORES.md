@@ -15,7 +15,7 @@ Unix ejecuta `export PYTHONPATH=src:.`.
 3. Ejecuta:
 
    ```text
-   python -m conformance.runner --register molchat_agent.tools.reference --cases examples/reference_backend/cases --live --base-url http://127.0.0.1:8099
+   python -m conformance.runner --adapter generic --register molchat_agent.tools.reference --cases examples/reference_backend/cases --live --base-url http://127.0.0.1:8099
    ```
 
 Comprueba que no haya fallos y que las comprobaciones `1b`, `3b` y `5b`
@@ -37,8 +37,13 @@ levanta el servicio en un puerto libre y verifica las tres patas en vivo.
    entidad inexistente (`bogus_args`) y un oráculo estable de estado. Las
    rutas de OpenAPI deben declarar los métodos realmente servidos.
 3. Importa el módulo con `--register`, apunta `--cases` a tu directorio y
-   ejecuta primero sin `--live` y después con él. El transporte existente
-   `MolDesignBridge` también sirve estos contratos HTTP, con Bearer y política
+   ejecuta primero sin `--live` y después con él. Selecciona explícitamente
+   `--adapter generic` para una API ajena a MolDesign: este modo no negocia el
+   contrato de MolDesign ni lo declara compatible. El modo predeterminado
+   `moldesign` exige la negociación, incluso con packs registrados; si es
+   incompatible, la prueba falla en vez de ocultarlo como un skip. El transporte
+   `MolDesignBridge` también sirve otros contratos HTTP al configurarlo
+   explícitamente con `require_contract=False`, con Bearer y política
    de URL: loopback por defecto; remoto solo HTTPS y con autorización explícita
    `MOLDESIGN_ALLOW_REMOTE=1`. La integración actual no ofrece aún un selector
    general de adaptador en la CLI o la UI: registra el pack en tu proceso e

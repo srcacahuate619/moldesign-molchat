@@ -7,14 +7,17 @@ bridge keeps a delegating shim. faster-whisper tiny, offline, authenticated.
 from __future__ import annotations
 
 import httpx
+from collections.abc import Awaitable, Callable
 
 from .stt import AUDIO_LIMIT, LANGS, STTError
 
 
 class MolDesignWhisper:
-    def __init__(self, client: httpx.AsyncClient, token: str) -> None:
+    def __init__(self, client: httpx.AsyncClient, token: str,
+                 *, ensure_contract: Callable[[], Awaitable[None]] | None = None) -> None:
         self._client = client
         self._token = token
+        self._ensure_contract = ensure_contract
 
     async def transcribe(self, audio_bytes: bytes, *, lang: str = "es") -> str:
         """Use MolDesign's authenticated local Whisper endpoint."""
@@ -22,6 +25,8 @@ class MolDesignWhisper:
             raise ValueError("Audio vacío o superior al límite local de 15 MB")
         if lang not in LANGS:
             raise ValueError("Esta primera integración admite es/en")
+        if self._ensure_contract is not None:
+            await self._ensure_contract()
         try:
             response = await self._client.post(
                 "/ai/speech-to-text", params={"lang": lang}, content=audio_bytes,

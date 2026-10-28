@@ -26,6 +26,9 @@ export default function App() {
     localStorage.getItem(LOCALE_KEY) === "en" ? "en" : "es",
   );
   const [tab, setTab] = useState<Tab>("chat");
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
   const t = useCallback(
     (key: StringKey) => strings(locale)[key],
     [locale],
@@ -65,8 +68,15 @@ export default function App() {
   // Hosted in MolDesign: announce readiness once; the desktop answers with
   // our session token (loopback postMessage, never URL). Standalone: inert.
   useEffect(() => {
+    const unlisten = listenForSession((candidate, hostLocale) => {
+      if (hostLocale) {
+        localStorage.setItem(LOCALE_KEY, hostLocale);
+        setLocale(hostLocale);
+      }
+      void connect(candidate);
+    });
     announceReady();
-    return listenForSession((candidate) => void connect(candidate));
+    return unlisten;
   }, [connect]);
 
   if (!token) {

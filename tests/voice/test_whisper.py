@@ -6,6 +6,20 @@ import pytest
 from molchat_agent.voice import MolDesignWhisper, STTError
 
 
+@pytest.mark.asyncio
+async def test_no_transcribe_si_el_contrato_no_es_compatible():
+    calls = []
+    async def responder(request):
+        calls.append(request.url.path)
+        return httpx.Response(200, json={'text': 'no debería llegar'})
+    async def incompatible():
+        raise STTError('contrato incompatible')
+    async with httpx.AsyncClient(transport=httpx.MockTransport(responder), base_url='http://127.0.0.1') as client:
+        with pytest.raises(STTError, match='contrato'):
+            await MolDesignWhisper(client, 'test-token', ensure_contract=incompatible).transcribe(b'RIFF-x')
+    assert calls == []
+
+
 def _client(handler):
     return httpx.AsyncClient(base_url="http://127.0.0.1:8000",
                              transport=httpx.MockTransport(handler))

@@ -107,7 +107,7 @@ async def test_hosted_submit_sends_bearer_to_platform(tmp_path, frozen_time):
     transport = httpx.MockTransport(handle)
     platform = httpx.AsyncClient(base_url="http://127.0.0.1:18017",
                                  transport=transport)
-    bridge = MolDesignBridge(base_url="http://127.0.0.1:18017",
+    bridge = MolDesignBridge(require_contract=False, base_url="http://127.0.0.1:18017",
                              token="test-fixed", client=platform)
     state = ServerState(
         secret=SECRET, registry=build_registry(MolChatConfig(profile="hackathon")),
@@ -146,7 +146,7 @@ async def test_standalone_submit_sends_fixed_token(tmp_path, frozen_time):
 
     platform = httpx.AsyncClient(base_url="http://127.0.0.1:8000",
                                  transport=httpx.MockTransport(handle))
-    bridge = MolDesignBridge(token="test-fixed", client=platform)
+    bridge = MolDesignBridge(require_contract=False, token="test-fixed", client=platform)
     state = ServerState(
         secret=SECRET, registry=build_registry(MolChatConfig(profile="hackathon")),
         memory=MemoryStore(tmp_path / "mem.db"), backend=QualityBackend(FIXTURES),
@@ -194,7 +194,7 @@ async def test_hosted_transcribe_prefers_platform_then_local(tmp_path, frozen_ti
 
     platform = httpx.AsyncClient(base_url="http://127.0.0.1:18017",
                                  transport=httpx.MockTransport(handle))
-    bridge = MolDesignBridge(base_url="http://127.0.0.1:18017", client=platform)
+    bridge = MolDesignBridge(require_contract=False, base_url="http://127.0.0.1:18017", client=platform)
     stt = StubSTT()
     state = ServerState(
         secret=SECRET, registry=build_registry(MolChatConfig(profile="hackathon")),
