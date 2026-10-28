@@ -152,7 +152,9 @@ class ScriptedBridge:
     async def call(self, capability, args, **kwargs):
         self.calls.append((capability, dict(args)))
         response = self.responses[capability]
-        if isinstance(response, list):
+        # A non-empty list is a sequence of responses (pop until the last);
+        # an empty list is a literal empty-list response, not zero scripts.
+        if isinstance(response, list) and response:
             if len(response) > 1:
                 return response.pop(0)
             return response[0]

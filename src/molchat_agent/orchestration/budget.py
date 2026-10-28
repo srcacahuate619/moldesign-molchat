@@ -27,8 +27,12 @@ class BudgetTracker:
 
     def check_time(self) -> None:
         elapsed = time.monotonic() - self.started
-        if elapsed > self.budget.max_time_s:
-            raise BudgetExceeded(f"tiempo excedido ({elapsed:.0f}s > {self.budget.max_time_s:.0f}s)")
+        # ">=": at the limit you are over it. With a strict ">" a budget of
+        # 0 s only tripped if the clock advanced between construction and the
+        # first check (measured: it does not under some interpreter/OS pairs,
+        # e.g. Windows + 3.12), so "no time allowed" let fast steps run.
+        if elapsed >= self.budget.max_time_s:
+            raise BudgetExceeded(f"tiempo excedido ({elapsed:.0f}s >= {self.budget.max_time_s:.0f}s)")
 
     def check_job_start(self) -> None:
         if self.jobs_started >= self.budget.max_jobs:

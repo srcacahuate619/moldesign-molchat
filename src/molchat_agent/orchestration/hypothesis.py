@@ -157,7 +157,9 @@ class HypothesisRunner:
         if self._runs >= self._budget.max_runs:
             return False, f"límite de corridas ({self._budget.max_runs})"
         elapsed = time.monotonic() - self._started
-        if elapsed > self._budget.max_time_s:
+        # ">=": mismo contrato que BudgetTracker.check_time; un estricto ">"
+        # hacia depender del reloj un presupuesto de 0 s.
+        if elapsed >= self._budget.max_time_s:
             return False, f"tiempo excedido ({elapsed:.0f}s)"
         return True, "ok"
 
