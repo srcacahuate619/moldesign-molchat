@@ -64,19 +64,43 @@ otorgado antes del primer byte y revocable por proveedor. Sin él, el registro
 lanza `ConsentDenied` sin emitir nada — ni siquiera el sondeo de salud
 (estado `no_consent`). `MOLCHAT_OFFLINE=1` manda sobre cualquier autorización.
 Los otorgamientos viven en `~/.molchat/consents.json` (o
-`MOLCHAT_CONSENTS_FILE`); el fichero no contiene secretos.
+`MOLCHAT_CONSENTS_FILE`); el fichero no contiene secretos. En modo alojado
+(MolDesign como host) el consentimiento es el de la cuenta, guardado en MolDesign:
+este fichero no se usa.
 
 Frontera de datos: un planificador remoto recibe el objetivo y el catálogo.
 Resultados e historial no salen sin un consentimiento específico con vista
 previa (§10.4; exigible desde el ciclo de hipótesis, Fase 5).
 
+## Proveedores y claves
+
+Los proveedores remotos son un catálogo fijo en la llave: `providers/catalogo.json`
+(OpenAI primero como API genérica; DeepSeek sólo para DeepSeek; Anthropic, Gemini,
+NVIDIA, Meta y los dos locales). Cada entrada dice su familia de protocolo, su URL
+base y lo que sale de la máquina. La URL no la cambia el entorno. Un adaptador por
+entrada: `providers/registry.py::construir`.
+
+Modo alojado (MolDesign como host): el proveedor activo y su clave son de la cuenta.
+Cada turno pide al host el activo (`GET /molchat-host/proveedores`) y, si es remoto,
+la credencial para el host de este catálogo (`POST /molchat-host/credencial`). El host
+la entrega sólo si la cuenta guardó la clave, autorizó `proveedor@host` y el host es el
+suyo. La clave vive en un registro de UNA llamada (`providers/alojado.py`); el registro
+base nunca la guarda. Sin autorización, la llamada no sale y se dice dónde resolverlo.
+
+Fuera de MolDesign (sidecar independiente): las claves vienen del entorno
+(`OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `NVIDIA_API_KEY`, `ANTHROPIC_API_KEY`,
+`GEMINI_API_KEY`, `MODEL_API_KEY` para Meta) y el consentimiento es el de
+`~/.molchat/consents.json`.
+
 ## Perfiles
 
-- `hackathon` (por defecto): Meta Standard + proveedores locales. El resto de
-  remotos están deshabilitados (`ProviderDisabled`, no silencio).
-- `default`: todo lo registrado está permitido (sigue exigiendo consentimiento).
+- `default` (por defecto, el del producto): todo el catálogo permitido. Cada remoto
+  exige su clave y su autorización.
+- `hackathon` (sólo con `MOLCHAT_PROFILE=hackathon`): Meta Standard y los locales;
+  el resto de remotos se deshabilitan (`ProviderDisabled`, no silencio).
 
-`MOLCHAT_PROVIDER` fija el proveedor activo; sin él, el activo es `meta`.
+`MOLCHAT_PROVIDER` fija el proveedor activo. Sin él no hay proveedor activo: la
+respuesta conceptual lo dice en vez de usar otro en silencio.
 
 ## Política Meta (§6.1.1)
 
@@ -94,7 +118,12 @@ gestionan autorizaciones.
 
 ## Decisiones diferidas (no olvidadas)
 
-- Almacén cifrado de claves por usuario (diseño de `provider_config_store`):
-  hoy las claves viven solo en entorno/memoria. Fase 2/5.
+- Claves por cuenta fuera de MolDesign (almacén propio del sidecar, cifrado y por
+  usuario de sistema). Hoy el sidecar independiente lee el entorno.
+- Multi-cuenta dentro de un mismo proceso: el sidecar sigue fijado a la primera
+  cuenta (PD-04 del ADR 100). Las claves ya son por cuenta en MolDesign.
+- Cifrado de la clave maestra con DPAPI (hoy se deriva de `~/.moldesign/secret_key`).
+- Listado de modelos desde el proveedor (`/models`) y API Responses para los modelos
+  Codex: sin implementar.
 - Handshake de contrato + catálogo vivo servido por la plataforma (CR-04).
   Hoy el catálogo es local y la suite de contrato lo valida.
