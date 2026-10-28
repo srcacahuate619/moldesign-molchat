@@ -74,4 +74,18 @@ describe("VoiceButton", () => {
     fireEvent.click(screen.getByRole("button"));
     await waitFor(() => expect(onError).toHaveBeenCalled());
   });
+
+  it("stops a recording when the trusted host closes the panel", async () => {
+    mockSupported.mockReturnValue(true);
+    const stop = vi.fn().mockResolvedValue(new Blob(["raw"]));
+    mockStart.mockResolvedValue({ stop });
+    renderButton({ onTranscript: () => {}, onError: () => {} });
+    fireEvent.click(screen.getByRole("button"));
+    await waitFor(() => expect(screen.getByRole("button")).toHaveAttribute("aria-pressed", "true"));
+    fireEvent(window, new MessageEvent("message", {
+      source: window.parent, origin: "http://127.0.0.1:3000", data: { type: "molchat-host-hidden" },
+    }));
+    await waitFor(() => expect(stop).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("button")).toHaveAttribute("aria-pressed", "false");
+  });
 });
