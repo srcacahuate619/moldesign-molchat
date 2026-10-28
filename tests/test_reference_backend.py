@@ -57,3 +57,37 @@ async def test_live_read_failure_does_not_pass_as_no_mutation(monkeypatch):
     result = await runner.check_reads_no_mutation_live(
         packs, FailedBridge(), {"capability": "reference_count"})
     assert result[0].status == "fail"
+
+
+@pytest.mark.asyncio
+async def test_live_read_blocked_counts_as_read_not_as_failure(monkeypatch):
+    """A blocked read (preflight blockers are data) keeps 3b on its purpose:
+    no mutation. Measured live against MolDesign, check_preflight blocks on a
+    fresh catalog and the runner must not call that a conformance failure."""
+    catalog_module = importlib.import_module("molchat_agent.tools.catalog")
+    monkeypatch.setattr(catalog_module, "_REGISTRY", registered_catalog())
+    reference = importlib.import_module("molchat_agent.tools.reference")
+    importlib.reload(reference)
+
+    class BlockedReport:
+        state = "blocked"
+
+    class BlockedBridge:
+        async def call(self, capability, args, **kwargs):
+            if capability == "reference_count":
+                return {"count": 7}
+            raise AssertionError("no further reads expected")
+
+    async def _blocked(self, plan):
+        return BlockedReport()
+
+    monkeypatch.setattr(runner, "AgentExecutor",
+                        lambda bridge: type("E", (), {"execute": _blocked})())
+
+    packs = [runner.Pack(name="example", capabilities=[
+        {"name": "reference_status", "valid_args": {"record_id": "example-1"},
+         "live_read": True}])]
+    result = await runner.check_reads_no_mutation_live(
+        packs, BlockedBridge(), {"capability": "reference_count"})
+    assert result[0].status == "pass"
+    assert "blocked" in result[0].detail

@@ -371,7 +371,12 @@ async def check_reads_no_mutation_live(packs: list[Pack], bridge: MolDesignBridg
             report = await AgentExecutor(bridge).execute(
                 _plan_for(entry["name"], entry["valid_args"]))
             lines.append(f"{entry['name']}={report.state}")
-            if report.state != "completed":
+            # "blocked" is a completed read in this kit's contract: for a
+            # preflight, blockers ARE the data (measured live: check_preflight
+            # against MolDesign blocks on a fresh catalog and the executor
+            # stops by design). What 3b certifies is that no mutation moved
+            # the oracle; a failed or ambiguous read proves nothing and fails.
+            if report.state not in ("completed", "blocked"):
                 return [Verdict("3b", entry["name"], "fail",
                                 f"live read did not complete: {report.state}")]
     try:
