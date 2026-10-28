@@ -43,7 +43,7 @@ Una versión propia de MolChat entra en MolDesign si cumple el contrato. Para es
 - Mantener `moldesign.molchat/1` y un manifiesto que describa sus ficheros con su esquema.
 - Conservar `LICENSE` como texto íntegro de GPL-3.0-or-later y `NOTICE.md`.
 - No dejar rutas absolutas de una máquina en el código que se distribuye.
-- Conservar las entradas que el lanzador necesita: `molchat_agent/__main__.py`, `cli.py`, `server/serve.py`, `server/app.py` y `ui/dist/index.html`.
+- Conservar las entradas que el lanzador necesita: `src/molchat_agent/__init__.py`, `__main__.py`, `cli.py`, `server/serve.py`, `server/app.py` y `ui/dist/index.html`, junto con `LICENSE`, `NOTICE.md` y `pyproject.toml`. Es la lista que comprueba `scripts/stage_molchat.py` (`INDISPENSABLES`).
 - Pasar `python -m conformance.runner` (sin `--live`) y `python -m pytest`.
 
 Si cambias el contrato, MolDesign no arranca la llave hasta que su host lo soporte. Es un fallo deliberado: un sidecar que habla otro protocolo no debe ejecutarse en silencio.
