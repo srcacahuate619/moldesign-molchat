@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 
 ESQUEMA = "moldesign.molchat-catalogo/1"
 #: Familias de protocolo con adaptador en este sidecar.
-FAMILIAS = frozenset({"openai_chat", "anthropic", "gemini", "meta", "ollama"})
+FAMILIAS = frozenset({"openai_chat", "anthropic", "gemini", "meta", "llama_server", "ollama"})
 RUTA = Path(__file__).with_name("catalogo.json")
 _LOOPBACK = frozenset({"127.0.0.1", "localhost", "::1"})
 

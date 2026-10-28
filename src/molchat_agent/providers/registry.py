@@ -32,6 +32,7 @@ from .base import (
     ProviderDisabled,
     ProviderError,
 )
+from . import catalogo
 from .claude import ClaudeProvider
 from .fake import FakeProvider
 from .gemini import GeminiProvider
@@ -42,7 +43,6 @@ from .openai_compatible import OpenAICompatibleProvider
 # In the hackathon profile, Meta is the only remote destination allowed.
 # Local providers are always allowed; unknown means remote (fail closed).
 HACKATHON_REMOTE_ALLOWLIST = frozenset({"meta"})
-PROFILE_DEFAULT_PROVIDER = "meta"
 
 
 class UnknownProviderError(KeyError):
@@ -252,16 +252,17 @@ class ProviderRegistry:
         self._active_id = provider_id
 
     @property
-    def active_id(self) -> str:
-        if self._active_id is not None:
-            return self._active_id
-        if PROFILE_DEFAULT_PROVIDER in self._providers:
-            return PROFILE_DEFAULT_PROVIDER
-        return "fake"
+    def active_id(self) -> str | None:
+        """El proveedor activo, o None. No hay uno por defecto: ni un remoto ni `fake`
+        sin que la cuenta o el operador lo elijan."""
+        return self._active_id
 
     async def plan(self, goal: str, catalog: list[CatalogEntry] | None = None,
                    provider_id: str | None = None) -> Plan:
-        provider = self.get(provider_id or self.active_id)
+        elegido = provider_id or self.active_id
+        if elegido is None:
+            raise ProviderError("sin proveedor de IA activo: elígelo en Ajustes > Proveedores")
+        provider = self.get(elegido)
         reason = self.block_reason(provider.id)
         if reason:
             raise ConsentDenied(reason)
@@ -360,12 +361,76 @@ class ProviderRegistry:
         return rows
 
 
+def construir(entrada: catalogo.Entrada, *, api_key: str | None = None,
+              modelo: str | None = None, base_url: str | None = None,
+              config: MolChatConfig | None = None,
+              client: httpx.AsyncClient | None = None) -> LLMProvider:
+    """Adaptador de un proveedor del catálogo, con su clave y su modelo.
+
+    Es la única fábrica: el registro de la máquina y el registro de una llamada
+    alojada (clave entregada por MolDesign) construyen igual. El id del adaptador
+    es el del catálogo, no el de la familia (Claude se registra como `anthropic`).
+    """
+    proveedor = _adaptador(entrada, api_key=api_key, modelo=modelo, base_url=base_url,
+                           config=config, client=client)
+    proveedor.id = entrada.id
+    return proveedor
+
+
+def _adaptador(entrada: catalogo.Entrada, *, api_key: str | None = None,
+               modelo: str | None = None, base_url: str | None = None,
+               config: MolChatConfig | None = None,
+               client: httpx.AsyncClient | None = None) -> LLMProvider:
+    """La clase de adaptador de la familia. La clave vacía se pasa como "" para que
+    ningún adaptador caiga a una variable de otro proveedor."""
+    config = config or load_config()
+    clave = api_key or ""
+    modelo = modelo if modelo is not None else entrada.modelo_por_defecto
+    url = base_url or entrada.base_url
+    familia = entrada.familia
+    if familia == "openai_chat":
+        return OpenAICompatibleProvider(provider_id=entrada.id, api_key=clave, base_url=url,
+                                        model=modelo, client=client)
+    if familia == "anthropic":
+        return ClaudeProvider(api_key=clave, model=modelo, client=client)
+    if familia == "gemini":
+        return GeminiProvider(api_key=clave, model=modelo, client=client)
+    if familia == "meta":
+        return MetaProvider(api_key=clave, model=modelo,
+                            reasoning_effort=config.meta_reasoning_effort, client=client)
+    if familia == "llama_server":
+        return LlamaServerProvider(base_url=url, model=modelo, client=client)
+    if familia == "ollama":
+        return OllamaProvider(base_url=url, model=modelo, client=client)
+    raise ValueError(f"familia sin adaptador: {familia}")
+
+
+def clave_de_entorno(config: MolChatConfig, proveedor: str) -> str | None:
+    """La clave que este proceso recibió en su entorno para un proveedor del catálogo."""
+    return {
+        "openai": config.openai_api_key,
+        "deepseek": config.deepseek_api_key,
+        "nvidia": config.nvidia_api_key,
+        "anthropic": config.anthropic_api_key,
+        "gemini": config.gemini_api_key,
+        "meta": config.model_api_key,
+    }.get(proveedor)
+
+
+def _modelo_y_url_de_entorno(config: MolChatConfig, proveedor: str) -> tuple[str | None, str | None]:
+    """Modelo y URL que el entorno puede cambiar. Las URLs remotas no: las fija el catálogo."""
+    modelos = {"anthropic": config.claude_model, "gemini": config.gemini_model,
+               "meta": config.meta_model, "llama-server": config.llama_server_model,
+               "ollama": config.ollama_model}
+    urls = {"llama-server": config.llama_server_url, "ollama": config.ollama_url}
+    return modelos.get(proveedor) or None, urls.get(proveedor) or None
+
+
 def build_registry(config: MolChatConfig | None = None,
                    clients: dict[str, httpx.AsyncClient] | None = None) -> ProviderRegistry:
-    """Default registry from environment config: fake, Meta,
-    OpenAI-compatible, llama-server and Ollama. ``clients`` injects
-    transports (tests). A provider that rejects its own configuration is
-    registered broken instead of crashing the factory.
+    """Registro de esta máquina: un adaptador por proveedor del catálogo, con las
+    claves del entorno. Un proveedor que rechaza su configuración queda como roto,
+    con su motivo, en vez de tumbar la fábrica. `clients` inyecta transportes (tests).
     """
     config = config or load_config()
     transports = clients or {}
@@ -374,52 +439,26 @@ def build_registry(config: MolChatConfig | None = None,
         consents=ConsentStore(config.consents_file),
         offline=config.offline)
     registry.register(FakeProvider())
-    try:
-        registry.register(MetaProvider(
-            api_key=config.model_api_key,
-            model=config.meta_model,
-            reasoning_effort=config.meta_reasoning_effort,
-            client=transports.get("meta")))
-    except ValueError as exc:
-        registry.register(BrokenProvider("meta", str(exc)))
-    try:
-        registry.register(OpenAICompatibleProvider(
-            api_key=config.openai_compat_api_key,
-            base_url=config.openai_compat_base_url,
-            model=config.openai_compat_model,
-            json_mode=config.openai_compat_json_mode,
-            disable_thinking=config.openai_compat_disable_thinking,
-            client=transports.get("openai-compatible")))
-    except ValueError as exc:
-        registry.register(BrokenProvider("openai-compatible", str(exc)))
-    try:
-        registry.register(LlamaServerProvider(
-            base_url=config.llama_server_url,
-            model=config.llama_server_model,
-            client=transports.get("llama-server")))
-    except ValueError as exc:
-        registry.register(BrokenProvider("llama-server", str(exc)))
-    try:
-        registry.register(OllamaProvider(
-            base_url=config.ollama_url,
-            model=config.ollama_model,
-            client=transports.get("ollama")))
-    except ValueError as exc:
-        registry.register(BrokenProvider("ollama", str(exc)))
-    try:
-        registry.register(ClaudeProvider(
-            api_key=config.anthropic_api_key,
-            model=config.claude_model,
-            client=transports.get("claude")))
-    except ValueError as exc:
-        registry.register(BrokenProvider("claude", str(exc)))
-    try:
-        registry.register(GeminiProvider(
-            api_key=config.gemini_api_key,
-            model=config.gemini_model,
-            client=transports.get("gemini")))
-    except ValueError as exc:
-        registry.register(BrokenProvider("gemini", str(exc)))
+    for entrada in catalogo.ENTRADAS:
+        modelo, url = _modelo_y_url_de_entorno(config, entrada.id)
+        try:
+            registry.register(construir(
+                entrada, api_key=clave_de_entorno(config, entrada.id), modelo=modelo,
+                base_url=url, config=config, client=transports.get(entrada.id)))
+        except ValueError as exc:
+            registry.register(BrokenProvider(entrada.id, str(exc)))
+    if config.openai_compat_base_url:
+        # Endpoint genérico y configurado a mano: sólo si el operador lo declaró.
+        try:
+            registry.register(OpenAICompatibleProvider(
+                api_key=config.openai_compat_api_key or "",
+                base_url=config.openai_compat_base_url,
+                model=config.openai_compat_model,
+                json_mode=config.openai_compat_json_mode,
+                disable_thinking=config.openai_compat_disable_thinking,
+                client=transports.get("openai-compatible")))
+        except ValueError as exc:
+            registry.register(BrokenProvider("openai-compatible", str(exc)))
     if config.provider is not None:
         registry.set_active(config.provider)
     return registry

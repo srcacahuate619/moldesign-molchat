@@ -87,9 +87,9 @@ def test_factory_registers_meta_and_survives_bad_config():
     from molchat_agent.config import load_config
 
     registry = build_registry(load_config({}))
-    assert registry.ids() == ["claude", "fake", "gemini", "llama-server", "meta",
-                                "ollama", "openai-compatible"]
-    assert registry.active_id == "meta"
+    assert registry.ids() == ["anthropic", "deepseek", "fake", "gemini", "llama-server",
+                              "meta", "nvidia", "ollama", "openai"]
+    assert registry.active_id is None  # sin proveedor por defecto
 
     broken = build_registry(load_config({"META_MODEL": "muse-spark-1.3-contributor"}))
     provider = broken.get("meta")

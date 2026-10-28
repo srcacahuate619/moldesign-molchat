@@ -50,7 +50,11 @@ class OpenAICompatibleProvider:
     def __init__(self, *, api_key: str | None = None, base_url: str | None = None,
                  model: str | None = None, temperature: float = 0.1,
                  json_mode: str | None = None, disable_thinking: bool | None = None,
-                 client: httpx.AsyncClient | None = None) -> None:
+                 client: httpx.AsyncClient | None = None,
+                 provider_id: str | None = None) -> None:
+        # Un proveedor del catálogo (openai, deepseek, nvidia...) es una instancia
+        # con su id; sin id queda el genérico de siempre.
+        self.id = provider_id or type(self).id
         config = load_config()
         self.json_mode = json_mode if json_mode is not None else config.openai_compat_json_mode
         if self.json_mode not in ("schema", "object"):

@@ -28,7 +28,7 @@ class MolChatConfig:
     moldesign_base_url: str = "http://127.0.0.1:8000"
     moldesign_token: str | None = None
     moldesign_allow_remote: bool = False
-    profile: str = HACKATHON_PROFILE
+    profile: str = DEFAULT_PROFILE
     provider: str | None = None  # active provider override (else profile default)
     model_api_key: str | None = None  # Meta Model API
     meta_model: str = "muse-spark-1.3"
@@ -46,6 +46,11 @@ class MolChatConfig:
     claude_model: str = "claude-haiku-4-5-20251001"
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-2.5-flash"
+    #: Claves de los proveedores del catálogo. En modo alojado no se usan: llegan
+    #: por petición desde MolDesign, donde están guardadas por cuenta.
+    openai_api_key: str | None = None
+    deepseek_api_key: str | None = None
+    nvidia_api_key: str | None = None
     cloud_stt_enabled: bool = False
     cloud_stt_base_url: str = ""
     cloud_stt_api_key: str | None = None
@@ -87,6 +92,9 @@ class MolChatConfig:
             "claude_model": self.claude_model,
             "gemini_api_key": secret(self.gemini_api_key),
             "gemini_model": self.gemini_model,
+            "openai_api_key": secret(self.openai_api_key),
+            "deepseek_api_key": secret(self.deepseek_api_key),
+            "nvidia_api_key": secret(self.nvidia_api_key),
             "cloud_stt_enabled": str(self.cloud_stt_enabled),
             "cloud_stt_base_url": self.cloud_stt_base_url or "(unset)",
             "cloud_stt_api_key": secret(self.cloud_stt_api_key),
@@ -116,7 +124,9 @@ def load_config(env: Mapping[str, str] | None = None) -> MolChatConfig:
     def flag(name: str) -> bool:
         return text(name) == "1"
 
-    profile = text("MOLCHAT_PROFILE", HACKATHON_PROFILE)
+    # Producto: `default`. El perfil `hackathon` (sólo Meta remoto) es una política de
+    # concurso y debe pedirse a mano con MOLCHAT_PROFILE=hackathon.
+    profile = text("MOLCHAT_PROFILE", DEFAULT_PROFILE)
     if profile not in PROFILES:
         raise ValueError(f"MOLCHAT_PROFILE debe ser uno de {list(PROFILES)}: {profile!r}")
 
@@ -154,6 +164,9 @@ def load_config(env: Mapping[str, str] | None = None) -> MolChatConfig:
         claude_model=text("CLAUDE_MODEL", "claude-haiku-4-5-20251001"),
         gemini_api_key=secret("GEMINI_API_KEY"),
         gemini_model=text("GEMINI_MODEL", "gemini-2.5-flash"),
+        openai_api_key=secret("OPENAI_API_KEY"),
+        deepseek_api_key=secret("DEEPSEEK_API_KEY"),
+        nvidia_api_key=secret("NVIDIA_API_KEY"),
         cloud_stt_enabled=flag("MOLCHAT_CLOUD_STT"),
         cloud_stt_base_url=text("MOLCHAT_CLOUD_STT_URL"),
         cloud_stt_api_key=secret("MOLCHAT_CLOUD_STT_KEY"),

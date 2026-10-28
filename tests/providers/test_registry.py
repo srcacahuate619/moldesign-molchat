@@ -73,14 +73,14 @@ def test_future_providers_disabled_in_hackathon_enabled_in_default(tmp_path):
     config = MolChatConfig(profile=HACKATHON_PROFILE,
                            consents_file=tmp_path / "c.json")
     hackathon = build_registry(config)
-    assert "claude" in hackathon.ids() and "gemini" in hackathon.ids()
+    assert "anthropic" in hackathon.ids() and "gemini" in hackathon.ids()
     with pytest.raises(ProviderDisabled):
-        hackathon.get("claude")
+        hackathon.get("anthropic")
     with pytest.raises(ProviderDisabled):
         hackathon.get("gemini")
     default = build_registry(MolChatConfig(profile=DEFAULT_PROFILE,
                                            consents_file=tmp_path / "c.json"))
-    assert default.get("claude").id == "claude"
+    assert default.get("anthropic").id == "anthropic"
     assert default.get("gemini").id == "gemini"
 
 
@@ -100,11 +100,11 @@ def test_openai_compatible_options_reach_registered_provider(tmp_path):
     assert provider.disable_thinking is True
 
 
-def test_active_defaults_to_meta_then_fake():
-    assert _registry_with_stubs(HACKATHON_PROFILE).active_id == "meta"
+def test_active_has_no_default_provider():
+    assert _registry_with_stubs(HACKATHON_PROFILE).active_id is None
     registry = ProviderRegistry()
     registry.register(FakeProvider())
-    assert registry.active_id == "fake"
+    assert registry.active_id is None  # ningún proveedor es el de por defecto
 
 
 def test_set_active_validates_known_and_enabled():
@@ -129,7 +129,7 @@ async def test_plan_routes_to_active_or_named_provider(tmp_path):
 
 def test_build_registry_from_config():
     registry = build_registry(load_config({"MOLCHAT_PROVIDER": "fake"}))
-    assert registry.profile == HACKATHON_PROFILE
+    assert registry.profile == "default"
     assert registry.active_id == "fake"
-    assert registry.ids() == ["claude", "fake", "gemini", "llama-server", "meta",
-                                "ollama", "openai-compatible"]
+    assert registry.ids() == ["anthropic", "deepseek", "fake", "gemini", "llama-server",
+                              "meta", "nvidia", "ollama", "openai"]

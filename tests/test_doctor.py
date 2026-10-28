@@ -28,7 +28,7 @@ def _args(*argv):
 async def test_doctor_reports_without_backend_or_keys(clean_env, capsys):
     assert await _dispatch(_args("doctor")) == 0
     out = capsys.readouterr().out
-    assert "Perfil: hackathon" in out
+    assert "Perfil: default" in out
     assert "fake [local]" in out
     assert "meta [remote]" in out
     assert "model_api_key: unset" in out

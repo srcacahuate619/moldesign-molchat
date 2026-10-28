@@ -309,6 +309,9 @@ class ConversationEngine:
             return ("Hola. Puedo calcular propiedades, comparar y rankear "
                     "moléculas, o explicar conceptos de química computacional."), [], False
         provider_id = self._provider_id or self._registry.active_id
+        if provider_id is None:
+            # Sin proveedor no hay respuesta conceptual: se dice, no se inventa.
+            return self._abstain("no hay proveedor de IA activo: elígelo en Ajustes > Proveedores")
         try:
             reason = self._registry.block_reason(provider_id)
             provider = self._registry.get(provider_id)

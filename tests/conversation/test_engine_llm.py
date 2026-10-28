@@ -30,7 +30,7 @@ def _meta_engine(tmp_path, chat_body, consents="c.json"):
     def handle(request):
         return httpx.Response(200, json={"choices": [{"message": {"content": chat_body}}]})
 
-    config = load_config({"MODEL_API_KEY": "test-key",
+    config = load_config({"MODEL_API_KEY": "test-key", "MOLCHAT_PROVIDER": "meta",
                           "MOLCHAT_CONSENTS_FILE": str(tmp_path / consents)})
     transport = httpx.MockTransport(handle)
     client = httpx.AsyncClient(transport=transport)
@@ -86,7 +86,7 @@ async def test_remote_conceptual_without_consent_emits_nothing(tmp_path):
         calls.append(request)
         return httpx.Response(200, json={"choices": [{"message": {"content": "x"}}]})
 
-    config = load_config({"MODEL_API_KEY": "test-key",
+    config = load_config({"MODEL_API_KEY": "test-key", "MOLCHAT_PROVIDER": "meta",
                           "MOLCHAT_CONSENTS_FILE": str(tmp_path / "c.json")})
     client = httpx.AsyncClient(transport=httpx.MockTransport(handle))
     registry = build_registry(config, clients={"meta": client})
@@ -161,7 +161,7 @@ def _remote_spy_engine(tmp_path):
         seen.update(json.loads(request.content))
         return httpx.Response(200, json={"choices": [{"message": {"content": "concepto."}}]})
 
-    config = load_config({"MODEL_API_KEY": "test-key",
+    config = load_config({"MODEL_API_KEY": "test-key", "MOLCHAT_PROVIDER": "meta",
                           "MOLCHAT_CONSENTS_FILE": str(tmp_path / "c.json")})
     client = httpx.AsyncClient(transport=httpx.MockTransport(handle))
     registry = build_registry(config, clients={"meta": client})

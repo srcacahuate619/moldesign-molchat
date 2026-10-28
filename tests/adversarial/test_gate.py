@@ -150,7 +150,7 @@ class TestLlamadasRemotas:
             calls.append(request)
             return httpx.Response(200, json={"choices": [{"message": {"content": "x"}}]})
 
-        config = load_config({"MODEL_API_KEY": "test-key",
+        config = load_config({"MODEL_API_KEY": "test-key", "MOLCHAT_PROVIDER": "meta",
                               "MOLCHAT_CONSENTS_FILE": str(tmp_path / "c.json"),
                               "MOLCHAT_OFFLINE": "1"})
         client = httpx.AsyncClient(transport=httpx.MockTransport(handle))
@@ -167,7 +167,7 @@ class TestLlamadasRemotas:
 
     @pytest.mark.asyncio
     async def test_denial_is_actionable(self, tmp_path):
-        config = load_config({"MODEL_API_KEY": "test-key",
+        config = load_config({"MODEL_API_KEY": "test-key", "MOLCHAT_PROVIDER": "meta",
                               "MOLCHAT_CONSENTS_FILE": str(tmp_path / "c.json")})
         registry = build_registry(config)
         engine = ConversationEngine(

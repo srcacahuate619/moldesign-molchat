@@ -114,7 +114,9 @@ async def test_tool_error_path_returns_text(world):
 @pytest.mark.asyncio
 async def test_conceptual_needs_a_configured_provider(world):
     """Unconfigured remote provider: denial path also returns text."""
-    registry = build_registry(load_config({"MOLCHAT_PROVIDER": "openai-compatible",
+    # OpenAI es el proveedor genérico del catálogo; sin clave ni autorización, la
+    # respuesta es el rechazo en texto, no una excepción.
+    registry = build_registry(load_config({"MOLCHAT_PROVIDER": "openai",
                                            "MOLCHAT_PROFILE": "default"}))
     engine = ConversationEngine(registry=registry, backend=_EmptyPropsBackend(),
                                 memory=world, user_id="f2c1-test")

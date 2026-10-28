@@ -10,9 +10,9 @@ from molchat_agent.config import (
 )
 
 
-def test_defaults_are_safe_and_hackathon_first():
+def test_defaults_are_safe_and_product_first():
     config = load_config({})
-    assert config.profile == HACKATHON_PROFILE
+    assert config.profile == "default"
     assert config.moldesign_base_url == "http://127.0.0.1:8000"
     assert config.moldesign_token is None
     assert config.moldesign_allow_remote is False

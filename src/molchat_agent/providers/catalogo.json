@@ -83,7 +83,7 @@
     {
       "id": "llama-server",
       "nombre": "llama-server (en esta máquina)",
-      "familia": "openai_chat",
+      "familia": "llama_server",
       "base_url": "http://127.0.0.1:8400/v1",
       "requiere_clave": false,
       "remoto": false,
