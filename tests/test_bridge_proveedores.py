@@ -8,7 +8,7 @@ from molchat_agent.bridge import BridgeError, BridgeTransportError, MolDesignBri
 URL = "http://127.0.0.1:8000"
 
 
-def _puente(handler, token="mh1.sesion-de-prueba"):
+def _puente(handler, token="test-mh1-sesion"):
     cliente = httpx.AsyncClient(base_url=URL, transport=httpx.MockTransport(handler))
     return MolDesignBridge(URL, token=token, client=cliente)
 
@@ -22,7 +22,7 @@ async def test_credencial_va_con_la_sesion_y_devuelve_la_clave():
 
     datos = await _puente(handler).credencial("openai", "api.openai.com")
     assert datos["api_key"] == "sk-1"
-    assert vistas == [("POST", "/molchat-host/credencial", "Bearer mh1.sesion-de-prueba")]
+    assert vistas == [("POST", "/molchat-host/credencial", "Bearer test-mh1-sesion")]
 
 
 async def test_un_rechazo_lleva_su_motivo_y_ninguna_clave():

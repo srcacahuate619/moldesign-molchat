@@ -16,9 +16,9 @@ def test_openai_usa_su_url_y_su_id_y_no_hereda_otras_claves():
 
 
 def test_deepseek_solo_llega_a_su_host():
-    proveedor = construir(catalogo.por_id("deepseek"), api_key="sk-deepseek-1234567890")
+    proveedor = construir(catalogo.por_id("deepseek"), api_key="test-deepseek-1234567890")
     assert proveedor.config.base_url == "https://api.deepseek.com"
-    assert proveedor.config.api_key == "sk-deepseek-1234567890"
+    assert proveedor.config.api_key == "test-deepseek-1234567890"
 
 
 def test_cada_clave_del_entorno_va_a_su_proveedor():

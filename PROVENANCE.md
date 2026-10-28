@@ -840,3 +840,39 @@ MolDesign es por API HTTP, no por copia de código.
 - Transformación: símbolos de interfaz locales, sin recursos remotos
 - Licencia resultante: GPL-3.0-or-later
 - Tests: pruebas de componentes de ui/src/components
+
+### src/molchat_agent/providers/catalogo.py, tests/providers/test_catalogo.py
+
+- Origen: código nuevo en este repositorio; el catálogo vive en la llave (`providers/catalogo.json`) y MolDesign lo lee de la copia verificada
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo: entrada inmutable por proveedor, carga y búsqueda por id; la URL y el host salen del catálogo, no del entorno
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/providers/test_catalogo.py
+
+### src/molchat_agent/providers/alojado.py, tests/providers/test_alojado.py
+
+- Origen: código nuevo en este repositorio; sigue el contrato HTTP del modo alojado de MolDesign (`/molchat-host/`), sin copiar código de MolDesign
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: código nuevo: la clave de la cuenta llega para una sola llamada y el registro base nunca la guarda
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/providers/test_alojado.py
+
+### tests/providers/test_construir.py
+
+- Origen: código nuevo en este repositorio (pruebas de la fábrica `construir` de `providers/registry.py`)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: pruebas nuevas: cada proveedor recibe su clave y su URL, y ninguna clave llega a otro proveedor
+- Licencia resultante: GPL-3.0-or-later
+- Tests: son los tests
+
+### tests/test_bridge_proveedores.py
+
+- Origen: código nuevo en este repositorio (pruebas del puente de proveedores con MolDesign)
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua
+- Transformación: pruebas nuevas de la credencial con la sesión, de los motivos de rechazo sin claves y del error de transporte
+- Licencia resultante: GPL-3.0-or-later
+- Tests: son los tests
