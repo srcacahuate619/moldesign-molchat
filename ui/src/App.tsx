@@ -1,6 +1,7 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api, type CatalogEntry } from "./lib/api";
 import { strings, type Locale, type StringKey } from "./lib/i18n";
+import { announceReady, listenForSession } from "./lib/hostSession";
 import Chat from "./components/Chat";
 import Jobs from "./components/Jobs";
 import Plans from "./components/Plans";
@@ -60,6 +61,13 @@ export default function App() {
     sessionStorage.removeItem(SESSION_KEY);
     setToken(null);
   }, []);
+
+  // Hosted in MolDesign: announce readiness once; the desktop answers with
+  // our session token (loopback postMessage, never URL). Standalone: inert.
+  useEffect(() => {
+    announceReady();
+    return listenForSession((candidate) => void connect(candidate));
+  }, [connect]);
 
   if (!token) {
     return <Unlock t={t} failed={unlockFailed} onConnect={(v) => void connect(v)} />;
