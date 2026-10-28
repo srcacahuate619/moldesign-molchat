@@ -143,9 +143,9 @@ antes de convertirse en un plan de laboratorio.
   no evaluadas automáticamente en aprobaciones científicas.
 - El backend local se restringe a loopback; para un servidor remoto se exige
   HTTPS y configuración explícita. No se siguen redirecciones HTTP.
-- Las propiedades por conversación usan un dataset demo local de 8 moléculas
-  (valores RDKit grabados); la cobertura completa espera la API de plataforma
-  (CR-01) y lo desconocido se abstiene en vez de inventar.
+- Las propiedades por conversación requieren el contrato autenticado
+  `properties/1` de MolDesign. Si la plataforma no está disponible o no declara
+  esa capacidad, el asistente se abstiene; no sustituye resultados por datos demo.
 - El vídeo científico lo renderiza Molcy en la plataforma, nunca el agente;
   el agente pide el trabajo, lo sigue y enlaza su acta de procedencia
   (`molcy.procedencia/1`). Solo puede ser fuente de vídeo una corrida que el

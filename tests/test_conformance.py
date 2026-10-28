@@ -148,7 +148,7 @@ def test_register_flag_imports_third_party_modules(tmp_path, monkeypatch, capsys
 def _live_bridge(handler):
     client = httpx.AsyncClient(base_url="http://127.0.0.1:18017",
                                transport=httpx.MockTransport(handler))
-    return MolDesignBridge(base_url="http://127.0.0.1:18017",
+    return MolDesignBridge(require_contract=False, base_url="http://127.0.0.1:18017",
                            token="test-token", client=client)
 
 

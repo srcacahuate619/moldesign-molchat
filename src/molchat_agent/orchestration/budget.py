@@ -27,8 +27,8 @@ class BudgetTracker:
 
     def check_time(self) -> None:
         elapsed = time.monotonic() - self.started
-        if elapsed > self.budget.max_time_s:
-            raise BudgetExceeded(f"tiempo excedido ({elapsed:.0f}s > {self.budget.max_time_s:.0f}s)")
+        if elapsed >= self.budget.max_time_s:
+            raise BudgetExceeded(f"tiempo excedido ({elapsed:.0f}s >= {self.budget.max_time_s:.0f}s)")
 
     def check_job_start(self) -> None:
         if self.jobs_started >= self.budget.max_jobs:

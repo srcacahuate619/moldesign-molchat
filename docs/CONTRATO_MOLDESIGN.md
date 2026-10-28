@@ -1,5 +1,10 @@
 # Contrato MolChat ↔ MolDesign (v3, `moldesign.molchat/1`, Fase 5)
 
+Para la negociación, identidad y formato de propiedades implementados en la
+integración local, ver [PROTOCOLO_MOLDESIGN.md](PROTOCOLO_MOLDESIGN.md).
+Las capacidades negociadas son una superficie nueva en desarrollo; las cifras
+históricas y estados de CR de este documento se conservan como registro de Fase 5.
+
 Toda comunicación agente↔plataforma es HTTP con este contrato. El catálogo
 vivo servido por la plataforma (CR-04) no existe aún: el catálogo es local
 (`tools/moldesign.py` + `tools/molcy.py`, 31 capacidades) y la suite de

@@ -1,0 +1,2 @@
+# Vite incorpora este HTML al artefacto; fijar LF evita builds mixtos en Windows.
+ui/index.html text eol=lf

@@ -195,7 +195,7 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
         conv_id = payload.get("conversation_id")
         if conv_id is not None and not isinstance(conv_id, str):
             return _error(400, "conversation_id no válido")
-        engine = state.engine_for(session.sub)
+        engine = state.engine_for(session.sub, platform_token(request))
         if conv_id is None:
             conv_id = state.memory.create_conversation(session.sub)
         elif state.memory.get_conversation(conv_id, session.sub) is None:
