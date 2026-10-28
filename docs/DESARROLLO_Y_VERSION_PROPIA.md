@@ -16,7 +16,7 @@ MolDesign ejecuta la copia que tiene fijada. Mientras no la vuelvas a vendorizar
 
 2. Haz commits limpios. Sólo lo commiteado se puede integrar.
 
-3. Para probar un cambio dentro de MolDesign sin tocar su copia publicada, vendoriza a una carpeta de prueba:
+3. Para probar un cambio dentro de MolDesign sin tocar su copia publicada, vendoriza a una carpeta de prueba desde la raíz de MolDesign:
 
    ```bash
    python scripts/stage_molchat.py --fuente <esta-carpeta> --write --destino <carpeta-de-prueba>
