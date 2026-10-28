@@ -131,5 +131,5 @@ def test_build_registry_from_config():
     registry = build_registry(load_config({"MOLCHAT_PROVIDER": "fake"}))
     assert registry.profile == "default"
     assert registry.active_id == "fake"
-    assert registry.ids() == ["anthropic", "deepseek", "fake", "gemini", "llama-server",
+    assert registry.ids() == ["anthropic", "baseten-hackathon", "deepseek", "fake", "gemini", "llama-server",
                               "meta", "nvidia", "ollama", "openai"]
