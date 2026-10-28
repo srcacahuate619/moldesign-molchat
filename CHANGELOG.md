@@ -2,6 +2,8 @@
 
 ## No publicado
 
+- Documentación de la llave y de la cerradura con MolDesign (`docs/LLAVE_Y_CERRADURA.md`) y del flujo de desarrollo y de versión propia (`docs/DESARROLLO_Y_VERSION_PROPIA.md`).
+
 - Negociación versionada con MolDesign; modo explícito para adaptadores genéricos.
 
 - Ejemplo de adaptador HTTP sintético con casos y comprobaciones en vivo.
