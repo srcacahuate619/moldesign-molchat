@@ -197,6 +197,45 @@ class MolDesignBridge:
             raise BridgeTransportError(f"No se pudo leer el stream de {name}") from exc
         return {"events": events}
 
+    async def _pedir_proveedor(self, metodo: str, ruta: str,
+                               cuerpo: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Petición de proveedores a MolDesign con la identidad de la sesión. Un 4xx
+        devuelve el `motivo` del host en `detail`; nunca una clave en el mensaje."""
+        if not self._token:
+            raise BridgeError("La plataforma requiere una sesión autenticada")
+        try:
+            r = await self._client.request(metodo, ruta, json=cuerpo,
+                                           headers={"Authorization": f"Bearer {self._token}"})
+        except httpx.TimeoutException as exc:
+            raise BridgeTransportError("MolDesign no respondió a tiempo") from exc
+        except httpx.RequestError as exc:
+            raise BridgeTransportError("MolDesign no está disponible") from exc
+        if r.status_code >= 400:
+            motivo = ""
+            try:
+                detalle = r.json().get("detail")
+                motivo = str(detalle.get("motivo", "")) if isinstance(detalle, dict) else str(detalle or "")
+            except (ValueError, AttributeError):
+                motivo = ""
+            raise BridgeError("MolDesign no entregó la credencial de proveedor",
+                              status_code=r.status_code, detail=motivo[:80])
+        if len(r.content) > 65536:
+            raise BridgeError("respuesta de MolDesign demasiado grande")
+        datos = r.json()
+        if not isinstance(datos, dict):
+            raise BridgeError("respuesta de MolDesign no válida")
+        return datos
+
+    async def proveedores_de_cuenta(self) -> dict[str, Any]:
+        """Estado de los proveedores de esta cuenta: activo y autorizaciones. Sin claves."""
+        return await self._pedir_proveedor("GET", "/molchat-host/proveedores")
+
+    async def credencial(self, proveedor: str, host: str) -> dict[str, Any]:
+        """Clave y modelo para UNA llamada. MolDesign sólo la entrega si la cuenta
+        autorizó `proveedor@host` y ese host es el del catálogo verificado."""
+        return await self._pedir_proveedor("POST", "/molchat-host/credencial",
+                                           {"proveedor": proveedor, "host": host})
+
     async def transcribe_local(self, audio_bytes: bytes, *, lang: str = "es",
                              token: str | None = None) -> str:
         """Use MolDesign's authenticated local Whisper endpoint.

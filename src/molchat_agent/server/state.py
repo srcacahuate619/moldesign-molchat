@@ -52,13 +52,23 @@ class ServerState:
                 "este sidecar ya sirve a otra cuenta; "
                 "reinícialo para cambiar de identidad")
 
-    def engine_for(self, sub: str, platform_token: str | None = None) -> ConversationEngine:
+    async def registro_de_turno(self, platform_token: str | None = None) -> ProviderRegistry:
+        """El registro de esta llamada. En modo alojado trae la clave de la cuenta (sólo
+        para esta llamada); fuera de él, el registro de la máquina de siempre."""
+        if not (self.hosted and self.bridge is not None):
+            return self.registry
+        from ..providers.alojado import registro_del_turno
+        return await registro_del_turno(self.registry, self.bridge.with_token(platform_token))
+
+    def engine_for(self, sub: str, platform_token: str | None = None,
+                   registro: ProviderRegistry | None = None) -> ConversationEngine:
         backend = self.backend
         if self.hosted and isinstance(backend, PlatformBackend):
             backend = backend.with_token(platform_token)
+        registro = registro or self.registry
         return ConversationEngine(
-            registry=self.registry, backend=backend, memory=self.memory,
-            user_id=sub, provider_id=self.provider_id or self.registry.active_id)
+            registry=registro, backend=backend, memory=self.memory,
+            user_id=sub, provider_id=self.provider_id or registro.active_id)
 
     def revoke(self, jti: str) -> None:
         self.revoked.add(jti)

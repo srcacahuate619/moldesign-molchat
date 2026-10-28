@@ -195,7 +195,8 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
         conv_id = payload.get("conversation_id")
         if conv_id is not None and not isinstance(conv_id, str):
             return _error(400, "conversation_id no válido")
-        engine = state.engine_for(session.sub, platform_token(request))
+        registro = await state.registro_de_turno(platform_token(request))
+        engine = state.engine_for(session.sub, platform_token(request), registro)
         if conv_id is None:
             conv_id = state.memory.create_conversation(session.sub)
         elif state.memory.get_conversation(conv_id, session.sub) is None:
@@ -238,7 +239,8 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
         if provider_id is not None and not isinstance(provider_id, str):
             return _error(400, "provider_id no válido")
         try:
-            plan = await state.registry.plan(goal, provider_id=provider_id)
+            registro = await state.registro_de_turno(platform_token(request))
+            plan = await registro.plan(goal, provider_id=provider_id)
         except (ConsentDenied, ProviderDisabled) as exc:
             raise HTTPException(403, str(exc)) from exc
         except ProviderError as exc:

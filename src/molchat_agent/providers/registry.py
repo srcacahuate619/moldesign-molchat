@@ -21,7 +21,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from ..config import HACKATHON_PROFILE, MolChatConfig, load_config
+from ..config import DEFAULT_PROFILE, HACKATHON_PROFILE, MolChatConfig, load_config
 from ..plan import Plan
 from .base import (
     CatalogEntry,
@@ -205,7 +205,7 @@ class BrokenProvider:
 
 
 class ProviderRegistry:
-    def __init__(self, *, profile: str = HACKATHON_PROFILE,
+    def __init__(self, *, profile: str = DEFAULT_PROFILE,
                  consents: ConsentStore | None = None,
                  offline: bool = False) -> None:
         self._profile = profile
@@ -213,6 +213,10 @@ class ProviderRegistry:
         self._active_id: str | None = None
         self._consents = consents or ConsentStore()
         self._offline = offline
+        # Modo alojado (una llamada): la autorización de los remotos la tiene MolDesign
+        # por cuenta; `_bloqueos` lleva el motivo cuando MolDesign no entregó la clave.
+        self._delegado = False
+        self._bloqueos: dict[str, str] = {}
 
     @property
     def profile(self) -> str:
@@ -273,12 +277,17 @@ class ProviderRegistry:
 
     def block_reason(self, provider_id: str) -> str:
         """Why this provider must not emit now, or ``""`` when it may."""
+        if provider_id in self._bloqueos:
+            return self._bloqueos[provider_id]
         destination = self.destination(provider_id)
         if not destination.is_remote:
             return ""
         if self._offline:
             return (f"Modo offline: el objetivo saldría hacia {destination.host}. "
                     "No se envió aunque el destino esté autorizado.")
+        if self._delegado:
+            # MolDesign autorizó este host para la cuenta y entregó la clave: ya está decidido.
+            return ""
         if self._consents.granted(destination.fingerprint):
             return ""
         return (f"El objetivo saldría de esta máquina hacia {destination.host} "
@@ -297,7 +306,27 @@ class ProviderRegistry:
         destination = self.destination(provider_id)
         if not destination.is_remote:
             return True  # local providers never exfiltrate
+        if self._delegado:
+            return True  # la cuenta autorizó este envío al dar de alta el proveedor
         return self._consents.granted(destination.fingerprint + CONTENT_SCOPE)
+
+    def de_llamada(self, *, activo: str | None, proveedor: LLMProvider | None = None,
+                   bloqueo: dict[str, str] | None = None) -> "ProviderRegistry":
+        """Registro de UNA llamada en modo alojado.
+
+        Comparte los adaptadores de la máquina y cambia sólo el activo, el adaptador
+        que lleva la clave de la cuenta y los bloqueos. El registro base nunca guarda
+        una clave: la de esta llamada muere con ella.
+        """
+        nuevo = ProviderRegistry(profile=self._profile, consents=self._consents,
+                                 offline=self._offline)
+        nuevo._providers = dict(self._providers)
+        if proveedor is not None:
+            nuevo._providers[proveedor.id] = proveedor
+        nuevo._active_id = activo
+        nuevo._bloqueos = dict(bloqueo or {})
+        nuevo._delegado = True
+        return nuevo
 
     def grant_content(self, provider_id: str) -> dict[str, Any]:
         """Authorize history/summaries for an already-consented destination."""
