@@ -14,7 +14,7 @@ from typing import Any
 
 from ..conversation.engine import ConversationEngine
 from ..conversation.memory import MemoryStore
-from ..conversation.tools import ToolBackend
+from ..conversation.tools import PlatformBackend, ToolBackend
 from ..providers.registry import ProviderRegistry
 from ..voice.stt import SpeechToText
 from .executions import ExecutionManager
@@ -52,9 +52,12 @@ class ServerState:
                 "este sidecar ya sirve a otra cuenta; "
                 "reinícialo para cambiar de identidad")
 
-    def engine_for(self, sub: str) -> ConversationEngine:
+    def engine_for(self, sub: str, platform_token: str | None = None) -> ConversationEngine:
+        backend = self.backend
+        if self.hosted and isinstance(backend, PlatformBackend):
+            backend = backend.with_token(platform_token)
         return ConversationEngine(
-            registry=self.registry, backend=self.backend, memory=self.memory,
+            registry=self.registry, backend=backend, memory=self.memory,
             user_id=sub, provider_id=self.provider_id or self.registry.active_id)
 
     def revoke(self, jti: str) -> None:

@@ -9,6 +9,7 @@ deterministically; a ``PlatformBackend`` over HTTP replaces it later.
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
@@ -38,6 +39,66 @@ class MoleculeRecord:
 class ToolBackend(Protocol):
     async def properties(self, smiles: str) -> MoleculeRecord: ...
     def name_for(self, smiles: str) -> str | None: ...
+
+
+class PlatformBackend:
+    """Compute against the authenticated, versioned MolDesign contract.
+
+    Unknown versions, missing capabilities and malformed results abstain.
+    No demo or cached scientific values are used as a fallback.
+    """
+
+    def __init__(self, bridge: Any) -> None:
+        self._bridge = bridge
+
+    def with_token(self, token: str | None) -> "PlatformBackend":
+        return PlatformBackend(self._bridge.with_token(token))
+
+    def name_for(self, smiles: str) -> str | None:
+        return None
+
+    async def properties(self, smiles: str) -> MoleculeRecord:
+        import httpx
+
+        if not self._bridge.token:
+            raise ToolError("Se necesita una sesión de MolDesign para calcular propiedades")
+        headers = {"Authorization": f"Bearer {self._bridge.token}"}
+        try:
+            contract = await self._bridge.client.get('/molchat-host/contract', headers=headers)
+            if contract.status_code != 200 or len(contract.content) > 65536:
+                raise ToolError("MolDesign no ofrece el contrato de propiedades")
+            data = contract.json()
+            if (not isinstance(data, dict) or data.get('contract') != 'moldesign.molchat/1'
+                    or not isinstance(data.get('capabilities'), list)
+                    or 'properties/1' not in data['capabilities']):
+                raise ToolError("Contrato de MolDesign incompatible o capacidad ausente")
+            response = await self._bridge.client.post(
+                '/molchat-host/properties', headers=headers, json={'smiles': smiles})
+            if response.status_code != 200 or len(response.content) > 65536:
+                raise ToolError(f"MolDesign no calculó las propiedades (HTTP {response.status_code})")
+            result = response.json()
+            if not isinstance(result, dict) or result.get('contract') != 'properties/1':
+                raise ToolError("Respuesta de propiedades incompatible")
+            props = result.get('properties')
+            keys = ('mw', 'logp', 'tpsa', 'hbd', 'hba', 'rot_bonds', 'heavy_atoms', 'rings')
+            if not isinstance(props, dict) or any(
+                isinstance(props.get(k), bool) or not isinstance(props.get(k), (int, float))
+                or not math.isfinite(props[k]) for k in keys
+            ):
+                raise ToolError("MolDesign devolvió propiedades incompletas")
+            canonical = result.get('canonical_smiles')
+            source = result.get('source')
+            warnings = result.get('warnings')
+            if (not isinstance(canonical, str) or not canonical or not isinstance(source, str)
+                    or not source or not isinstance(warnings, list)
+                    or not all(isinstance(w, str) for w in warnings)):
+                raise ToolError("MolDesign no declaró la identidad o procedencia")
+            if warnings:
+                source += ' | Avisos: ' + '; '.join(warnings)
+            return MoleculeRecord(name=canonical, smiles=canonical,
+                                  props={k: props[k] for k in keys}, source=source)
+        except (httpx.RequestError, ValueError) as exc:
+            raise ToolError("No se pudo verificar o consultar MolDesign") from exc
 
 
 class QualityBackend:

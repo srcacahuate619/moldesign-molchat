@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   announceReady,
   isLoopbackOrigin,
+  isTrustedHostOrigin,
   isSessionMessage,
   listenForSession,
 } from "./hostSession";
@@ -15,6 +16,12 @@ describe("host session handshake", () => {
     expect(isLoopbackOrigin("http://127.0.0.1.evil.com")).toBe(false);
     expect(isLoopbackOrigin("not a url")).toBe(false);
     expect(isLoopbackOrigin("")).toBe(false);
+  });
+
+  it("accepts the Tauri host origin without accepting lookalikes", () => {
+    expect(isTrustedHostOrigin("http://tauri.localhost")).toBe(true);
+    expect(isTrustedHostOrigin("https://tauri.localhost")).toBe(true);
+    expect(isTrustedHostOrigin("https://tauri.localhost.evil.example")).toBe(false);
   });
 
   it("validates the closed session shape", () => {
@@ -36,6 +43,22 @@ describe("host session handshake", () => {
       }),
     ).toBe(false);
     expect(isSessionMessage(null)).toBe(false);
+    expect(isSessionMessage({ type: "molchat-host-session", token: "test-mh1.x.y", locale: "en" })).toBe(true);
+    expect(isSessionMessage({ type: "molchat-host-session", token: "test-mh1.x.y", locale: "fr" })).toBe(false);
+  });
+
+  it("passes the host language only from the verified parent", () => {
+    const listeners: Array<(event: unknown) => void> = [];
+    const scope = {
+      addEventListener: (_t: string, l: (event: unknown) => void) => listeners.push(l),
+      removeEventListener: () => {},
+    };
+    const parent = { postMessage: vi.fn() };
+    const onToken = vi.fn();
+    listenForSession(onToken, scope as unknown as Parameters<typeof listenForSession>[1], parent);
+    listeners.forEach(l => l({ origin: "http://tauri.localhost", source: parent,
+      data: { type: "molchat-host-session", token: "test-mh1.x.y", locale: "en" } }));
+    expect(onToken).toHaveBeenCalledWith("test-mh1.x.y", "en");
   });
 
   it("announces readiness to the parent frame", () => {
@@ -60,21 +83,25 @@ describe("host session handshake", () => {
       },
     };
     const onToken = vi.fn();
+    const parent = { postMessage: vi.fn() };
+    const stranger = { postMessage: vi.fn() };
     const unlisten = listenForSession(
       onToken,
       scope as unknown as Parameters<typeof listenForSession>[1],
+      parent,
     );
-    const emit = (origin: string, data: unknown) =>
-      listeners.forEach((l) => l({ origin, data }));
+    const emit = (origin: string, data: unknown, source = parent) =>
+      listeners.forEach((l) => l({ origin, data, source }));
     emit("https://evil.example.com", {
       type: "molchat-host-session",
       token: "test-mh1.evil.y",
     });
     emit("http://127.0.0.1:18017", { type: "otra-cosa" });
-    emit("http://127.0.0.1:18017", {
+    emit("http://tauri.localhost", {
       type: "molchat-host-session",
       token: "test-mh1.bien.firma",
     });
+    emit("http://tauri.localhost", { type: "molchat-host-session", token: "test-mh1.ajena.firma" }, stranger);
     expect(onToken).toHaveBeenCalledTimes(1);
     expect(onToken).toHaveBeenCalledWith("test-mh1.bien.firma");
     unlisten();

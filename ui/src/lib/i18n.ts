@@ -46,7 +46,7 @@ const es = {
   "settings.language": "Idioma",
   "settings.data": "Datos de propiedades",
   "settings.dataNote":
-    "Demo local: 8 moléculas (valores RDKit grabados). La cobertura completa llega con la API de plataforma (CR-01); lo desconocido se abstiene.",
+    "Las propiedades las calcula MolDesign. Si la plataforma no está disponible, el asistente se abstiene.",
   "settings.session": "Sesión",
   "settings.revoke": "Revocar sesión y desconectar",
   "settings.consents": "Consentimientos de red",
@@ -112,7 +112,7 @@ const en: Record<StringKey, string> = {
   "settings.language": "Language",
   "settings.data": "Property data",
   "settings.dataNote":
-    "Local demo: 8 molecules (recorded RDKit values). Full coverage comes with the platform API (CR-01); unknowns abstain.",
+    "Properties are calculated by MolDesign. If the platform is unavailable, the assistant abstains.",
   "settings.session": "Session",
   "settings.revoke": "Revoke session and disconnect",
   "settings.consents": "Network consents",

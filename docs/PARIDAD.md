@@ -1,5 +1,9 @@
 # Matriz de paridad — MolChat nuevo vs interno (final al corte, Fase 6.6)
 
+> Registro del corte: la integración local posterior añade propiedades por
+> contrato con MolDesign. Las demás filas y su evidencia conservan el estado
+> medido en ese corte; no certifican el instalador ni la paridad completa.
+
 Fuente: `backend/services/ai/tools/*.py` (27 herramientas) + respondedores.
 Estados: **hecho** (en este repo, con tests), **puente** (vía contrato/bridge
 existente), **ausente (CR-XX)** (final: sin superficie en plataforma, el
@@ -10,7 +14,7 @@ agente se abstiene y lo dice; reaparece como capacidad cuando la CR exista),
 
 | Herramienta interna | Estado | Dónde / nota |
 |---|---|---|
-| `compute_properties` | hecho (fixtures demo, CR-01 pendiente) | `conversation/tools.py` + dataset demo etiquetado; vía API con CR-01 |
+| `compute_properties` | puente local `properties/1` | MolDesign valida y calcula; si el contrato está ausente, el agente se abstiene. La parte de preparación de CR-01 sigue pendiente. |
 | `validate_smiles` | hecho (heurística + servidor) | `intents.smiles_plausible` (estructural); validez química real en preflight |
 | `check_druglikeness` | hecho (reglas+registrado) | `deterministic.build_druglikeness_response`; PAINS sin registro → abstención |
 | `compare_molecules` | hecho | `deterministic.build_compare_response` (+ N-vías) sobre valores tipados |

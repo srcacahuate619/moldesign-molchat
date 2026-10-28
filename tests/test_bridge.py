@@ -32,7 +32,7 @@ async def test_bridge_uses_existing_contract_and_bearer_token():
 
     transport = httpx.MockTransport(handle)
     async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", transport=transport) as client:
-        bridge = MolDesignBridge(token="secret_local", client=client)
+        bridge = MolDesignBridge(require_contract=False, token="secret_local", client=client)
         result = await bridge.call("check_preflight", {"smiles": "CCO", "target_pdb_id": "1HSG"})
     assert result == {"blocking": False}
     assert seen == [("POST", "/evaluation/preflight", "Bearer secret_local")]
@@ -49,7 +49,7 @@ async def test_bridge_refuses_redirect_and_does_not_follow():
     async with httpx.AsyncClient(base_url="http://127.0.0.1:8000",
                                  transport=httpx.MockTransport(handle),
                                  follow_redirects=False) as client:
-        bridge = MolDesignBridge(token="secret", client=client)
+        bridge = MolDesignBridge(require_contract=False, token="secret", client=client)
         with pytest.raises(BridgeError, match="redirección"):
             await bridge.call("list_targets", {})
     assert seen == ["/targets/"]
@@ -57,7 +57,7 @@ async def test_bridge_refuses_redirect_and_does_not_follow():
 
 @pytest.mark.asyncio
 async def test_approval_requires_authenticated_session():
-    bridge = MolDesignBridge()
+    bridge = MolDesignBridge(require_contract=False, )
     try:
         with pytest.raises(BridgeError, match="sesión autenticada"):
             await bridge.call("approve_docking_proposal", {
@@ -78,7 +78,7 @@ async def test_voice_uses_local_endpoint_only_and_returns_transcript():
 
     async with httpx.AsyncClient(base_url="http://127.0.0.1:8000",
                                  transport=httpx.MockTransport(handle)) as client:
-        bridge = MolDesignBridge(token="test", client=client)
+        bridge = MolDesignBridge(require_contract=False, token="test", client=client)
         assert await bridge.transcribe_local(b"RIFF-valid-demo") == "Preparar el receptor"
 
 
@@ -91,7 +91,7 @@ async def test_bytes_capability_returns_raw_content():
 
     async with httpx.AsyncClient(base_url="http://127.0.0.1:8000",
                                  transport=httpx.MockTransport(handle)) as client:
-        bridge = MolDesignBridge(token="test", client=client)
+        bridge = MolDesignBridge(require_contract=False, token="test", client=client)
         assert await bridge.call("export_batch", {"batch_id": "b1", "format": "csv"}) == b"a,b\n1,2\n"
 
 
@@ -105,7 +105,7 @@ async def test_sse_capability_collects_data_events():
 
     async with httpx.AsyncClient(base_url="http://127.0.0.1:8000",
                                  transport=httpx.MockTransport(handle)) as client:
-        bridge = MolDesignBridge(token="test", client=client)
+        bridge = MolDesignBridge(require_contract=False, token="test", client=client)
         result = await bridge.call("stream_evaluation", {"task_id": "t1"})
     assert result == {"events": [{"type": "start"}, {"type": "final"}]}
 
@@ -120,7 +120,7 @@ async def test_post_with_query_params_sends_no_json_body():
 
     async with httpx.AsyncClient(base_url="http://127.0.0.1:8000",
                                  transport=httpx.MockTransport(handle)) as client:
-        bridge = MolDesignBridge(token="test", client=client)
+        bridge = MolDesignBridge(require_contract=False, token="test", client=client)
         result = await bridge.call("save_molecule", {
             "molecule_id": "12345678-1234-1234-1234-123456789012", "name": "demo"})
     assert result == {"saved": True}
@@ -134,7 +134,7 @@ async def test_idempotency_key_travels_as_header():
 
     async with httpx.AsyncClient(base_url="http://127.0.0.1:8000",
                                  transport=httpx.MockTransport(handle)) as client:
-        bridge = MolDesignBridge(token="test", client=client)
+        bridge = MolDesignBridge(require_contract=False, token="test", client=client)
         result = await bridge.call("cancel_evaluation", {"task_id": "t1"},
                                    idempotency_key="key-1")
     assert result == {"cancelled": True}
@@ -149,7 +149,7 @@ async def test_transport_loss_is_distinct_from_error_responses():
 
     async with httpx.AsyncClient(base_url="http://127.0.0.1:8000",
                                  transport=httpx.MockTransport(handle)) as client:
-        bridge = MolDesignBridge(token="test", client=client)
+        bridge = MolDesignBridge(require_contract=False, token="test", client=client)
         with pytest.raises(BridgeTransportError):
             await bridge.call("list_targets", {})
         # ...but still a BridgeError for generic handlers.
@@ -164,7 +164,7 @@ async def test_error_responses_carry_status_and_detail():
 
     async with httpx.AsyncClient(base_url="http://127.0.0.1:8000",
                                  transport=httpx.MockTransport(handle)) as client:
-        bridge = MolDesignBridge(token="test", client=client)
+        bridge = MolDesignBridge(require_contract=False, token="test", client=client)
         with pytest.raises(BridgeError) as caught:
             await bridge.call("create_docking_proposal", {"smiles": "CCO"})
     assert caught.value.status_code == 409
@@ -181,7 +181,7 @@ async def test_with_token_shares_client_with_own_authorization():
 
     async with httpx.AsyncClient(base_url="http://127.0.0.1:8000",
                                  transport=httpx.MockTransport(handle)) as client:
-        bridge = MolDesignBridge(token="test-fixed", client=client)
+        bridge = MolDesignBridge(require_contract=False, token="test-fixed", client=client)
         bound = bridge.with_token("test-bearer")
         assert bound.client is client
         await bound.call("list_targets", {})
@@ -201,7 +201,7 @@ async def test_transcribe_local_accepts_per_call_token():
 
     async with httpx.AsyncClient(base_url="http://127.0.0.1:8000",
                                  transport=httpx.MockTransport(handle)) as client:
-        bridge = MolDesignBridge(client=client)  # no fixed token (hosted)
+        bridge = MolDesignBridge(require_contract=False, client=client)  # no fixed token (hosted)
         assert await bridge.transcribe_local(b"RIFF-x", token="test-bearer") == "hola"
         with pytest.raises(BridgeError, match="sesión MolDesign"):
             await bridge.transcribe_local(b"RIFF-x")

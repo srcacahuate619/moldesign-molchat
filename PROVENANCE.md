@@ -822,3 +822,12 @@ MolDesign es por API HTTP, no por copia de código.
 - Transformación: corrección de errores HTTP y opciones explícitas para modo JSON y razonamiento; se conserva la validación local
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/providers/test_openai_compatible.py, tests/providers/test_registry.py; pruebas de NVIDIA documentadas en docs/EVALUACION_NVIDIA.md
+
+### tests/conversation/test_platform_backend.py
+
+- Origen: código nuevo de integración para el contrato HTTP de MolDesign
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua, con colaboración de un agente de código
+- Transformación: pruebas de versión, identidad, capacidades y abstención del cliente
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/conversation/test_platform_backend.py y pruebas de contrato en vivo

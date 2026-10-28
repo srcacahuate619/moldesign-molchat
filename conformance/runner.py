@@ -414,8 +414,31 @@ async def check_abstention_live(packs: list[Pack], bridge: MolDesignBridge) -> l
     return verdicts
 
 
+def contract_required(adapter: str, registrations: list[str]) -> bool:
+    """MolDesign always negotiates; a custom adapter must be explicit."""
+    if adapter == "moldesign":
+        return True
+    if adapter == "generic" and registrations:
+        return False
+    if adapter == "generic":
+        raise ValueError("el adaptador genérico exige registrar un pack explícito")
+    raise ValueError("modo de adaptador desconocido")
+
+
+async def check_platform_protocol(bridge: MolDesignBridge, required: bool) -> Verdict | None:
+    """An incompatible MolDesign contract fails instead of hiding in skips."""
+    if not required:
+        return None
+    try:
+        await bridge.ensure_contract("platform-actions/1")
+    except BridgeError as exc:
+        return Verdict("protocol", "moldesign", "fail", str(exc))
+    return Verdict("protocol", "moldesign", "pass", "moldesign.molchat/1")
+
+
 async def run(cases_dir: Path, *, live: bool, base_url: str,
-              token: str | None, allow_remote: bool) -> list[Verdict]:
+              token: str | None, allow_remote: bool,
+              require_contract: bool = True) -> list[Verdict]:
     verdicts: list[Verdict] = []
     packs, case_verdicts = load_packs(cases_dir)
     verdicts.extend(case_verdicts)
@@ -442,7 +465,13 @@ async def run(cases_dir: Path, *, live: bool, base_url: str,
         return verdicts
     oracle = next((p.oracle for p in packs if p.oracle), None)
     async with MolDesignBridge(base_url, token=token,
-                               allow_remote=allow_remote) as bridge:
+                               allow_remote=allow_remote,
+                               require_contract=require_contract) as bridge:
+        protocol = await check_platform_protocol(bridge, require_contract)
+        if protocol is not None:
+            verdicts.append(protocol)
+            if protocol.status == "fail":
+                return verdicts
         if oracle is None:
             verdicts.append(Verdict("3b", "batch", "skip", "no oracle cased"))
         else:
@@ -472,12 +501,20 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--cases", type=Path, default=CASES_DIR)
     parser.add_argument("--register", action="append", default=[],
                         help="dotted module registering extra capabilities (repeatable)")
+    parser.add_argument("--adapter", choices=("moldesign", "generic"), default="moldesign",
+                        help="generic es explícito y no negocia el contrato MolDesign")
     args = parser.parse_args(argv)
+    try:
+        exige_contrato = contract_required(args.adapter, args.register)
+    except ValueError as exc:
+        parser.error(str(exc))
     for module in args.register:
         importlib.import_module(module)
     token = os.environ.get("MOLDESIGN_TOKEN")
     allow_remote = os.environ.get("MOLDESIGN_ALLOW_REMOTE") == "1"
     if args.live:
+        if not exige_contrato:
+            print("conformance: adaptador genérico explícito; no se negocia el contrato MolDesign")
         try:
             validate_base_url(args.base_url, allow_remote=allow_remote)
         except ValueError as exc:
@@ -485,7 +522,8 @@ def main(argv: list[str] | None = None) -> int:
             return 1
     verdicts = asyncio.run(run(args.cases, live=args.live,
                                base_url=args.base_url, token=token,
-                               allow_remote=allow_remote))
+                               allow_remote=allow_remote,
+                               require_contract=exige_contrato))
     return report(verdicts)
 
 

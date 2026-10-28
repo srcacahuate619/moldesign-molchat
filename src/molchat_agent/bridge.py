@@ -66,10 +66,12 @@ class MolDesignBridge:
         self, base_url: str = "http://127.0.0.1:8000", *,
         token: str | None = None, allow_remote: bool = False,
         client: httpx.AsyncClient | None = None,
+        require_contract: bool = True,
     ) -> None:
         self.base_url = validate_base_url(base_url, allow_remote=allow_remote)
         self._token = token
         self._allow_remote = allow_remote
+        self._require_contract = require_contract
         self._owns_client = client is None
         self._client = client or httpx.AsyncClient(
             base_url=self.base_url, timeout=30.0, follow_redirects=False,
@@ -85,7 +87,7 @@ class MolDesignBridge:
         """
         return MolDesignBridge(self.base_url, token=token,
                                allow_remote=self._allow_remote,
-                               client=self._client)
+                               client=self._client, require_contract=self._require_contract)
 
     @classmethod
     def from_env(cls) -> "MolDesignBridge":
@@ -94,7 +96,25 @@ class MolDesignBridge:
             base_url=config.moldesign_base_url,
             token=config.moldesign_token,
             allow_remote=config.moldesign_allow_remote,
+            require_contract=True,
         )
+
+    async def ensure_contract(self, capability_name: str) -> None:
+        """Fail closed before any platform operation when negotiation is required."""
+        if not self._token:
+            raise BridgeError("La plataforma requiere una sesión autenticada")
+        try:
+            r = await self._client.get('/molchat-host/contract',
+                                       headers={'Authorization': f'Bearer {self._token}'})
+            if r.status_code != 200 or len(r.content) > 65536:
+                raise BridgeError("MolDesign no ofrece el contrato de agente")
+            data = r.json()
+            if (not isinstance(data, dict) or data.get('contract') != 'moldesign.molchat/1'
+                    or not isinstance(data.get('capabilities'), list)
+                    or capability_name not in data['capabilities']):
+                raise BridgeError("Contrato de MolDesign incompatible o capacidad ausente")
+        except (httpx.RequestError, ValueError) as exc:
+            raise BridgeError("No se pudo verificar el contrato de MolDesign") from exc
 
     @property
     def client(self) -> httpx.AsyncClient:
@@ -114,6 +134,8 @@ class MolDesignBridge:
 
     async def call(self, name: str, arguments: dict[str, Any],
                    *, idempotency_key: str | None = None) -> Any:
+        if self._require_contract:
+            await self.ensure_contract('platform-actions/1')
         tool = capability(name)
         method, path, query, body, response_kind = tool.request(arguments)
         headers = {"Accept": "application/json"}
@@ -185,6 +207,8 @@ class MolDesignBridge:
         effective = token or self._token
         if not effective:
             raise BridgeError("La transcripción requiere una sesión MolDesign")
+        if self._require_contract:
+            await self.with_token(effective).ensure_contract('platform-actions/1')
         from .voice.moldesign_whisper import MolDesignWhisper  # noqa: PLC0415
         from .voice.stt import STTError  # noqa: PLC0415
 

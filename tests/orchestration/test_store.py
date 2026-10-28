@@ -79,6 +79,14 @@ def test_budget_trips():
         tracker.check_job_start()
 
 
+def test_presupuesto_cero_se_detiene_aunque_reloj_no_avance(monkeypatch):
+    from molchat_agent.orchestration import budget
+    monkeypatch.setattr(budget.time, 'monotonic', lambda: 100.0)
+    tracker = BudgetTracker(Budget(max_time_s=0.0))
+    with pytest.raises(BudgetExceeded, match='tiempo'):
+        tracker.check_time()
+
+
 def test_claim_key_states(store):
     assert store.claim_key("k", "d", "s1", "h1") == "claimed"
     assert store.claim_key("k", "d", "s1", "h1") == "duplicate"

@@ -10,14 +10,13 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from importlib import resources
 from pathlib import Path
 from typing import Any
 
 from ..bridge import MolDesignBridge
 from ..config import MolChatConfig, load_config
 from ..conversation.memory import MemoryStore
-from ..conversation.tools import QualityBackend
+from ..conversation.tools import PlatformBackend
 from ..orchestration.store import ExecutionStore
 from ..providers import build_registry
 from ..voice.local_whisper import ChainSTT, LocalWhisperSTT, faster_whisper_available
@@ -30,7 +29,6 @@ from .state import ServerState
 
 DEFAULT_PORT = 8771
 LOOPBACK = frozenset({"127.0.0.1", "localhost", "::1"})
-DEMO_SOURCE = "demo dataset (8 moléculas; CR-01 pendiente)"
 
 
 @dataclass
@@ -72,17 +70,15 @@ and the sidecar's own local model is the fallback. No backend -> None (503).
                         api_key=config.cloud_stt_api_key,
                         model=config.cloud_stt_model)
     backends: list = []
-    if config.moldesign_token:
-        backends.append(MolDesignWhisper(bridge.client, config.moldesign_token))
+    if config.moldesign_token and not config.host_secret:
+        backends.append(MolDesignWhisper(
+            bridge.client, config.moldesign_token,
+            ensure_contract=lambda: bridge.ensure_contract('platform-actions/1')))
     if faster_whisper_available():
         backends.append(LocalWhisperSTT(config.whisper_model))
     if not backends:
         return None
     return backends[0] if len(backends) == 1 else ChainSTT(backends)
-
-
-def demo_data_path() -> Path:
-    return resources.files("molchat_agent.conversation.data") / "demo_molecules.json"
 
 
 def build_server(config: MolChatConfig | None = None,
@@ -99,13 +95,14 @@ def build_server(config: MolChatConfig | None = None,
                      config.session_ttl_s)
     registry = build_registry(config)
     bridge = MolDesignBridge(
-        base_url=config.moldesign_base_url, token=config.moldesign_token,
-        allow_remote=config.moldesign_allow_remote)
+        base_url=config.moldesign_base_url,
+        token=None if config.host_secret else config.moldesign_token,
+        allow_remote=config.moldesign_allow_remote, require_contract=True)
     store = ExecutionStore(config.exec_store)
     state = ServerState(
         secret=secret, registry=registry,
         memory=MemoryStore(config.memory_file),
-        backend=QualityBackend(demo_data_path(), source=DEMO_SOURCE),
+        backend=PlatformBackend(bridge),
         allowed_origins=config.allowed_origins,
         provider_id=config.provider,
         executions=ExecutionManager(bridge, store),
