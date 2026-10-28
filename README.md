@@ -86,6 +86,10 @@ MOLCHAT_PROVIDER=fake molchat-agent serve   # demo sin claves
 Abre `http://127.0.0.1:8771`, pega la sesión impresa una sola vez y úsalo.
 Detalles, modos y API en [`docs/SIDECAR.md`](docs/SIDECAR.md).
 
+## Integración con MolDesign (la llave)
+
+MolDesign no contiene este código: lo ejecuta como proceso aparte con la copia que tiene fijada. Cómo se comprueba esa copia, cómo cambiar de versión y cómo trabajar sin tocar MolDesign está en [LLAVE_Y_CERRADURA.md](docs/LLAVE_Y_CERRADURA.md) y [DESARROLLO_Y_VERSION_PROPIA.md](docs/DESARROLLO_Y_VERSION_PROPIA.md).
+
 ## Configuración
 
 | Variable | Uso |
