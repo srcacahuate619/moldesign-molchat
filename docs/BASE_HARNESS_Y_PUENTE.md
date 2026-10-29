@@ -44,6 +44,17 @@ proveedores que implementen el protocolo de herramientas compatible con OpenAI;
 los demás conservan el flujo previo. La selección de referencias se persiste
 por conversación y cuenta. Se han probado con transportes y modelo simulados;
 no se han probado con Baseten real y esta rama no está instalada en MolDesign.
+El paquete aislado pasó una prueba con dos procesos reales y un modelo local
+simulado. El receptor de casos de MolDesign también pasó sus pruebas propias;
+eso no sustituye la prueba completa del usuario en Tauri.
+
+Para probarlo con el backend de desarrollo existente, generar primero el
+paquete de prueba con `stage_molchat.py --destino` y lanzar Tauri con
+`MOLDESIGN_MOLCHAT_DIR` apuntando al paquete y `MOLCHAT_PERMITIR_EXTERNO=1`.
+El backend actual aún contiene el endpoint antiguo de PubChem, pero la
+herramienta de esta rama no lo llama. Al incorporar la rama, retirar ese
+endpoint antiguo junto a su implementación y pruebas, conservando permisos,
+receptor de casos y cambios locales del host.
 
 Antes de integrar en el host: probar el recorrido real en Tauri con el receptor
 de casos y validar el contrato de Baseten, incluyendo fallos del proveedor. La
