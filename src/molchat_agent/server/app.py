@@ -611,7 +611,7 @@ class _Guard:
 
 def _mask_unconfirmed_case_claims(text: str) -> str:
     """Correct explicit unsupported case-creation claims without dropping the answer."""
-    claim = (r"(?<!no )\b(?:se\s+cre[oó]|se\s+ha\s+creado|he\s+creado|cre[eé])"
+    claim = (r"(?<!no )\b(?:se\s+cre[oó]|se\s+ha\s+creado|he\s+creado|creé)"
              r"\s+(?:un\s+|el\s+)?caso\b")
     return re.sub(claim, "No se confirmó la creación de un caso", text, flags=re.I)
 
@@ -673,6 +673,12 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         "en inglés si lo conoces, sin pedir permiso de nuevo; indica el nombre consultado y conserva la "
         "incertidumbre si la identidad no está clara. No reintentes ante errores o falta de permiso. "
         "Distingue los cálculos de MolDesign/RDKit de los datos de PubChem: LogP y XLogP pueden usar métodos distintos. "
+        "Para comparar, consulta PubChem primero y calcula usando exactamente el SMILES de una referencia inequívoca; "
+        "espera el resultado de cada herramienta antes de llamar la siguiente. Si hay varias referencias pide elegir. "
+        "No digas que las estructuras son iguales sin identity=same y procedencia de PubChem. "
+        "Distingue hipótesis de causas demostradas: no atribuyas una diferencia a un método sin evidencia suficiente "
+        "de las reglas específicas de ambos cálculos y de su aplicación a esta estructura. "
+        "Si se desconocen las reglas o la identidad, explica que la causa no está comprobada. "
         "No promete información que no llegó. Comunica los errores con claridad. Responde en español.") }]
     conv = state.memory.get_conversation(conv_id, owner)
     if registro.content_granted(provider.id) and conv:
@@ -686,12 +692,19 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
     async def capture_properties(args: dict[str, Any]) -> dict[str, Any]:
         result = await properties.execute(args)
         if result.get("status") == "ok" and isinstance(result.get("properties"), dict):
+            structure = result.get("structure", {})
+            matches = [ref for ref in refs if ref.get("properties", {}).get("SMILES")
+                       and ref["properties"]["SMILES"] == structure.get("input_smiles")]
+            if len(matches) == 1:
+                structure["pubchem_cid"] = matches[0]["cid"]
+                structure["pubchem_source"] = matches[0]["source"]
             values = {key: str(value) for key, value in result["properties"].items()
                       if value is not None and isinstance(value, (int, float)) and not isinstance(value, bool)}
             verified.update(float(value) for value in values.values())
             evidence.append({"tool": "compute_properties", "label": str(result.get("name", "")),
                              "epistemic_class": "cálculo", "source": str(result.get("source", "MolDesign")),
-                             "values": values, "error": None})
+                             "values": values, "error": None, "structure": structure,
+                             "methods": result.get("methods", {})})
         return result
     tools: list[Tool] = [create_case_tool(request_case),
                          Tool(properties.name, properties.description, properties.parameters, capture_properties)]
@@ -749,7 +762,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             state.memory.set_harness_pending(conv_id, owner, {
                 "messages": result.messages, "provider_id": provider.id, "references": refs})
         state.memory.add_message(conv_id, owner, "user", text)
-        state.memory.add_message(conv_id, owner, "assistant", answer, references=refs)
+        state.memory.add_message(conv_id, owner, "assistant", answer, references=refs, evidence=evidence)
         yield {"type": "result", "result": {"text": answer, "intent": "harness", "evidence": evidence,
                "references": refs, "used_llm": True, "verified_values": sorted(verified),
                "latency_ms": int((time.monotonic() - started) * 1000)}}

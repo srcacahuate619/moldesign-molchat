@@ -26,6 +26,9 @@ def pubchem_tool(bridge: MolDesignBridge, client: httpx.AsyncClient) -> Tool:
         except (PubChemError, BridgeError):
             return {"status": "unavailable", "message": "No se pudo consultar PubChem o verificar el permiso."}
         return {"status": "ok" if result.matches else "not_found", "truncated": result.truncated,
+                "methodology": {"source": "https://pubchem.ncbi.nlm.nih.gov/docs/glossary",
+                    "hba": "PubChem refiere una clasificación de 1997; las reglas detalladas y su aplicación a esta molécula no se han comprobado aquí.",
+                    "xlogp": "XLogP de PubChem; no es necesariamente el LogP de RDKit."},
                 "matches": [{"cid": item.cid, "name": item.name, "source": item.source,
                              "properties": item.properties, "properties_available": item.properties_available}
                             for item in result.matches]}
@@ -57,7 +60,27 @@ def properties_tool(backend: ToolBackend) -> Tool:
             record = await backend.properties(smiles)
         except ToolError:
             return {"status": "unavailable", "message": "No se pudieron calcular propiedades para esa entrada."}
-        return {"status": "ok", "name": name, "properties": record.props, "source": record.source}
+        identity = "unverified"
+        verifier = None
+        if smiles == record.smiles:
+            identity = "same"
+            verifier = "SMILES idéntico"
+        else:
+            try:
+                from rdkit import Chem, rdBase
+                left, right = Chem.MolFromSmiles(smiles), Chem.MolFromSmiles(record.smiles)
+                if left is not None and right is not None:
+                    a = Chem.MolToSmiles(left, canonical=True, isomericSmiles=True)
+                    b = Chem.MolToSmiles(right, canonical=True, isomericSmiles=True)
+                    identity = "same" if a == b else "changed"
+                    verifier = f"SMILES canónico isomérico RDKit {rdBase.rdkitVersion}"
+            except ImportError:
+                pass
+        return {"status": "ok", "name": name, "properties": record.props, "source": record.source,
+                "methods": record.methods, "structure": {"input_smiles": smiles,
+                    "canonical_smiles": record.smiles, "identity": identity,
+                    "verifier": verifier, "warnings": record.warnings}}
 
     return Tool("compute_properties", "Calcula propiedades con MolDesign para un SMILES o un nombre "
-                "reconocido. Los valores provienen del resultado de la herramienta.", _named_input(2000), calculate)
+                "reconocido. Para comparar con PubChem usa exactamente su SMILES devuelto, no el nombre. "
+                "Devuelve identidad y transformaciones comprobables.", _named_input(2000), calculate)

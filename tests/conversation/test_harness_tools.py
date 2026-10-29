@@ -3,8 +3,9 @@ import httpx
 import pytest
 
 from molchat_agent.bridge import MolDesignBridge
-from molchat_agent.conversation.harness_tools import create_case_tool, pubchem_tool
+from molchat_agent.conversation.harness_tools import create_case_tool, properties_tool, pubchem_tool
 from molchat_agent.conversation.tool_loop import run_tool_loop
+from molchat_agent.conversation.tools import MoleculeRecord
 
 
 @pytest.mark.asyncio
@@ -51,3 +52,20 @@ async def test_case_result_comes_from_product_bridge(status):
     result = await create_case_tool(request_case).execute({"name": "hola"})
     assert result == {"status": status, "name": "hola"}
     assert calls == ["hola"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("canonical,identity", [("CCO", "same"), ("CC", "changed")])
+async def test_structure_check_detects_transformation(canonical, identity):
+    pytest.importorskip("rdkit")
+    class Backend:
+        async def properties(self, smiles):
+            assert smiles == "OCC"
+            return MoleculeRecord(name="example", smiles=canonical, props={"mw": 46},
+                                  warnings=["host warning"], methods={"hba": "NOCount"})
+    result = await properties_tool(Backend()).execute({"name": "OCC"})
+    assert result["structure"]["input_smiles"] == "OCC"
+    assert result["structure"]["canonical_smiles"] == canonical
+    assert result["structure"]["identity"] == identity
+    assert result["structure"]["warnings"] == ["host warning"]
+    assert result["methods"]["hba"] == "NOCount"

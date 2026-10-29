@@ -11,6 +11,7 @@ import {
 import type { StringKey } from "../lib/i18n";
 import EvidenceBlock from "./EvidenceBlock";
 import MessageText from "./MessageText";
+import PropertyComparison from "./PropertyComparison";
 import VoiceButton from "./VoiceButton";
 import { createCaseInHost } from "../lib/caseHost";
 import { BotIcon, HistoryIcon, PlusIcon, SendIcon } from "./Icons";
@@ -87,7 +88,7 @@ export default function Chat({
           detail.messages.map((m, index) => ({
             role: m.role === "assistant" ? "assistant" : "user",
             content: m.content,
-            evidence: [],
+            evidence: m.evidence ?? [],
             meta: "",
             references: m.references ?? (index === lastAssistant ? detail.pending_references : undefined),
             selectable: index === lastAssistant && (detail.pending_references?.length ?? 0) > 1,
@@ -234,7 +235,16 @@ export default function Chat({
           {messages.length === 0 && !streaming && (
             <li className="chat-empty"><span className="empty-icon"><BotIcon /></span><strong>{t("app.title")}</strong><span>{t("chat.empty")}</span></li>
           )}
-          {messages.map((message, index) => (
+          {messages.map((message, index) => {
+            const splitAt = message.role === "assistant" && message.content.length > 400
+              ? message.content.indexOf("\n\n") : -1;
+            const summary = splitAt > 0 && splitAt < 350 ? message.content.slice(0, splitAt) : message.content;
+            const remainder = summary !== message.content ? message.content.slice(splitAt + 2) : "";
+            const comparisons = message.evidence.flatMap((item) => {
+              const reference = message.references?.find((ref) => ref.cid === item.structure?.pubchem_cid);
+              return reference ? [{ item, reference }] : [];
+            });
+            return (
             <li key={index} className={`message ${message.role}`}>
               <p className="message-who">
                 {message.role === "user" ? t("chat.you") : t("chat.molchat")}
@@ -248,11 +258,13 @@ export default function Chat({
                       <EvidenceBlock key={i} evidence={item} />
                     ))}
                   </details>
-                  <MessageText text={message.content} />
+                  <MessageText text={summary} />
                 </>
               ) : (
-                message.role === "assistant" ? <MessageText text={message.content} /> : <p className="message-text">{message.content}</p>
+                message.role === "assistant" ? <MessageText text={summary} /> : <p className="message-text">{message.content}</p>
               )}
+              {remainder && <details><summary>{t("chat.moreAnswer")}</summary><MessageText text={remainder} /></details>}
+              {comparisons.map(({ item, reference }, i) => <PropertyComparison key={`${reference.cid}-${i}`} evidence={item} reference={reference} t={t} />)}
               {message.references && message.references.length > 0 && (
                 <ul>
                   {message.references.map((reference) => (
@@ -293,8 +305,13 @@ export default function Chat({
                   ))}
                 </ul>
               )}
+              {message.role === "assistant" && (message.references?.length || message.evidence.length) ? <details className="context-actions">
+                <summary>{t("chat.actions")}</summary>
+                {["chat.openKetcher", "chat.loadCase", "chat.compareMolecule"].map((key) => <button key={key} type="button" disabled title={t("chat.actionUnavailable")}>{t(key as StringKey)}</button>)}
+                <p className="muted">{t("chat.actionUnavailable")}</p>
+              </details> : null}
             </li>
-          ))}
+          ); })}
           {streaming && (
             <li className="muted">
               {status} <button onClick={stop}>{t("chat.stop")}</button>

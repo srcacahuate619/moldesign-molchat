@@ -15,6 +15,16 @@ export interface Evidence {
   source: string;
   values: Record<string, string>;
   error: string | null;
+  methods?: Record<string, string>;
+  structure?: {
+    input_smiles: string;
+    canonical_smiles: string;
+    identity: "same" | "changed" | "unverified";
+    verifier?: string | null;
+    warnings?: string[];
+    pubchem_cid?: number;
+    pubchem_source?: string;
+  };
 }
 
 export interface PubChemReference {
@@ -116,7 +126,7 @@ export const api = {
     request(t, "/v1/conversations") as Promise<ConversationSummary[]>,
   getConversation: (t: string, id: string) =>
     request(t, `/v1/conversations/${id}`) as Promise<{
-      messages: { role: string; content: string; references?: PubChemReference[] }[];
+      messages: { role: string; content: string; references?: PubChemReference[]; evidence?: Evidence[] }[];
       pending_references?: PubChemReference[];
     }>,
   deleteConversation: (t: string, id: string) =>

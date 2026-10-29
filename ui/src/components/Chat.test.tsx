@@ -105,6 +105,20 @@ describe("Chat error turn with idempotent retry", () => {
     expect(await screen.findByText("C13H18O2")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Seleccionar" })).not.toBeInTheDocument();
   });
+  it("keeps a long response progressive and contextual actions unavailable", async () => {
+    mockList.mockResolvedValue([]);
+    mockStream.mockImplementation((_token: string, _body: unknown, onEvent: (e: Record<string, unknown>) => void) => {
+      queueMicrotask(() => onEvent({ type: "result", result: { text: "Resumen breve.\n\n" + "Detalle ".repeat(80), used_llm: true, latency_ms: 1, verified_values: [], evidence: [], references: [{ cid: 1, name: "Ejemplo", source: "https://pubchem.ncbi.nlm.nih.gov/compound/1" }] } }));
+      return () => {};
+    });
+    renderChat();
+    fireEvent.change(screen.getByPlaceholderText(/pregunta/i), { target: { value: "consulta" } });
+    fireEvent.click(screen.getByText("Enviar"));
+    expect(await screen.findByText("Resumen breve.")).toBeVisible();
+    expect(screen.getByText("Explicación y respuesta completa").parentElement).not.toHaveAttribute("open");
+    expect(screen.getByRole("button", { name: "Abrir en Ketcher", hidden: true })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Cargar en caso", hidden: true })).toBeDisabled();
+  });
   it("shows source choices and records only the user's selection", async () => {
     mockList.mockResolvedValue([]);
     mockSelectPubchem.mockResolvedValue({ text: "Seleccionaste Aspirin." });

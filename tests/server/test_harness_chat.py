@@ -7,7 +7,7 @@ import pytest
 
 from molchat_agent.config import MolChatConfig
 from molchat_agent.conversation.memory import MemoryStore
-from molchat_agent.conversation.tools import QualityBackend
+from molchat_agent.conversation.tools import MoleculeRecord, QualityBackend
 from molchat_agent.providers import build_registry
 from molchat_agent.server.app import create_app
 from molchat_agent.server.auth import mint, standalone_secret
@@ -158,6 +158,7 @@ async def test_calculated_values_are_cited_and_unverified_values_are_removed(tmp
     ("En este caso se ha creado una tabla de propiedades.", "tabla de propiedades", "No se confirmó"),
     ("Aquí tienes los datos. Se creó el caso ejemplo.", "Aquí tienes los datos.", "Se creó el caso"),
     ("No se creó un caso; faltan datos.", "No se creó un caso", "No se confirmó"),
+    ("¿Quieres que cree un caso para esta molécula?", "que cree un caso", "No se confirmó"),
 ])
 async def test_case_claim_guard_preserves_unrelated_response(tmp_path, monkeypatch, model_reply, expected, not_expected):
     state, registry, headers = state_for(tmp_path)
@@ -264,6 +265,53 @@ async def test_model_can_retry_pubchem_with_english_name_after_not_found(tmp_pat
             response = await client.post("/v1/chat", headers=headers, json={"text": "busca aspirina en PubChem"})
             result = next(e["result"] for e in events(response) if e["type"] == "result")
             assert calls == ["aspirina", "aspirin"] and result["references"][0]["cid"] == 2244
+
+
+@pytest.mark.asyncio
+async def test_comparison_links_only_exact_pubchem_smiles_and_survives_reload(tmp_path, monkeypatch):
+    state, registry, headers = state_for(tmp_path)
+    provider = registry.get("fake")
+    class Backend:
+        async def properties(self, smiles):
+            assert smiles == "OCC"
+            return MoleculeRecord(name="ethanol", smiles="CCO", props={"hba": 1}, source="RDKit",
+                                  methods={"hba": "RDKit Lipinski.NOCount"})
+    state.backend = Backend()
+    async def model(messages, _tools):
+        if messages[-1]["role"] == "user":
+            name, args = "pubchem_lookup", {"name": "ethanol"}
+        elif "matches" in json.loads(messages[-1]["content"]):
+            name, args = "compute_properties", {"name": "OCC"}
+        else:
+            data = json.loads(messages[-1]["content"])
+            assert data["structure"]["pubchem_cid"] == 702
+            assert data["methods"]["hba"] == "RDKit Lipinski.NOCount"
+            return {"role": "assistant", "content": "Datos disponibles para etanol."}
+        return {"role": "assistant", "content": None, "tool_calls": [{"id": name, "type": "function",
+                "function": {"name": name, "arguments": json.dumps(args)}}]}
+    monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
+    class Bridge:
+        def with_token(self, token): return self
+        async def authorize_pubchem(self): pass
+    state.bridge = Bridge()
+    async def registry_for_turn(_token): return registry
+    monkeypatch.setattr(state, "registro_de_turno", registry_for_turn)
+    async def public(request):
+        if "/name/" in request.url.path: return httpx.Response(200, json={"IdentifierList": {"CID": [702]}})
+        if "/property/" in request.url.path: return httpx.Response(200, json={"PropertyTable": {"Properties": [{"CID": 702, "SMILES": "OCC", "HBondAcceptorCount": 1}]}})
+        return httpx.Response(200, json={"InformationList": {"Information": [{"CID": 702, "Title": "Ethanol"}]}})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(public)) as external:
+        state.pubchem_client = external
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+            response = await client.post("/v1/chat", headers=headers, json={"text": "compara etanol con PubChem"})
+            entries = events(response)
+            result = next(e["result"] for e in entries if e["type"] == "result")
+            structure = result["evidence"][0]["structure"]
+            assert structure["input_smiles"] == "OCC" and structure["pubchem_cid"] == 702
+            assert structure["identity"] == "same"
+            conv_id = next(e["id"] for e in entries if e["type"] == "conversation")
+            restored = (await client.get(f"/v1/conversations/{conv_id}", headers=headers)).json()
+            assert restored["messages"][-1]["evidence"][0]["structure"] == structure
 
 
 @pytest.mark.asyncio

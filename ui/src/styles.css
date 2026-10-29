@@ -71,6 +71,15 @@ input, textarea { max-width: 100%; }
 .message-list-item { padding-left: 10px; }
 .message-gap { height: 0.75em; }
 .message-text code { overflow-wrap: anywhere; }
+.comparison { margin: 10px 0; }
+.comparison-scroll { overflow-x: auto; }
+.comparison table { border-collapse: collapse; width: 100%; font-size: 12px; }
+.comparison th, .comparison td { border-bottom: 1px solid var(--line); text-align: left; padding: 5px; vertical-align: top; }
+.comparison-different { background: var(--evidence); }
+.comparison dl div { margin: 6px 0; }
+.comparison dt { font-weight: 600; }
+.comparison dd { margin: 0; }
+.context-actions button { margin: 5px 5px 0 0; }
 .pubchem-properties { margin: 8px 0; }
 .pubchem-properties div { margin: 4px 0; }
 .pubchem-properties dt { font-weight: 600; }
