@@ -154,6 +154,27 @@ async def test_calculated_values_are_cited_and_unverified_values_are_removed(tmp
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("model_reply,expected,not_expected", [
+    ("En este caso se ha creado una tabla de propiedades.", "tabla de propiedades", "No se confirmó"),
+    ("Aquí tienes los datos. Se creó el caso ejemplo.", "Aquí tienes los datos.", "Se creó el caso"),
+    ("No se creó un caso; faltan datos.", "No se creó un caso", "No se confirmó"),
+])
+async def test_case_claim_guard_preserves_unrelated_response(tmp_path, monkeypatch, model_reply, expected, not_expected):
+    state, registry, headers = state_for(tmp_path)
+    provider = registry.get("fake")
+    async def model(_messages, _tools):
+        return {"role": "assistant", "content": model_reply}
+    monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))),
+                                 base_url="http://testserver") as client:
+        response = await client.post("/v1/chat", headers=headers, json={"text": "Explícame las propiedades"})
+        result = next(e["result"] for e in events(response) if e["type"] == "result")
+        assert expected in result["text"]
+        assert not_expected not in result["text"]
+        assert not any(e["type"] == "case_create" for e in events(response))
+
+
+@pytest.mark.asyncio
 async def test_followup_keeps_conversation_context_for_tool_selection(tmp_path, monkeypatch):
     state, registry, headers = state_for(tmp_path)
     provider = registry.get("fake")
@@ -200,7 +221,7 @@ async def test_case_creation_waits_for_host(tmp_path, monkeypatch, status):
             return {"role": "assistant", "content": None, "tool_calls": [{"id": "c1", "type": "function",
                     "function": {"name": "create_case", "arguments": '{"name":"hola"}'}}]}
         assert json.loads(messages[-1]["content"])["status"] == status
-        return {"role": "assistant", "content": "Procesado."}
+        return {"role": "assistant", "content": "Además, preparé la información solicitada."}
     monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))),
                                  base_url="http://testserver") as client:
@@ -215,3 +236,4 @@ async def test_case_creation_waits_for_host(tmp_path, monkeypatch, status):
         result = next(e["result"]["text"] for e in events(await turn) if e["type"] == "result")
         expected = {"created": "Se creó", "exists": "Ya existe", "failed": "no pudo", "unknown": "No pude confirmar"}
         assert expected[status] in result
+        assert "Además, preparé la información solicitada." in result

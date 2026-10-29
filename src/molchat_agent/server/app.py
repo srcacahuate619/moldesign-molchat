@@ -609,6 +609,13 @@ class _Guard:
             headers["Access-Control-Allow-Methods"] = "GET, POST, DELETE, OPTIONS"
 
 
+def _mask_unconfirmed_case_claims(text: str) -> str:
+    """Correct explicit unsupported case-creation claims without dropping the answer."""
+    claim = (r"(?<!no )\b(?:se\s+cre[oó]|se\s+ha\s+creado|he\s+creado|cre[eé])"
+             r"\s+(?:un\s+|el\s+)?caso\b")
+    return re.sub(claim, "No se confirmó la creación de un caso", text, flags=re.I)
+
+
 def _hostname(value: str) -> str:
     try:
         return (urlsplit("//" + value).hostname or "").lower()
@@ -707,17 +714,17 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             if task in done:
                 break
         result = task.result()
-        answer = case_answer() if case_started else result.text
-        if not case_started:
-            if (re.search(r"\b(?:caso|case)\b", answer, re.I)
-                    and re.search(r"\b(?:se cre[oó]|cre[eé]|cread[oa]|he creado)\b", answer, re.I)):
-                answer = "No se confirmó ninguna creación de caso en MolDesign."
-            quoted = numbers_in(text) + numbers_in(json.dumps(refs, ensure_ascii=False))
-            if refs:
-                quoted.append(str(len(refs)))
-            answer, issues = redact_unverified(answer, verified, quotable=frozenset(quoted))
-            if issues:
-                answer = f"{VERIFICATION_NOTE} se ocultaron valores no verificados. " + answer
+        answer = result.text
+        if not case_status or case_status.get("status") != "created":
+            answer = _mask_unconfirmed_case_claims(answer)
+        quoted = numbers_in(text) + numbers_in(json.dumps(refs, ensure_ascii=False))
+        if refs:
+            quoted.append(str(len(refs)))
+        answer, issues = redact_unverified(answer, verified, quotable=frozenset(quoted))
+        if issues:
+            answer = f"{VERIFICATION_NOTE} se ocultaron valores no verificados. " + answer
+        if case_started:
+            answer += "\n\n" + case_answer()
         if len(refs) > 1:
             state.memory.set_harness_pending(conv_id, owner, {
                 "messages": result.messages, "provider_id": provider.id, "references": refs})
