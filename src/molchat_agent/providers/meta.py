@@ -197,6 +197,16 @@ class MetaProvider:
         yield ChatEvent(type="token", text=content)
         yield ChatEvent(type="done", done=True)
 
+    async def chat_with_tools(self, messages: list[dict[str, Any]],
+                              tools: list[dict[str, Any]]) -> dict[str, Any]:
+        """Forward the native Chat Completions tool protocol to Meta."""
+        from .openai_compatible import OpenAICompatibleProvider
+
+        adapter = OpenAICompatibleProvider(api_key=self.config.api_key, base_url=META_API_BASE,
+                                           model=self.config.model, client=self._http,
+                                           provider_id=self.id)
+        return await adapter.chat_with_tools(messages, tools)
+
 
 #: Backward-compatible alias: the class lived in ``molchat_agent.meta``.
 MetaPlanner = MetaProvider

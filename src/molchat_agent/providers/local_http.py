@@ -176,6 +176,16 @@ class LlamaServerProvider:
         yield ChatEvent(type="token", text=content)
         yield ChatEvent(type="done", done=True)
 
+    async def chat_with_tools(self, messages: list[dict[str, Any]],
+                              tools: list[dict[str, Any]]) -> dict[str, Any]:
+        """llama-server exposes the same structured Chat Completions contract."""
+        from .openai_compatible import OpenAICompatibleProvider
+
+        adapter = OpenAICompatibleProvider(base_url=self.config.base_url, model=self.config.model,
+                                           temperature=self.config.temperature, client=self._http,
+                                           provider_id=self.id)
+        return await adapter.chat_with_tools(messages, tools)
+
 
 class OllamaProvider:
     """Planner against a running Ollama server (native /api/*)."""

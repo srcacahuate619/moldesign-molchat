@@ -7,6 +7,20 @@ from molchat_agent.meta import MetaPlanner
 
 
 @pytest.mark.asyncio
+async def test_meta_chat_supports_structured_tools():
+    def handle(request):
+        data = json.loads(request.content)
+        assert request.url.host == "api.meta.ai"
+        assert request.headers["authorization"] == "Bearer test-key"
+        assert data["tools"][0]["function"]["name"] == "demo"
+        return httpx.Response(200, json={"choices": [{"message": {"role": "assistant", "content": "ok"}}]})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+        result = await MetaPlanner(api_key="test-key", client=client).chat_with_tools(
+            [{"role": "user", "content": "hola"}], [{"type": "function", "function": {"name": "demo"}}])
+    assert result["content"] == "ok"
+
+
+@pytest.mark.asyncio
 async def test_meta_uses_structured_output_but_excludes_sensitive_tools():
     observed = {}
 
