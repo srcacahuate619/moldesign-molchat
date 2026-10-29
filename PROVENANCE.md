@@ -1,5 +1,14 @@
 # Procedencia — MolChat Agent
 
+### src/molchat_agent/conversation/case_selection.py, tests/conversation/test_case_selection.py, tests/server/test_case_host_action.py
+
+- Origen: código nuevo de este repositorio para una solicitud de creación de caso al host.
+- Commit de MolDesign: N/A; integración mediante mensajes y resultado confirmado.
+- Autoría: Johan Amezcua, con colaboración de un agente de código.
+- Transformación: selección validada, respuesta del host por cuenta y pruebas de rechazo.
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/conversation/test_case_selection.py y tests/server/test_case_host_action.py.
+
 Ledger de porte desde MolDesign (PLAN §21). Ningún fichero entra desde
 MolDesign sin una entrada aquí. Formato obligatorio por pieza portada: origen
 exacto, commit fijado, autoría, transformación, licencia resultante y tests.

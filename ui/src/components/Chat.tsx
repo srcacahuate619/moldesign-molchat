@@ -10,6 +10,7 @@ import {
 import type { StringKey } from "../lib/i18n";
 import EvidenceBlock from "./EvidenceBlock";
 import VoiceButton from "./VoiceButton";
+import { createCaseInHost } from "../lib/caseHost";
 import { BotIcon, HistoryIcon, PlusIcon, SendIcon } from "./Icons";
 
 interface Message {
@@ -108,6 +109,13 @@ export default function Chat({
             void refreshList();
           } else if (kind === "intent") {
             setStatus(t("chat.streaming"));
+          } else if (kind === "case_create") {
+            const id = event["request_id"];
+            const name = event["name"];
+            if (typeof id === "string" && typeof name === "string") {
+              void createCaseInHost(id, name).then((result) => api.reportCaseResult(token, id, result))
+                .catch(() => setError(t("error.generic")));
+            }
           } else if (kind === "result") {
             const result = event["result"] as TurnResult;
             const meta = [

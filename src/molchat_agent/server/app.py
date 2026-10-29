@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
+import uuid
 from pathlib import Path
 from typing import Any, AsyncIterator
 from urllib.parse import urlsplit
@@ -23,7 +25,9 @@ from starlette.routing import Route
 
 from .. import __version__
 from ..bridge import BridgeError
-from ..conversation.memory import Conversation, ConversationNotFound
+from ..conversation.memory import Conversation, ConversationNotFound, PersistenciaFallida
+from ..conversation.case_selection import select_case
+from ..conversation.intents import classify
 from ..plan import Plan
 from ..providers.base import ProviderDisabled, ProviderError
 from ..providers.registry import ConsentDenied
@@ -205,6 +209,52 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
         async def stream() -> AsyncIterator[bytes]:
             yield encode_event({"type": "conversation", "id": conv_id})
             try:
+                if state.hosted and classify(text).name == "case_action":
+                    started = time.monotonic()
+                    yield encode_event({"type": "intent", "name": "case_action", "tool": "create_case"})
+                    provider_id = registro.active_id
+                    reason = registro.block_reason(provider_id) if provider_id else "No hay proveedor activo."
+                    if reason:
+                        answer = reason
+                    else:
+                        try:
+                            selection = await select_case(registro.get(provider_id), text)
+                        except (ProviderDisabled, ProviderError, ValueError, RuntimeError):
+                            selection = None
+                        if selection is None:
+                            answer = ("No se creó ningún caso: el modelo no identificó una solicitud "
+                                      "válida con un nombre explícito. Revisa el mensaje o el proveedor.")
+                        else:
+                            request_id = uuid.uuid4().hex
+                            future = asyncio.get_running_loop().create_future()
+                            state.case_requests[request_id] = (session.sub, future)
+                            try:
+                                yield encode_event({"type": "case_create", "request_id": request_id,
+                                                    "name": selection.name})
+                                try:
+                                    outcome = await asyncio.wait_for(future, timeout=60)
+                                except asyncio.TimeoutError:
+                                    outcome = {"status": "unknown"}
+                            finally:
+                                state.case_requests.pop(request_id, None)
+                            if outcome.get("status") == "created":
+                                answer = f'Se creó el caso "{selection.name}" en MolDesign.'
+                            elif outcome.get("status") == "failed":
+                                answer = "MolDesign no pudo crear el caso. Revisa el estado de la aplicación."
+                            else:
+                                answer = "No pude confirmar el resultado. Revisa la lista de casos antes de reintentar."
+                    try:
+                        state.memory.add_message(conv_id, session.sub, "user", text)
+                        state.memory.add_message(conv_id, session.sub, "assistant", answer)
+                    except PersistenciaFallida:
+                        answer += " No se pudo guardar el turno en el historial."
+                    yield encode_event({"type": "result", "result": {
+                        "text": answer, "intent": "case_action", "evidence": [],
+                        "latency_ms": int((time.monotonic() - started) * 1000),
+                        "used_llm": bool(provider_id and not reason),
+                        "verified_values": [],
+                    }})
+                    return
                 async for event in engine.turn_stream(conv_id, text):
                     yield encode_event(_public_event(event))
             except ConversationNotFound:
@@ -215,6 +265,17 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
 
         return StreamingResponse(stream(), media_type="text/event-stream",
                                  headers=dict(SSE_HEADERS))
+
+    async def case_result(request: Request) -> JSONResponse:
+        session = await need_chat(request)
+        pending = state.case_requests.get(request.path_params["request_id"])
+        if pending is None or pending[0] != session.sub or pending[1].done():
+            return _error(404, "solicitud no encontrada")
+        payload = await read_json(request)
+        if not isinstance(payload, dict) or set(payload) != {"status"} or payload["status"] not in ("created", "failed", "unknown"):
+            return _error(400, "resultado no válido")
+        pending[1].set_result({"status": payload["status"]})
+        return JSONResponse({"accepted": True})
 
     async def revoke(request: Request) -> JSONResponse:
         token = parse_bearer(request.headers.get("authorization"))
@@ -395,6 +456,7 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
             Route("/v1/version", version, methods=["GET"]),
             Route("/v1/catalog", get_catalog, methods=["GET"]),
             Route("/v1/conversations", create_conversation, methods=["POST"]),
+            Route("/v1/case-requests/{request_id}/result", case_result, methods=["POST"]),
             Route("/v1/conversations", list_conversations, methods=["GET"]),
             Route("/v1/conversations/{conv_id}", get_conversation, methods=["GET"]),
             Route("/v1/conversations/{conv_id}", delete_conversation, methods=["DELETE"]),

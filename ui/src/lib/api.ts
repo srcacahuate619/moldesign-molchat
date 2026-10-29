@@ -95,6 +95,8 @@ export const api = {
     return (await response.json()) as { stt?: string };
   },
   catalog: (t: string) => request(t, "/v1/catalog") as Promise<CatalogEntry[]>,
+  reportCaseResult: (t: string, id: string, status: "created" | "failed" | "unknown") =>
+    postJson(t, `/v1/case-requests/${encodeURIComponent(id)}/result`, { status }),
   createConversation: (t: string) =>
     postJson(t, "/v1/conversations", {}) as Promise<{ id: string }>,
   listConversations: (t: string) =>
