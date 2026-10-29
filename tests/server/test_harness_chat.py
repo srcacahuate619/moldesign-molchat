@@ -58,8 +58,13 @@ async def test_chat_uses_direct_pubchem_and_resumes_selection(tmp_path, monkeypa
     monkeypatch.setattr(state, "registro_de_turno", registry_for_turn)
     async def public(request):
         if "/name/" in request.url.path:
-            return httpx.Response(200, json={"IdentifierList": {"CID": [3672]}})
-        return httpx.Response(200, json={"InformationList": {"Information": [{"CID": 3672, "Title": "Ibuprofen"}]}})
+            return httpx.Response(200, json={"IdentifierList": {"CID": [3672, 3673]}})
+        if "/property/" in request.url.path:
+            return httpx.Response(200, json={"PropertyTable": {"Properties": [
+                {"CID": 3672, "MolecularFormula": "C13H18O2", "MolecularWeight": "206.28"},
+                {"CID": 3673, "MolecularFormula": "C13H18O2"}]}})
+        cid = int(request.url.path.split("/")[5])
+        return httpx.Response(200, json={"InformationList": {"Information": [{"CID": cid, "Title": f"Ibuprofen {cid}"}]}})
     async with httpx.AsyncClient(transport=httpx.MockTransport(public)) as external:
         state.pubchem_client = external
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))),
@@ -69,7 +74,7 @@ async def test_chat_uses_direct_pubchem_and_resumes_selection(tmp_path, monkeypa
             conv_id = next(e["id"] for e in entries if e["type"] == "conversation")
             assert next(e["result"] for e in entries if e["type"] == "result")["references"][0]["cid"] == 3672
             restored = await client.get(f"/v1/conversations/{conv_id}", headers=headers)
-            assert restored.json()["pending_references"][0]["cid"] == 3672
+            assert len(restored.json()["pending_references"]) == 2
         # A fresh application state restores the selection from SQLite.
         restarted = ServerState(secret=state.secret, registry=registry, memory=MemoryStore(state.memory.path),
                                 backend=state.backend, hosted=True, bridge=state.bridge, pubchem_client=external)
@@ -79,6 +84,54 @@ async def test_chat_uses_direct_pubchem_and_resumes_selection(tmp_path, monkeypa
             selection = await client.post(f"/v1/conversations/{conv_id}/pubchem-selection", headers=headers, json={"cid": 3672})
             assert selection.status_code == 200 and "no dispongo" in selection.json()["text"]
             assert (await client.post(f"/v1/conversations/{conv_id}/pubchem-selection", headers=headers, json={"cid": 3672})).status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_single_match_shows_properties_without_selection_and_preserves_formula(tmp_path, monkeypatch):
+    state, registry, headers = state_for(tmp_path)
+    provider = registry.get("fake")
+    async def model(messages, tools):
+        if messages[-1]["role"] == "user":
+            return {"role": "assistant", "content": None, "tool_calls": [{"id": "c1", "type": "function",
+                    "function": {"name": "pubchem_lookup", "arguments": '{"name":"ibuprofeno"}'}}]}
+        result = json.loads(messages[-1]["content"])
+        assert result["matches"][0]["properties"]["MolecularWeight"] == "206.28"
+        assert result["matches"][0]["properties"]["SMILES"] == "CC(C)CC1=CC=C(C=C1)C(C)C(=O)O"
+        return {"role": "assistant", "content": "Encontré 1 coincidencia: C13H18O2, peso 206.28."}
+    monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
+    class Bridge:
+        def with_token(self, token):
+            return self
+        async def authorize_pubchem(self):
+            pass
+    state.bridge = Bridge()
+    async def registry_for_turn(_token):
+        return registry
+    monkeypatch.setattr(state, "registro_de_turno", registry_for_turn)
+    async def public(request):
+        if "/name/" in request.url.path:
+            return httpx.Response(200, json={"IdentifierList": {"CID": [3672]}})
+        if "/property/" in request.url.path:
+            return httpx.Response(200, json={"PropertyTable": {"Properties": [{"CID": 3672,
+                "MolecularFormula": "C13H18O2", "MolecularWeight": "206.28", "SMILES": "CC(C)CC1=CC=C(C=C1)C(C)C(=O)O"}]}})
+        return httpx.Response(200, json={"InformationList": {"Information": [{"CID": 3672, "Title": "Ibuprofen"}]}})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(public)) as external:
+        state.pubchem_client = external
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))),
+                                     base_url="http://testserver") as client:
+            response = await client.post("/v1/chat", headers=headers, json={"text": "información sobre ibuprofeno"})
+            entries = events(response)
+            conv_id = next(e["id"] for e in entries if e["type"] == "conversation")
+            result = next(e["result"] for e in entries if e["type"] == "result")
+            assert result["references"][0]["properties"]["MolecularFormula"] == "C13H18O2"
+            assert result["references"][0]["properties"]["SMILES"] == "CC(C)CC1=CC=C(C=C1)C(C)C(=O)O"
+            assert "1 coincidencia" in result["text"] and "C13H18O2" in result["text"]
+            assert "no verificado" not in result["text"]
+            restored = (await client.get(f"/v1/conversations/{conv_id}", headers=headers)).json()
+            assert restored["pending_references"] == []
+            assert restored["messages"][-1]["references"][0]["properties"]["MolecularWeight"] == "206.28"
+            selection = await client.post(f"/v1/conversations/{conv_id}/pubchem-selection", headers=headers, json={"cid": 3672})
+            assert selection.status_code == 404
 
 
 @pytest.mark.asyncio

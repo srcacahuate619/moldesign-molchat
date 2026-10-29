@@ -26,11 +26,12 @@ def pubchem_tool(bridge: MolDesignBridge, client: httpx.AsyncClient) -> Tool:
         except (PubChemError, BridgeError):
             return {"status": "unavailable", "message": "No se pudo consultar PubChem o verificar el permiso."}
         return {"status": "ok" if result.matches else "not_found", "truncated": result.truncated,
-                "matches": [{"cid": item.cid, "name": item.name, "source": item.source}
+                "matches": [{"cid": item.cid, "name": item.name, "source": item.source,
+                             "properties": item.properties, "properties_available": item.properties_available}
                             for item in result.matches]}
 
-    return Tool("pubchem_lookup", "Busca referencias de un compuesto por nombre en PubChem. "
-                "Devuelve identidad y fuente, no estructuras ni cambios al editor.",
+    return Tool("pubchem_lookup", "Consulta identidad y propiedades públicas de un compuesto por nombre en PubChem. "
+                "Devuelve la fuente y los datos disponibles; no modifica el editor.",
                 _named_input(120), lookup)
 
 

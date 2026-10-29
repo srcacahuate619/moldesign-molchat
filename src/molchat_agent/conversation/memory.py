@@ -258,11 +258,14 @@ class MemoryStore:
             payload["selection_text"] = selected_text
             return payload
 
-    def add_message(self, conv_id: str, user_id: str, role: str, content: str) -> None:
+    def add_message(self, conv_id: str, user_id: str, role: str, content: str, *,
+                    references: list[dict[str, Any]] | None = None) -> None:
         conv = self.get_conversation(conv_id, user_id)
         if conv is None:
             raise ConversationNotFound(conv_id)
         conv.add_message(role, content)
+        if references:
+            conv.messages[-1]["references"] = references
         with self._connect() as conn:
             conn.execute(
                 "UPDATE conversations SET messages = ?, updated_at = ? "

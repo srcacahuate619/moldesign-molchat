@@ -19,6 +19,8 @@ async def test_harness_reads_pubchem_directly_and_returns_result_to_model():
         external_paths.append(request.url.path)
         if "/name/" in request.url.path:
             return httpx.Response(200, json={"IdentifierList": {"CID": [2244]}})
+        if "/property/" in request.url.path:
+            return httpx.Response(200, json={"PropertyTable": {"Properties": [{"CID": 2244, "MolecularFormula": "C9H8O4"}]}})
         return httpx.Response(200, json={"InformationList": {"Information": [{"CID": 2244, "Title": "Aspirin"}]}})
     class Provider:
         async def chat_with_tools(self, messages, schemas):
@@ -35,8 +37,8 @@ async def test_harness_reads_pubchem_directly_and_returns_result_to_model():
         result = await run_tool_loop(Provider(), [{"role": "user", "content": "Busca aspirina"}],
                                      [pubchem_tool(bridge, public_client)])
     assert "PubChem" in result.text
-    assert host_paths == ["/ai/consent/red", "/ai/consent/red"]
-    assert len(external_paths) == 2
+    assert host_paths == ["/ai/consent/red"] * 3
+    assert len(external_paths) == 3
 
 
 @pytest.mark.asyncio

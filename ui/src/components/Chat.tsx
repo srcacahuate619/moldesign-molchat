@@ -5,6 +5,7 @@ import {
   openChatStream,
   type ConversationSummary,
   type Evidence,
+  type PubChemReference,
   type TurnResult,
 } from "../lib/api";
 import type { StringKey } from "../lib/i18n";
@@ -18,7 +19,8 @@ interface Message {
   content: string;
   evidence: Evidence[];
   meta: string;
-  references?: { cid: number; name: string; source: string }[];
+  references?: PubChemReference[];
+  selectable?: boolean;
 }
 
 const ACTIVE_CONVERSATION = "molchat.activeConversation";
@@ -86,7 +88,8 @@ export default function Chat({
             content: m.content,
             evidence: [],
             meta: "",
-            references: index === lastAssistant ? detail.pending_references : undefined,
+            references: m.references ?? (index === lastAssistant ? detail.pending_references : undefined),
+            selectable: index === lastAssistant && (detail.pending_references?.length ?? 0) > 1,
           })),
         );
       } catch (err) {
@@ -162,6 +165,7 @@ export default function Chat({
                 evidence: result.evidence,
                 meta,
                 references: result.references,
+                selectable: (result.references?.length ?? 0) > 1,
               },
             ]);
           } else if (kind === "error") {
@@ -253,15 +257,34 @@ export default function Chat({
                   {message.references.map((reference) => (
                     <li key={reference.cid}>
                       <a href={reference.source} target="_blank" rel="noreferrer">{reference.name} · PubChem {reference.cid}</a>{" "}
-                      <button type="button" onClick={() => {
+                      {reference.properties && Object.keys(reference.properties).length > 0 && (
+                        <dl className="pubchem-properties">
+                          {([
+                            ["MolecularFormula", t("chat.pubchemFormula")],
+                            ["MolecularWeight", t("chat.pubchemWeight")],
+                            ["IUPACName", t("chat.pubchemIupac")],
+                            ["SMILES", t("chat.pubchemSmiles")],
+                            ["ConnectivitySMILES", t("chat.pubchemConnectivity")],
+                            ["XLogP", t("chat.pubchemXlogp")],
+                            ["TPSA", t("chat.pubchemTpsa")],
+                            ["HBondDonorCount", t("chat.pubchemDonors")],
+                            ["HBondAcceptorCount", t("chat.pubchemAcceptors")],
+                          ] as const).map(([key, label]) => reference.properties?.[key] != null &&
+                            !(key === "ConnectivitySMILES" && reference.properties?.[key] === reference.properties?.SMILES) && (
+                            <div key={key}><dt>{label}</dt><dd>{reference.properties?.[key]}{key === "MolecularWeight" ? " g/mol" : ""}</dd></div>
+                          ))}
+                        </dl>
+                      )}
+                      {reference.properties_available === false && <p>{t("chat.pubchemPartial")}</p>}
+                      {message.selectable && message.references && message.references.length > 1 && <button type="button" onClick={() => {
                         const id = activeIdRef.current;
                         if (!id) return;
                         void api.selectPubchem(token, id, reference.cid).then((result) => {
                           if (activeIdRef.current !== id) return;
-                          setMessages((prev) => [...prev.map((entry) => ({ ...entry, references: undefined })),
+                          setMessages((prev) => [...prev.map((entry) => ({ ...entry, selectable: false })),
                             { role: "assistant", content: result.text, evidence: [], meta: "" }]);
                         }).catch(() => { setLastText(null); setError(t("error.generic")); });
-                      }}>{t("chat.selectReference")}</button>
+                      }}>{t("chat.selectReference")}</button>}
                     </li>
                   ))}
                 </ul>

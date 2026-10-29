@@ -58,6 +58,7 @@ receptor de casos y cambios locales del host.
 
 Antes de integrar en el host: probar el recorrido real en Tauri con el receptor
 de casos y validar el contrato de Baseten, incluyendo fallos del proveedor. La
-consulta sigue siendo informativa: no modifica el editor ni devuelve SMILES.
+consulta sigue siendo informativa: puede mostrar propiedades y SMILES devueltos
+por PubChem, pero no modifica el editor ni el campo SMILES de MolDesign.
 Las demás herramientas no están conectadas al nuevo ciclo y deben añadirse sin
 regresar a una clasificación determinista anterior al modelo.

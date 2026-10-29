@@ -65,12 +65,45 @@ describe("Chat error turn with idempotent retry", () => {
   it("restores selectable references when reopening a conversation", async () => {
     mockList.mockResolvedValue([{ id: "conv", summary: "Consulta", message_count: 2 }]);
     mockGet.mockResolvedValue({ messages: [{ role: "user", content: "aspirina" }, { role: "assistant", content: "Elige" }],
-      pending_references: [{ cid: 2244, name: "Aspirin", source: "https://pubchem.ncbi.nlm.nih.gov/compound/2244" }] });
+      pending_references: [{ cid: 2244, name: "Aspirin", source: "https://pubchem.ncbi.nlm.nih.gov/compound/2244" },
+        { cid: 2245, name: "Otra", source: "https://pubchem.ncbi.nlm.nih.gov/compound/2245" }] });
     renderChat();
     fireEvent.click(screen.getByRole("button", { name: /mostrar historial/i }));
     fireEvent.click(await screen.findByText(/Consulta/));
     expect(await screen.findByRole("link", { name: /Aspirin/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Seleccionar" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Seleccionar" })).toHaveLength(2);
+  });
+  it("shows the properties of a single result without a select button", async () => {
+    mockList.mockResolvedValue([]);
+    mockStream.mockImplementation((_token: string, _body: unknown, onEvent: (e: Record<string, unknown>) => void) => {
+      queueMicrotask(() => {
+        onEvent({ type: "conversation", id: "single" });
+        onEvent({ type: "result", result: { text: "Encontré una referencia.", used_llm: true, latency_ms: 1, verified_values: [], evidence: [], references: [{
+          cid: 3672, name: "Ibuprofen", source: "https://pubchem.ncbi.nlm.nih.gov/compound/3672",
+          properties_available: true, properties: { MolecularFormula: "C13H18O2", MolecularWeight: "206.28", SMILES: "CC(C)CC1=CC=C(C=C1)C(C)C(=O)O", ConnectivitySMILES: "CC(C)CC1=CC=C(C=C1)C(C)C(=O)O" } }] } });
+      });
+      return () => {};
+    });
+    renderChat();
+    fireEvent.change(screen.getByPlaceholderText(/pregunta/i), { target: { value: "busca ibuprofeno" } });
+    fireEvent.click(screen.getByText("Enviar"));
+    expect(await screen.findByText("C13H18O2")).toBeInTheDocument();
+    expect(screen.getByText("206.28 g/mol")).toBeInTheDocument();
+    expect(screen.getByText("CC(C)CC1=CC=C(C=C1)C(C)C(=O)O")).toBeInTheDocument();
+    expect(screen.queryByText(/SMILES de conectividad/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Seleccionar" })).not.toBeInTheDocument();
+  });
+  it("restores single-result properties after reopening the conversation", async () => {
+    mockList.mockResolvedValue([{ id: "single-history", summary: "Ibuprofeno", message_count: 2 }]);
+    mockGet.mockResolvedValue({ messages: [{ role: "user", content: "ibuprofeno" },
+      { role: "assistant", content: "Resultado", references: [{ cid: 3672, name: "Ibuprofen",
+        source: "https://pubchem.ncbi.nlm.nih.gov/compound/3672", properties_available: true,
+        properties: { MolecularFormula: "C13H18O2" } }] }], pending_references: [] });
+    renderChat();
+    fireEvent.click(screen.getByRole("button", { name: /mostrar historial/i }));
+    fireEvent.click(await screen.findByText(/Ibuprofeno/));
+    expect(await screen.findByText("C13H18O2")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Seleccionar" })).not.toBeInTheDocument();
   });
   it("shows source choices and records only the user's selection", async () => {
     mockList.mockResolvedValue([]);
@@ -78,7 +111,9 @@ describe("Chat error turn with idempotent retry", () => {
     mockStream.mockImplementation((_token: string, _body: unknown, onEvent: (e: Record<string, unknown>) => void) => {
       queueMicrotask(() => {
         onEvent({ type: "conversation", id: "conversation-1" });
-        onEvent({ type: "result", result: { text: "Coincidencias", used_llm: true, latency_ms: 1, verified_values: [], evidence: [], references: [{ cid: 2244, name: "Aspirin", source: "https://pubchem.ncbi.nlm.nih.gov/compound/2244" }] } });
+        onEvent({ type: "result", result: { text: "Coincidencias", used_llm: true, latency_ms: 1, verified_values: [], evidence: [], references: [
+          { cid: 2244, name: "Aspirin", source: "https://pubchem.ncbi.nlm.nih.gov/compound/2244" },
+          { cid: 2245, name: "Otra", source: "https://pubchem.ncbi.nlm.nih.gov/compound/2245" }] } });
       });
       return () => {};
     });
@@ -87,7 +122,7 @@ describe("Chat error turn with idempotent retry", () => {
     fireEvent.click(screen.getByText("Enviar"));
     expect(await screen.findByRole("link", { name: /Aspirin/ })).toHaveAttribute("href", "https://pubchem.ncbi.nlm.nih.gov/compound/2244");
     expect(mockSelectPubchem).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Seleccionar" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Seleccionar" })[0]);
     await screen.findByText("Seleccionaste Aspirin.");
     expect(mockSelectPubchem).toHaveBeenCalledWith("test-token", "conversation-1", 2244);
   });

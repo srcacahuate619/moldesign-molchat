@@ -67,6 +67,10 @@ input, textarea { max-width: 100%; }
 .message-who { margin: 0 0 4px; font-weight: 650; font-size: 12px; }
 .message-who .muted { font-weight: 400; }
 .message-text { margin: 4px 0 0; white-space: pre-wrap; }
+.pubchem-properties { margin: 8px 0; }
+.pubchem-properties div { margin: 4px 0; }
+.pubchem-properties dt { font-weight: 600; }
+.pubchem-properties dd { margin: 0; overflow-wrap: anywhere; }
 .evidence { background: var(--evidence); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 8px 0; overflow-wrap: anywhere; }
 .evidence header, .evidence-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .evidence-class, .evidence-source, .evidence dl { margin: 4px 0; }

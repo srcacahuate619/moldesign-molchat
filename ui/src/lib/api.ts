@@ -17,6 +17,14 @@ export interface Evidence {
   error: string | null;
 }
 
+export interface PubChemReference {
+  cid: number;
+  name: string;
+  source: string;
+  properties?: Record<string, string | number>;
+  properties_available?: boolean;
+}
+
 export interface TurnResult {
   text: string;
   intent: string;
@@ -24,7 +32,7 @@ export interface TurnResult {
   latency_ms: number;
   used_llm: boolean;
   verified_values: number[];
-  references?: { cid: number; name: string; source: string }[];
+  references?: PubChemReference[];
 }
 
 export interface ConversationSummary {
@@ -108,8 +116,8 @@ export const api = {
     request(t, "/v1/conversations") as Promise<ConversationSummary[]>,
   getConversation: (t: string, id: string) =>
     request(t, `/v1/conversations/${id}`) as Promise<{
-      messages: { role: string; content: string }[];
-      pending_references?: { cid: number; name: string; source: string }[];
+      messages: { role: string; content: string; references?: PubChemReference[] }[];
+      pending_references?: PubChemReference[];
     }>,
   deleteConversation: (t: string, id: string) =>
     request(t, `/v1/conversations/${id}`, { method: "DELETE" }),
