@@ -32,7 +32,7 @@ from ..conversation.case_selection import select_case
 from ..conversation.intents import classify
 from ..conversation.tool_loop import Tool, run_tool_loop
 from ..conversation.harness_tools import create_case_tool, properties_tool, pubchem_tool
-from ..conversation.evidence import numbers_in, redact_unverified, split_flow, VERIFICATION_NOTE
+from ..conversation.evidence import context_literals, numbers_in, redact_unverified, split_flow, VERIFICATION_NOTE
 from ..conversation.tools import PlatformBackend
 from ..plan import Plan
 from ..providers.base import ProviderDisabled, ProviderError
@@ -669,6 +669,10 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         "SMILES ni acciones. Solo afirma que un caso fue creado si "
         "el host devuelve created. La consulta PubChem devuelve identidad y propiedades disponibles; "
         "si hay una coincidencia, muestra sus datos; si hay varias, pide elegir. "
+        "Si una búsqueda por nombre no encuentra resultados, intenta una variante razonable o el nombre "
+        "en inglés si lo conoces, sin pedir permiso de nuevo; indica el nombre consultado y conserva la "
+        "incertidumbre si la identidad no está clara. No reintentes ante errores o falta de permiso. "
+        "Distingue los cálculos de MolDesign/RDKit de los datos de PubChem: LogP y XLogP pueden usar métodos distintos. "
         "No promete información que no llegó. Comunica los errores con claridad. Responde en español.") }]
     conv = state.memory.get_conversation(conv_id, owner)
     if registro.content_granted(provider.id) and conv:
@@ -699,6 +703,14 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             if result.get("status") == "ok":
                 refs.extend(result["matches"])
                 verified.update(float(item["cid"]) for item in refs)
+                for item in refs:
+                    for key in ("MolecularWeight", "XLogP", "TPSA", "HBondDonorCount", "HBondAcceptorCount"):
+                        value = item.get("properties", {}).get(key)
+                        try:
+                            if value is not None:
+                                verified.add(float(value))
+                        except (TypeError, ValueError):
+                            pass
             return result
         tools.append(Tool(lookup.name, lookup.description, lookup.parameters, capture))
     if not registro.content_granted(provider.id):
@@ -717,13 +729,21 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         answer = result.text
         if not case_status or case_status.get("status") != "created":
             answer = _mask_unconfirmed_case_claims(answer)
-        quoted = numbers_in(text) + numbers_in(json.dumps(refs, ensure_ascii=False))
+        quoted = numbers_in(text)
         if refs:
             quoted.append(str(len(refs)))
-        answer, issues = redact_unverified(answer, verified, quotable=frozenset(quoted))
+        context = "\n".join(m["content"] for m in messages if m.get("role") in ("user", "assistant"))
+        context += "\n" + json.dumps(refs, ensure_ascii=False) + "\n" + "\n".join(e["source"] for e in evidence)
+        answer, issues = redact_unverified(answer, verified, quotable=frozenset(quoted),
+                                          literals=frozenset(context_literals(context)))
         if issues:
             answer = f"{VERIFICATION_NOTE} se ocultaron valores no verificados. " + answer
-        if case_started:
+        normalized_answer = re.sub(r"[*_`]", "", answer)
+        already_confirmed = (case_status and case_status.get("status") == "created"
+            and case_status["name"] in normalized_answer
+            and re.search(r"(?:caso[^.\n]{0,120}(?:creado|creó)|(?:creó|creado)[^.\n]{0,120}caso)", normalized_answer, re.I)
+            and not re.search(r"\bno\b[^.\n]{0,100}(?:creado|creó)", normalized_answer, re.I))
+        if case_started and not already_confirmed:
             answer += "\n\n" + case_answer()
         if len(refs) > 1:
             state.memory.set_harness_pending(conv_id, owner, {

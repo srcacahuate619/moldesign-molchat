@@ -67,6 +67,10 @@ input, textarea { max-width: 100%; }
 .message-who { margin: 0 0 4px; font-weight: 650; font-size: 12px; }
 .message-who .muted { font-weight: 400; }
 .message-text { margin: 4px 0 0; white-space: pre-wrap; }
+.message-heading { font-weight: 700; margin: 10px 0 4px; }
+.message-list-item { padding-left: 10px; }
+.message-gap { height: 0.75em; }
+.message-text code { overflow-wrap: anywhere; }
 .pubchem-properties { margin: 8px 0; }
 .pubchem-properties div { margin: 4px 0; }
 .pubchem-properties dt { font-weight: 600; }

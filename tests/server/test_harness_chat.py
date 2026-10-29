@@ -212,6 +212,61 @@ async def test_followup_keeps_conversation_context_for_tool_selection(tmp_path, 
 
 
 @pytest.mark.asyncio
+async def test_followup_preserves_prior_structures_and_names_but_not_new_measurements(tmp_path, monkeypatch):
+    state, registry, headers = state_for(tmp_path)
+    provider = registry.get("fake")
+    smiles = "CC(=O)OC1=CC=CC=C1C(=O)O"
+    async def model(messages, _tools):
+        assert any(smiles in message.get("content", "") for message in messages)
+        return {"role": "assistant", "content": f'Caso "prueba 2", SMILES `{smiles}`. Peso 999.9.'}
+    monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
+    conv = state.memory.create_conversation("owner")
+    state.memory.add_message(conv, "owner", "assistant", f'Caso "prueba 2"; PubChem: `{smiles}`.')
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))),
+                                 base_url="http://testserver") as client:
+        response = await client.post("/v1/chat", headers=headers, json={"text": "¿puedes cargarlo?", "conversation_id": conv})
+        answer = next(e["result"]["text"] for e in events(response) if e["type"] == "result")
+        assert smiles in answer and 'prueba 2' in answer
+        assert '999.9' not in answer and '[dato no verificado]' in answer
+
+
+@pytest.mark.asyncio
+async def test_model_can_retry_pubchem_with_english_name_after_not_found(tmp_path, monkeypatch):
+    state, registry, headers = state_for(tmp_path)
+    provider = registry.get("fake")
+    calls = []
+    async def model(messages, tools):
+        assert "nombre en inglés" in messages[0]["content"]
+        if messages[-1]["role"] == "user":
+            name = "aspirina"
+        elif json.loads(messages[-1]["content"])["status"] == "not_found":
+            name = "aspirin"
+        else:
+            return {"role": "assistant", "content": "Encontré Aspirin en PubChem."}
+        calls.append(name)
+        return {"role": "assistant", "content": None, "tool_calls": [{"id": f"c{len(calls)}", "type": "function",
+                "function": {"name": "pubchem_lookup", "arguments": json.dumps({"name": name})}}]}
+    monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
+    class Bridge:
+        def with_token(self, token): return self
+        async def authorize_pubchem(self): pass
+    state.bridge = Bridge()
+    async def registry_for_turn(_token): return registry
+    monkeypatch.setattr(state, "registro_de_turno", registry_for_turn)
+    async def public(request):
+        if "/name/aspirina/" in request.url.path: return httpx.Response(404)
+        if "/name/" in request.url.path: return httpx.Response(200, json={"IdentifierList": {"CID": [2244]}})
+        if "/property/" in request.url.path: return httpx.Response(200, json={"PropertyTable": {"Properties": [{"CID": 2244, "MolecularFormula": "C9H8O4"}]}})
+        return httpx.Response(200, json={"InformationList": {"Information": [{"CID": 2244, "Title": "Aspirin"}]}})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(public)) as external:
+        state.pubchem_client = external
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+            response = await client.post("/v1/chat", headers=headers, json={"text": "busca aspirina en PubChem"})
+            result = next(e["result"] for e in events(response) if e["type"] == "result")
+            assert calls == ["aspirina", "aspirin"] and result["references"][0]["cid"] == 2244
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("status", ["created", "exists", "failed", "unknown"])
 async def test_case_creation_waits_for_host(tmp_path, monkeypatch, status):
     state, registry, headers = state_for(tmp_path)
@@ -237,3 +292,24 @@ async def test_case_creation_waits_for_host(tmp_path, monkeypatch, status):
         expected = {"created": "Se creó", "exists": "Ya existe", "failed": "no pudo", "unknown": "No pude confirmar"}
         assert expected[status] in result
         assert "Además, preparé la información solicitada." in result
+
+
+@pytest.mark.asyncio
+async def test_confirmed_case_is_not_announced_twice(tmp_path, monkeypatch):
+    state, registry, headers = state_for(tmp_path)
+    provider = registry.get("fake")
+    async def model(messages, _tools):
+        if messages[-1]["role"] == "user":
+            return {"role": "assistant", "content": None, "tool_calls": [{"id": "c1", "type": "function",
+                "function": {"name": "create_case", "arguments": '{"name":"prueba 2"}'}}]}
+        return {"role": "assistant", "content": 'El caso **"prueba 2"** fue creado correctamente.'}
+    monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+        turn = asyncio.create_task(client.post("/v1/chat", headers=headers, json={"text": 'crea "prueba 2"'}))
+        for _ in range(100):
+            if state.case_requests: break
+            await asyncio.sleep(0.01)
+        request_id = next(iter(state.case_requests))
+        await client.post(f"/v1/case-requests/{request_id}/result", headers=headers, json={"status": "created"})
+        answer = next(e["result"]["text"] for e in events(await turn) if e["type"] == "result")
+        assert 'fue creado correctamente' in answer and 'Se creó el caso' not in answer

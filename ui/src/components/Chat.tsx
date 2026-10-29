@@ -10,6 +10,7 @@ import {
 } from "../lib/api";
 import type { StringKey } from "../lib/i18n";
 import EvidenceBlock from "./EvidenceBlock";
+import MessageText from "./MessageText";
 import VoiceButton from "./VoiceButton";
 import { createCaseInHost } from "../lib/caseHost";
 import { BotIcon, HistoryIcon, PlusIcon, SendIcon } from "./Icons";
@@ -241,16 +242,16 @@ export default function Chat({
               </p>
               {message.evidence.length > 0 ? (
                 <>
-                  <details open>
+                  <details>
                     <summary>{t("chat.evidence")}</summary>
                     {message.evidence.map((item, i) => (
                       <EvidenceBlock key={i} evidence={item} />
                     ))}
                   </details>
-                  <p className="message-text">{message.content}</p>
+                  <MessageText text={message.content} />
                 </>
               ) : (
-                <p className="message-text">{message.content}</p>
+                message.role === "assistant" ? <MessageText text={message.content} /> : <p className="message-text">{message.content}</p>
               )}
               {message.references && message.references.length > 0 && (
                 <ul>
@@ -258,6 +259,8 @@ export default function Chat({
                     <li key={reference.cid}>
                       <a href={reference.source} target="_blank" rel="noreferrer">{reference.name} · PubChem {reference.cid}</a>{" "}
                       {reference.properties && Object.keys(reference.properties).length > 0 && (
+                        <details open={Object.values(reference.properties).filter((value) => String(value).length >= 3 && message.content.includes(String(value))).length < 2}>
+                        <summary>{t("chat.pubchemDetails")}</summary>
                         <dl className="pubchem-properties">
                           {([
                             ["MolecularFormula", t("chat.pubchemFormula")],
@@ -274,6 +277,7 @@ export default function Chat({
                             <div key={key}><dt>{label}</dt><dd>{reference.properties?.[key]}{key === "MolecularWeight" ? " g/mol" : ""}</dd></div>
                           ))}
                         </dl>
+                        </details>
                       )}
                       {reference.properties_available === false && <p>{t("chat.pubchemPartial")}</p>}
                       {message.selectable && message.references && message.references.length > 1 && <button type="button" onClick={() => {
