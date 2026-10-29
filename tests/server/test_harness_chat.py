@@ -38,7 +38,7 @@ async def test_chat_uses_direct_pubchem_and_resumes_selection(tmp_path, monkeypa
     async def model(messages, tools):
         seen.append(list(messages))
         if len(seen) == 1:
-            assert {t["function"]["name"] for t in tools} == {"pubchem_lookup", "create_case", "compute_properties", "load_case_smiles", "search_receptors"}
+            assert {t["function"]["name"] for t in tools} == {"pubchem_lookup", "create_case", "compute_properties", "load_case_smiles", "search_receptors", "verify_editor_structure"}
             return {"role": "assistant", "content": None, "tool_calls": [{"id": "c1", "type": "function",
                     "function": {"name": "pubchem_lookup", "arguments": '{"name":"ibuprofeno"}'}}]}
         if len(seen) == 2:
@@ -489,3 +489,69 @@ async def test_chat_can_search_catalog_and_retain_receptor_identifier(tmp_path, 
             result = next(e["result"] for e in events(response) if e["type"] == "result")
             assert "7E2Y" in result["text"] and result["evidence"][0]["tool"] == "search_receptors"
             assert (await client.get("/v1/harness-jobs", headers=headers)).json()[0]["steps"][0]["tool"] == "search_receptors"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("changed", [False, True])
+async def test_editor_verification_checks_revision_and_does_not_persist_molfile(tmp_path, monkeypatch, changed):
+    Chem = pytest.importorskip("rdkit.Chem")
+    state, registry, headers = state_for(tmp_path)
+    provider = registry.get("fake")
+    molfile = Chem.MolToMolBlock(Chem.MolFromSmiles("CCO"))
+    conv = state.memory.create_conversation("owner")
+    state.memory.add_message(conv, "owner", "assistant", "Referencia", references=[{"cid": 702, "name": "Ethanol",
+        "source": "https://pubchem.ncbi.nlm.nih.gov/compound/702", "properties": {"SMILES": "CCO"}}])
+    async def model(messages, tools):
+        if messages[-1]["role"] == "user":
+            return {"role": "assistant", "content": None, "tool_calls": [{"id": "verify", "type": "function",
+                "function": {"name": "verify_editor_structure", "arguments": '{"case_name":"prueba","cid":"702"}'}}]}
+        result = json.loads(messages[-1]["content"])
+        assert result["status"] == ("changed" if changed else "match")
+        assert "molfile" not in result
+        return {"role": "assistant", "content": "El dibujo coincide exactamente."}
+    monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+        turn = asyncio.create_task(client.post("/v1/chat", headers=headers, json={"text": "verifica el dibujo en prueba con PubChem 702", "conversation_id": conv}))
+        for _ in range(300):
+            if state.editor_requests: break
+            await asyncio.sleep(0.01)
+        first = next(iter(state.editor_requests))
+        assert (await client.post(f"/v1/editor-requests/{first}/result", headers=headers,
+                                  json={"status": "ok", "molfile": molfile, "revision": "1:2"})).status_code == 200
+        for _ in range(300):
+            pending = [key for key in state.editor_requests if key != first]
+            if pending: break
+            await asyncio.sleep(0.01)
+        assert pending
+        await client.post(f"/v1/editor-requests/{pending[0]}/result", headers=headers,
+                          json={"status": "changed" if changed else "ok"})
+        result = next(e["result"] for e in events(await turn) if e["type"] == "result")
+        assert ("cambió durante" in result["text"]) == changed
+        assert ("coincide con la referencia" in result["text"]) != changed
+        if changed:
+            assert "coincide exactamente" not in result["text"]
+        assert molfile not in json.dumps(state.memory.get_conversation(conv, "owner").messages)
+        assert molfile not in json.dumps(state.memory.list_harness_jobs("owner"))
+        assert all(molfile not in json.dumps(value) for value in state.structure_cache.values())
+
+
+@pytest.mark.asyncio
+async def test_editor_verification_does_not_use_ambiguous_or_missing_reference(tmp_path, monkeypatch):
+    state, registry, headers = state_for(tmp_path)
+    provider = registry.get("fake")
+    conv = state.memory.create_conversation("owner")
+    state.memory.add_message(conv, "owner", "assistant", "elige", references=[
+        {"cid": 702, "name": "one", "source": "https://pubchem.ncbi.nlm.nih.gov/compound/702", "properties": {"SMILES": "CCO"}},
+        {"cid": 703, "name": "two", "source": "https://pubchem.ncbi.nlm.nih.gov/compound/703", "properties": {"SMILES": "CCC"}}])
+    async def model(messages, _tools):
+        if messages[-1]["role"] == "user":
+            return {"role": "assistant", "content": None, "tool_calls": [{"id": "verify", "type": "function",
+                "function": {"name": "verify_editor_structure", "arguments": '{"case_name":"prueba","cid":"702"}'}}]}
+        assert json.loads(messages[-1]["content"])["status"] == "no_reference"
+        return {"role": "assistant", "content": "Necesito una referencia."}
+    monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+        response = await client.post("/v1/chat", headers=headers, json={"text": "verifica", "conversation_id": conv})
+        result = next(e["result"] for e in events(response) if e["type"] == "result")
+        assert "referencia inequívoca" in result["text"]
+        assert not state.editor_requests

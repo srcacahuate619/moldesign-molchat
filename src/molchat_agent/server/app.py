@@ -10,6 +10,7 @@ JSON ``{"error": ...}``; unexpected failures never leak internals.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import re
 import time
@@ -31,6 +32,7 @@ from ..conversation.memory import Conversation, ConversationNotFound, Persistenc
 from ..conversation.case_selection import select_case
 from ..conversation.intents import classify
 from ..conversation.tool_loop import Tool, run_tool_loop
+from ..conversation.structure_check import compare_editor_structure
 from ..conversation.harness_tools import create_case_tool, load_case_smiles_tool, properties_tool, pubchem_tool, receptor_catalog_tool
 from ..conversation.evidence import context_literals, numbers_in, redact_unverified, split_flow, VERIFICATION_NOTE
 from ..conversation.tools import PlatformBackend
@@ -305,6 +307,23 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
         pending[1].set_result({"status": payload["status"]})
         return JSONResponse({"accepted": True})
 
+    async def editor_result(request: Request) -> JSONResponse:
+        session = await need_chat(request)
+        pending = state.editor_requests.get(request.path_params["request_id"])
+        if pending is None or pending[0] != session.sub or pending[1].done():
+            return _error(404, "solicitud no encontrada")
+        payload = await read_json(request)
+        allowed = {"ok", "not_ready", "not_found", "ambiguous", "changed", "too_large", "read_limit", "failed", "unknown"}
+        if (not isinstance(payload, dict) or set(payload) - {"status", "molfile", "revision"}
+                or not isinstance(payload.get("status"), str) or payload["status"] not in allowed):
+            return _error(400, "resultado no válido")
+        if "molfile" in payload and (not isinstance(payload["molfile"], str) or len(payload["molfile"].encode("utf-8")) > 262144):
+            return _error(400, "dibujo demasiado grande")
+        if "revision" in payload and (not isinstance(payload["revision"], str) or len(payload["revision"]) > 100):
+            return _error(400, "revisión no válida")
+        pending[1].set_result(payload)
+        return JSONResponse({"accepted": True})
+
     async def list_harness_jobs(request: Request) -> JSONResponse:
         session = await need_chat(request)
         try:
@@ -556,6 +575,7 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
             Route("/v1/conversations", create_conversation, methods=["POST"]),
             Route("/v1/case-requests/{request_id}/result", case_result, methods=["POST"]),
             Route("/v1/smiles-requests/{request_id}/result", smiles_result, methods=["POST"]),
+            Route("/v1/editor-requests/{request_id}/result", editor_result, methods=["POST"]),
             Route("/v1/harness-jobs", list_harness_jobs, methods=["GET"]),
             Route("/v1/pubchem/permission", pubchem_permission, methods=["GET", "POST", "DELETE"]),
             Route("/v1/conversations/{conv_id}/pubchem-selection", select_pubchem_reference, methods=["POST"]),
@@ -657,6 +677,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
     case_started = False
     smiles_started = False
     smiles_result_data: dict[str, Any] | None = None
+    editor_check_result: dict[str, Any] | None = None
     trace_id = uuid.uuid4().hex
     trace: list[dict[str, str]] = []
     trace_error = False
@@ -678,7 +699,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         elif phase == "arguments" and args:
             for step in reversed(trace):
                 if step["id"] == call_id:
-                    details = [f"{key}: {args[key][:120]}" for key in ("case_name", "name", "query", "page", "section", "availability")
+                    details = [f"{key}: {args[key][:120]}" for key in ("case_name", "cid", "name", "query", "page", "section", "availability")
                                if isinstance(args.get(key), str)]
                     if details:
                         step["detail"] = " · ".join(details)
@@ -706,6 +727,20 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
                 return {"status": "unknown"}
         finally:
             state.smiles_requests.pop(request_id, None)
+
+    async def request_editor(case_name: str, operation: str, revision: str = "-") -> dict[str, Any]:
+        request_id = uuid.uuid4().hex
+        future = asyncio.get_running_loop().create_future()
+        state.editor_requests[request_id] = (owner, future)
+        try:
+            await events.put({"type": "editor_read", "request_id": request_id, "case_name": case_name,
+                              "operation": operation, "revision": revision})
+            try:
+                return await asyncio.wait_for(future, timeout=35)
+            except asyncio.TimeoutError:
+                return {"status": "unknown"}
+        finally:
+            state.editor_requests.pop(request_id, None)
 
     async def request_case(name: str) -> dict[str, Any]:
         nonlocal case_started, case_status
@@ -756,6 +791,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         "Para buscar receptores usa search_receptors: conserva disponibilidad, sección y calibración tal como "
         "las devuelve el catálogo; no supongas que estar disponible signifique verificado o calibrado. "
         "Para listas paginadas indica la página, el total y si hay una siguiente página. "
+        "Para verificar el dibujo real frente a PubChem usa verify_editor_structure y comunica su estado. "
+        "No afirmes que el dibujo coincide si la herramienta no lo confirmó; indica la estereoquímica no especificada. "
         "No promete información que no llegó. Comunica los errores con claridad. Responde en español.") }]
     conv = state.memory.get_conversation(conv_id, owner)
     historical_refs: list[dict[str, Any]] = []
@@ -807,9 +844,64 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         nonlocal smiles_result_data
         smiles_result_data = await load_tool.execute(args)
         return smiles_result_data
+
+    async def verify_editor(args: dict[str, Any]) -> dict[str, Any]:
+        nonlocal editor_check_result
+        cid_text = args["cid"]
+        if not cid_text.isascii() or not cid_text.isdigit() or int(cid_text) < 1:
+            return {"status": "invalid", "message": "Indica un CID de PubChem válido."}
+        cid = int(cid_text)
+        eligible = historical_refs + refs if len(refs) <= 1 else []
+        matching = {ref["cid"]: ref for ref in eligible if ref.get("cid") == cid}
+        reference = matching.get(cid)
+        smiles = reference.get("properties", {}).get("SMILES") if reference else None
+        if not isinstance(smiles, str) or not smiles:
+            editor_check_result = {"status": "no_reference", "case_name": args["case_name"], "cid": cid,
+                                   "message": "No hay una referencia inequívoca de PubChem con SMILES en esta conversación."}
+            return editor_check_result
+        snapshot = await request_editor(args["case_name"], "snapshot")
+        if snapshot.get("status") != "ok" or not snapshot.get("molfile") or not snapshot.get("revision"):
+            editor_check_result = {"status": snapshot.get("status", "unknown"), "case_name": args["case_name"], "cid": cid}
+            return editor_check_result
+        molfile, revision = snapshot["molfile"], snapshot["revision"]
+        key = hashlib.sha256((owner + "\0" + smiles + "\0" + molfile).encode("utf-8")).hexdigest()
+        now = time.monotonic()
+        cached = state.structure_cache.get(key)
+        if cached and now - cached[0] < 300:
+            comparison = dict(cached[1])
+            state.structure_cache.move_to_end(key)
+        else:
+            comparison = await asyncio.to_thread(compare_editor_structure, smiles, molfile)
+            if comparison.get("status") != "unverifiable":
+                state.structure_cache[key] = (now, dict(comparison))
+                state.structure_cache.move_to_end(key)
+                while len(state.structure_cache) > 16:
+                    state.structure_cache.popitem(last=False)
+        # Never retain a molfile in chat history or in the result cache.
+        del molfile, snapshot
+        check = await request_editor(args["case_name"], "check", revision)
+        if check.get("status") != "ok":
+            editor_check_result = {"status": "changed" if check.get("status") == "changed" else "unknown",
+                                   "case_name": args["case_name"], "cid": cid}
+        else:
+            editor_check_result = {**comparison, "case_name": args["case_name"], "cid": cid,
+                                   "source": reference["source"]}
+        verified.add(float(cid))
+        evidence.append({"tool": "verify_editor_structure", "label": args["case_name"],
+                         "epistemic_class": "cálculo", "source": "Dibujo de Ketcher y referencia de PubChem",
+                         "values": {"estado": str(editor_check_result["status"]),
+                                    **({"método": editor_check_result["method"]} if editor_check_result.get("method") else {}),
+                                    **({"alcance": editor_check_result["scope"]} if editor_check_result.get("scope") else {})},
+                         "error": None})
+        return editor_check_result
+
+    editor_schema = {"type": "object", "properties": {"case_name": {"type": "string", "maxLength": 100},
+                     "cid": {"type": "string", "maxLength": 12}}, "required": ["case_name", "cid"],
+                     "additionalProperties": False}
     tools: list[Tool] = [create_case_tool(request_case),
                          Tool(load_tool.name, load_tool.description, load_tool.parameters, capture_load),
-                         Tool(properties.name, properties.description, properties.parameters, capture_properties)]
+                         Tool(properties.name, properties.description, properties.parameters, capture_properties),
+                         Tool("verify_editor_structure", "Compara el dibujo actual de Ketcher con el SMILES de una referencia PubChem inequívoca ya consultada en esta conversación. No descarga imágenes ni modifica el editor. Requiere nombre del caso y CID; solo informa coincidencia si se confirmó la revisión del dibujo.", editor_schema, verify_editor)]
     if state.bridge is not None and not registro.offline:
         lookup = pubchem_tool(state.bridge.with_token(token), client)
         async def capture(args: dict[str, Any]) -> dict[str, Any]:
@@ -855,9 +947,15 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
                 break
         result = task.result()
         answer = result.text
+        if editor_check_result and editor_check_result.get("status") != "match":
+            # Do not let a model's free text turn an incomplete check, stereo
+            # uncertainty or a mismatch into an asserted match.
+            answer = "La comprobación del dibujo tiene el siguiente resultado:"
         if not case_status or case_status.get("status") != "created":
             answer = _mask_unconfirmed_case_claims(answer)
         linked_cids = {item.get("structure", {}).get("pubchem_cid") for item in evidence}
+        if editor_check_result and editor_check_result.get("status") != "no_reference":
+            linked_cids.add(editor_check_result.get("cid"))
         linked_refs = [ref for ref in historical_refs if ref.get("cid") in linked_cids]
         displayed_refs = list(refs)
         displayed_refs.extend(ref for ref in linked_refs if ref["cid"] not in {item["cid"] for item in displayed_refs})
@@ -873,7 +971,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         if displayed_refs:
             quoted.append(str(len(displayed_refs)))
         context = "\n".join(m["content"] for m in messages if m.get("role") in ("user", "assistant"))
-        context += "\n" + json.dumps(displayed_refs, ensure_ascii=False) + "\n" + json.dumps(receptor_results, ensure_ascii=False) + "\n" + "\n".join(e["source"] for e in evidence)
+        context += "\n" + json.dumps(displayed_refs, ensure_ascii=False) + "\n" + json.dumps(receptor_results, ensure_ascii=False) + "\n" + json.dumps(evidence, ensure_ascii=False)
         literals = context_literals(context)
         if displayed_refs:
             # PubChem's cited glossary states this; protect the phrase, not the
@@ -906,8 +1004,24 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
                 "unknown": "No se pudo confirmar el resultado; revisa el caso antes de reintentar.",
             }.get(status, "No se pudo confirmar el resultado; revisa el caso antes de reintentar.")
             answer += "\n\n" + result_message
+        if editor_check_result:
+            status = editor_check_result.get("status")
+            explanation = {
+                "match": "El dibujo leído de Ketcher coincide con la referencia de PubChem bajo la comparación estructural realizada.",
+                "match_stereo_unspecified": "La estructura coincide con la referencia en lo representado, pero hay estereoquímica sin especificar.",
+                "different_stereochemistry": "La conectividad coincide, pero la estereoquímica representada difiere o está incompleta.",
+                "different_structure": "La estructura del dibujo difiere de la referencia; no se identificó automáticamente la causa.",
+                "changed": "El dibujo cambió durante la comprobación; vuelve a verificarlo.",
+                "not_ready": "Ketcher todavía no está listo para comprobar el dibujo.",
+                "not_found": "No se encontró el caso indicado.",
+                "ambiguous": "Hay varios casos con ese nombre; indica cuál deseas comprobar.",
+                "too_large": "El dibujo supera el límite de lectura; no se pudo comprobar.",
+                "read_limit": "Se alcanzó el límite de lecturas nuevas de Ketcher para esta sesión. Guarda tu trabajo y reinicia MolDesign para volver a comprobar dibujos modificados.",
+                "no_reference": "No hay una referencia inequívoca de PubChem con SMILES en esta conversación.",
+            }.get(status, "No pude comprobar el dibujo; revisa el editor y vuelve a intentarlo.")
+            answer += f'\n\nComprobación del editor · caso «{editor_check_result["case_name"]}» · PubChem {editor_check_result["cid"]}: {explanation}'
         if trace:
-            incomplete = result.exhausted or any(step["status"] not in {"ok", "created", "applied", "exists"}
+            incomplete = result.exhausted or any(step["status"] not in {"ok", "created", "applied", "exists", "match", "match_stereo_unspecified", "different_stereochemistry", "different_structure"}
                 and not (step["tool"] in {"pubchem_lookup", "search_receptors"} and step["status"] == "not_found")
                 for step in trace)
             save_trace("partial" if incomplete else "completed")

@@ -6,7 +6,7 @@ import { strings } from "../lib/i18n";
 
 afterEach(() => { cleanup(); sessionStorage.clear(); });
 
-const { mockList, mockGet, mockStream, mockCreateCase, mockReportCase, mockLoadSmiles, mockReportSmiles, mockStartVoice, mockTranscribeVoice, mockSelectPubchem } = vi.hoisted(() => ({
+const { mockList, mockGet, mockStream, mockCreateCase, mockReportCase, mockLoadSmiles, mockReportSmiles, mockReadEditor, mockReportEditor, mockStartVoice, mockTranscribeVoice, mockSelectPubchem } = vi.hoisted(() => ({
   mockList: vi.fn(),
   mockGet: vi.fn(),
   mockStream: vi.fn(),
@@ -14,6 +14,8 @@ const { mockList, mockGet, mockStream, mockCreateCase, mockReportCase, mockLoadS
   mockReportCase: vi.fn(),
   mockLoadSmiles: vi.fn(),
   mockReportSmiles: vi.fn(),
+  mockReadEditor: vi.fn(),
+  mockReportEditor: vi.fn(),
   mockStartVoice: vi.fn(),
   mockTranscribeVoice: vi.fn(),
   mockSelectPubchem: vi.fn(),
@@ -21,13 +23,14 @@ const { mockList, mockGet, mockStream, mockCreateCase, mockReportCase, mockLoadS
 
 vi.mock("../lib/caseHost", () => ({ createCaseInHost: mockCreateCase }));
 vi.mock("../lib/smilesHost", () => ({ loadSmilesInHost: mockLoadSmiles }));
+vi.mock("../lib/editorHost", () => ({ readEditorInHost: mockReadEditor }));
 vi.mock("../lib/voice", () => ({ isVoiceSupported: () => true, startRecording: mockStartVoice, toWavMono16: vi.fn().mockResolvedValue(new Blob(["wav"])) }));
 
 vi.mock("../lib/api", async (importOriginal) => {
   const original = await importOriginal<typeof import("../lib/api")>();
   return {
     ...original,
-    api: { ...original.api, listConversations: mockList, getConversation: mockGet, reportCaseResult: mockReportCase, reportSmilesResult: mockReportSmiles, transcribe: mockTranscribeVoice, selectPubchem: mockSelectPubchem },
+    api: { ...original.api, listConversations: mockList, getConversation: mockGet, reportCaseResult: mockReportCase, reportSmilesResult: mockReportSmiles, reportEditorResult: mockReportEditor, transcribe: mockTranscribeVoice, selectPubchem: mockSelectPubchem },
     openChatStream: mockStream,
   };
 });
@@ -204,6 +207,21 @@ describe("Chat error turn with idempotent retry", () => {
     fireEvent.click(screen.getByText("Enviar"));
     await waitFor(() => expect(mockLoadSmiles).toHaveBeenCalledWith("smiles-id", "prueba", "CCO"));
     await waitFor(() => expect(mockReportSmiles).toHaveBeenCalledWith("test-token", "smiles-id", "applied"));
+  });
+  it("relays the editor snapshot and its revision without displaying the molfile", async () => {
+    mockList.mockResolvedValue([]);
+    mockReadEditor.mockResolvedValue({ status: "ok", molfile: "private molfile", revision: "1:2" });
+    mockReportEditor.mockResolvedValue({ accepted: true });
+    mockStream.mockImplementation((_token: string, _body: unknown, onEvent: (event: Record<string, unknown>) => void) => {
+      queueMicrotask(() => onEvent({ type: "editor_read", request_id: "read-id", case_name: "prueba", operation: "snapshot", revision: "-" }));
+      return () => {};
+    });
+    renderChat();
+    fireEvent.change(screen.getByPlaceholderText(/pregunta/i), { target: { value: "verifica" } });
+    fireEvent.click(screen.getByText("Enviar"));
+    await waitFor(() => expect(mockReadEditor).toHaveBeenCalledWith("read-id", "prueba", "snapshot", "-"));
+    await waitFor(() => expect(mockReportEditor).toHaveBeenCalledWith("test-token", "read-id", { status: "ok", molfile: "private molfile", revision: "1:2" }));
+    expect(screen.queryByText("private molfile")).not.toBeInTheDocument();
   });
   it("keeps history closed until requested in the compact panel", async () => {
     mockList.mockResolvedValue([{ id: "test-conversation", summary: "Mi conversación", message_count: 2 }]);

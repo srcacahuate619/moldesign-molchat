@@ -15,6 +15,7 @@ import PropertyComparison from "./PropertyComparison";
 import VoiceButton from "./VoiceButton";
 import { createCaseInHost } from "../lib/caseHost";
 import { loadSmilesInHost } from "../lib/smilesHost";
+import { readEditorInHost } from "../lib/editorHost";
 import { BotIcon, HistoryIcon, PlusIcon, SendIcon } from "./Icons";
 
 interface Message {
@@ -153,6 +154,13 @@ export default function Chat({
             const id = event["request_id"], name = event["case_name"], smiles = event["smiles"];
             if (typeof id === "string" && typeof name === "string" && typeof smiles === "string") {
               void loadSmilesInHost(id, name, smiles).then((result) => api.reportSmilesResult(token, id, result))
+                .catch(() => setError(t("error.generic")));
+            }
+          } else if (kind === "editor_read") {
+            const id = event["request_id"], name = event["case_name"], operation = event["operation"], revision = event["revision"];
+            if ([id, name, operation, revision].every((value) => typeof value === "string")) {
+              void readEditorInHost(id as string, name as string, operation as string, revision as string)
+                .then((result) => api.reportEditorResult(token, id as string, result))
                 .catch(() => setError(t("error.generic")));
             }
           } else if (kind === "result") {

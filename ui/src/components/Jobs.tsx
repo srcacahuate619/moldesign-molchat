@@ -25,6 +25,11 @@ const STEP_LABELS: Record<string, StringKey> = {
   invalid: "jobs.stepInvalid", invalid_smiles: "jobs.stepInvalid", ambiguous: "jobs.stepAmbiguous",
   busy: "jobs.stepBusy", failed: "jobs.stepFailed", error: "jobs.stepFailed", unknown: "jobs.stepUnknown",
   running: "jobs.stepRunning",
+  match: "jobs.structureMatch", match_stereo_unspecified: "jobs.structureUnspecified",
+  different_stereochemistry: "jobs.structureStereoDiffers", different_structure: "jobs.structureDiffers",
+  changed: "jobs.structureChanged", unverifiable: "jobs.structureUnverifiable", no_reference: "jobs.noReference",
+  not_ready: "jobs.editorNotReady", too_large: "jobs.editorTooLarge",
+  read_limit: "jobs.editorReadLimit",
 };
 
 export default function Jobs({

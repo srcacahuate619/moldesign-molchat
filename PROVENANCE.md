@@ -903,3 +903,12 @@ MolDesign es por API HTTP, no por copia de código.
 - Transformación: pruebas nuevas de la credencial con la sesión, de los motivos de rechazo sin claves y del error de transporte
 - Licencia resultante: GPL-3.0-or-later
 - Tests: son los tests
+
+### src/molchat_agent/conversation/structure_check.py, tests/conversation/test_structure_check.py
+
+- Origen: código nuevo en MolChat para comparar un molfile del editor con una referencia SMILES de PubChem usando RDKit.
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua, con colaboración de un agente de código.
+- Transformación: comparación de estructura y estereoquímica representada sin desalinización; pruebas de diferencias, fragmentos y abstención.
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/conversation/test_structure_check.py y tests/server/test_harness_chat.py
