@@ -530,9 +530,14 @@ async def test_editor_verification_checks_revision_and_does_not_persist_molfile(
         assert ("coincide con la referencia" in result["text"]) != changed
         if changed:
             assert "coincide exactamente" not in result["text"]
-        assert molfile not in json.dumps(state.memory.get_conversation(conv, "owner").messages)
-        assert molfile not in json.dumps(state.memory.list_harness_jobs("owner"))
-        assert all(molfile not in json.dumps(value) for value in state.structure_cache.values())
+        def contains_molfile(value):
+            if isinstance(value, str): return molfile in value
+            if isinstance(value, dict): return any(contains_molfile(item) for item in value.values())
+            if isinstance(value, (list, tuple)): return any(contains_molfile(item) for item in value)
+            return False
+        assert not contains_molfile(state.memory.get_conversation(conv, "owner").messages)
+        assert not contains_molfile(state.memory.list_harness_jobs("owner"))
+        assert not contains_molfile(list(state.structure_cache.values()))
 
 
 @pytest.mark.asyncio
