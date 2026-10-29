@@ -18,6 +18,15 @@ interface Message {
   content: string;
   evidence: Evidence[];
   meta: string;
+  references?: { cid: number; name: string; source: string }[];
+}
+
+const ACTIVE_CONVERSATION = "molchat.activeConversation";
+function rememberConversation(id: string | null) {
+  try {
+    if (id) sessionStorage.setItem(ACTIVE_CONVERSATION, id);
+    else sessionStorage.removeItem(ACTIVE_CONVERSATION);
+  } catch { /* Storage may be disabled; chat remains usable. */ }
 }
 
 export default function Chat({
@@ -33,6 +42,7 @@ export default function Chat({
 }) {
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const activeIdRef = useRef<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [status, setStatus] = useState<string | null>(null);
@@ -41,6 +51,7 @@ export default function Chat({
   const [pendingVoice, setPendingVoice] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const aborter = useRef<(() => void) | null>(null);
+  const restored = useRef(false);
   const streaming = status !== null;
 
   const refreshList = useCallback(async () => {
@@ -63,14 +74,19 @@ export default function Chat({
       setStatus(null);
       setError(null);
       setActiveId(id);
+      activeIdRef.current = id;
+      rememberConversation(id);
       try {
         const detail = await api.getConversation(token, id);
+        const lastAssistant = detail.messages.reduce((found, m, index) =>
+          m.role === "assistant" ? index : found, -1);
         setMessages(
-          detail.messages.map((m) => ({
+          detail.messages.map((m, index) => ({
             role: m.role === "assistant" ? "assistant" : "user",
             content: m.content,
             evidence: [],
             meta: "",
+            references: index === lastAssistant ? detail.pending_references : undefined,
           })),
         );
       } catch (err) {
@@ -80,6 +96,15 @@ export default function Chat({
     },
     [token, t, onSessionInvalid],
   );
+
+  useEffect(() => {
+    if (restored.current) return;
+    restored.current = true;
+    try {
+      const id = sessionStorage.getItem(ACTIVE_CONVERSATION);
+      if (id) void select(id);
+    } catch { /* No saved conversation is available. */ }
+  }, [select]);
 
   const send = useCallback(
     (text: string) => {
@@ -106,6 +131,8 @@ export default function Chat({
           if (kind === "conversation") {
             const id = event["id"] as string;
             setActiveId(id);
+            activeIdRef.current = id;
+            rememberConversation(id);
             void refreshList();
           } else if (kind === "intent") {
             setStatus(t("chat.streaming"));
@@ -134,6 +161,7 @@ export default function Chat({
                 content: result.text,
                 evidence: result.evidence,
                 meta,
+                references: result.references,
               },
             ]);
           } else if (kind === "error") {
@@ -170,6 +198,8 @@ export default function Chat({
           onClick={() => {
             aborter.current?.();
             setActiveId(null);
+            activeIdRef.current = null;
+            rememberConversation(null);
             setMessages([]);
             setError(null);
             setStatus(null);
@@ -217,6 +247,24 @@ export default function Chat({
                 </>
               ) : (
                 <p className="message-text">{message.content}</p>
+              )}
+              {message.references && message.references.length > 0 && (
+                <ul>
+                  {message.references.map((reference) => (
+                    <li key={reference.cid}>
+                      <a href={reference.source} target="_blank" rel="noreferrer">{reference.name} · PubChem {reference.cid}</a>{" "}
+                      <button type="button" onClick={() => {
+                        const id = activeIdRef.current;
+                        if (!id) return;
+                        void api.selectPubchem(token, id, reference.cid).then((result) => {
+                          if (activeIdRef.current !== id) return;
+                          setMessages((prev) => [...prev.map((entry) => ({ ...entry, references: undefined })),
+                            { role: "assistant", content: result.text, evidence: [], meta: "" }]);
+                        }).catch(() => { setLastText(null); setError(t("error.generic")); });
+                      }}>{t("chat.selectReference")}</button>
+                    </li>
+                  ))}
+                </ul>
               )}
             </li>
           ))}

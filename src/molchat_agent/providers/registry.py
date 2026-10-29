@@ -310,6 +310,10 @@ class ProviderRegistry:
             return True  # la cuenta autorizó este envío al dar de alta el proveedor
         return self._consents.granted(destination.fingerprint + CONTENT_SCOPE)
 
+    @property
+    def offline(self) -> bool:
+        return self._offline
+
     def de_llamada(self, *, activo: str | None, proveedor: LLMProvider | None = None,
                    bloqueo: dict[str, str] | None = None) -> "ProviderRegistry":
         """Registro de UNA llamada en modo alojado.

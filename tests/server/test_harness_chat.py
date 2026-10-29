@@ -1,0 +1,164 @@
+import asyncio
+import json
+from pathlib import Path
+
+import httpx
+import pytest
+
+from molchat_agent.config import MolChatConfig
+from molchat_agent.conversation.memory import MemoryStore
+from molchat_agent.conversation.tools import QualityBackend
+from molchat_agent.providers import build_registry
+from molchat_agent.server.app import create_app
+from molchat_agent.server.auth import mint, standalone_secret
+from molchat_agent.server.state import ServerState
+
+
+def events(response):
+    return [json.loads(line[5:].strip()) for line in response.text.splitlines() if line.startswith("data:")]
+
+
+def state_for(tmp_path):
+    registry = build_registry(MolChatConfig())
+    registry.set_active("fake")
+    secret = standalone_secret()
+    state = ServerState(secret=secret, registry=registry, memory=MemoryStore(tmp_path / "memory.db"),
+                        backend=QualityBackend(Path(__file__).parent.parent / "quality/fixtures/properties.json"),
+                        hosted=True)
+    token = mint(secret, "owner", {"chat"}, 3600)
+    return state, registry, {"Authorization": f"Bearer {token}"}
+
+
+@pytest.mark.asyncio
+async def test_chat_uses_direct_pubchem_and_resumes_selection(tmp_path, monkeypatch):
+    state, registry, headers = state_for(tmp_path)
+    provider = registry.get("fake")
+    seen = []
+    async def model(messages, tools):
+        seen.append(list(messages))
+        if len(seen) == 1:
+            assert {t["function"]["name"] for t in tools} == {"pubchem_lookup", "create_case", "compute_properties"}
+            return {"role": "assistant", "content": None, "tool_calls": [{"id": "c1", "type": "function",
+                    "function": {"name": "pubchem_lookup", "arguments": '{"name":"ibuprofeno"}'}}]}
+        if len(seen) == 2:
+            assert json.loads(messages[-1]["content"])["matches"][0]["cid"] == 3672
+            return {"role": "assistant", "content": "Encontré una referencia en PubChem."}
+        assert messages[1]["content"] == "Busca ibuprofeno en PubChem"
+        assert "Selecciono la referencia PubChem 3672" in messages[-1]["content"]
+        return {"role": "assistant", "content": "Referencia seleccionada; no dispongo del SMILES."}
+    monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
+    class Bridge:
+        def with_token(self, token):
+            return self
+        async def authorize_pubchem(self):
+            pass
+    state.bridge = Bridge()
+    async def registry_for_turn(_token):
+        return registry
+    monkeypatch.setattr(state, "registro_de_turno", registry_for_turn)
+    async def public(request):
+        if "/name/" in request.url.path:
+            return httpx.Response(200, json={"IdentifierList": {"CID": [3672]}})
+        return httpx.Response(200, json={"InformationList": {"Information": [{"CID": 3672, "Title": "Ibuprofen"}]}})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(public)) as external:
+        state.pubchem_client = external
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))),
+                                     base_url="http://testserver") as client:
+            response = await client.post("/v1/chat", headers=headers, json={"text": "Busca ibuprofeno en PubChem"})
+            entries = events(response)
+            conv_id = next(e["id"] for e in entries if e["type"] == "conversation")
+            assert next(e["result"] for e in entries if e["type"] == "result")["references"][0]["cid"] == 3672
+            restored = await client.get(f"/v1/conversations/{conv_id}", headers=headers)
+            assert restored.json()["pending_references"][0]["cid"] == 3672
+        # A fresh application state restores the selection from SQLite.
+        restarted = ServerState(secret=state.secret, registry=registry, memory=MemoryStore(state.memory.path),
+                                backend=state.backend, hosted=True, bridge=state.bridge, pubchem_client=external)
+        monkeypatch.setattr(restarted, "registro_de_turno", registry_for_turn)
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(restarted, allowed_hosts=("testserver",))),
+                                     base_url="http://testserver") as client:
+            selection = await client.post(f"/v1/conversations/{conv_id}/pubchem-selection", headers=headers, json={"cid": 3672})
+            assert selection.status_code == 200 and "no dispongo" in selection.json()["text"]
+            assert (await client.post(f"/v1/conversations/{conv_id}/pubchem-selection", headers=headers, json={"cid": 3672})).status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_calculated_values_are_cited_and_unverified_values_are_removed(tmp_path, monkeypatch):
+    state, registry, headers = state_for(tmp_path)
+    provider = registry.get("fake")
+    async def model(messages, tools):
+        if messages[-1]["role"] == "user":
+            return {"role": "assistant", "content": None, "tool_calls": [{"id": "calc", "type": "function",
+                    "function": {"name": "compute_properties", "arguments": '{"name":"ibuprofeno"}'}}]}
+        assert json.loads(messages[-1]["content"])["status"] == "ok"
+        return {"role": "assistant", "content": "Su peso es 206.3; otro valor es 999.9."}
+    monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))),
+                                 base_url="http://testserver") as client:
+        response = await client.post("/v1/chat", headers=headers, json={"text": "propiedades del ibuprofeno"})
+        result = next(e["result"] for e in events(response) if e["type"] == "result")
+        assert result["evidence"] and "206.3" in result["text"]
+        assert "999.9" not in result["text"] and "dato no verificado" in result["text"]
+
+
+@pytest.mark.asyncio
+async def test_followup_keeps_conversation_context_for_tool_selection(tmp_path, monkeypatch):
+    state, registry, headers = state_for(tmp_path)
+    provider = registry.get("fake")
+    async def model(messages, tools):
+        if messages[-1]["role"] == "tool":
+            return {"role": "assistant", "content": "Encontré una referencia en PubChem."}
+        assert messages[-1]["content"] == "ahora de PubChem"
+        assert any(m.get("role") == "user" and "ibuprofeno" in m.get("content", "") for m in messages)
+        return {"role": "assistant", "content": None, "tool_calls": [{"id": "search", "type": "function",
+                "function": {"name": "pubchem_lookup", "arguments": '{"name":"ibuprofeno"}'}}]}
+    monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
+    class Bridge:
+        def with_token(self, token):
+            return self
+        async def authorize_pubchem(self):
+            pass
+    state.bridge = Bridge()
+    async def registry_for_turn(_token):
+        return registry
+    monkeypatch.setattr(state, "registro_de_turno", registry_for_turn)
+    conv = state.memory.create_conversation("owner")
+    state.memory.add_message(conv, "owner", "user", "Dame las propiedades del ibuprofeno")
+    state.memory.add_message(conv, "owner", "assistant", "Aquí están las propiedades.")
+    async def public(request):
+        if "/name/" in request.url.path:
+            return httpx.Response(200, json={"IdentifierList": {"CID": [3672]}})
+        return httpx.Response(200, json={"InformationList": {"Information": [{"CID": 3672, "Title": "Ibuprofen"}]}})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(public)) as external:
+        state.pubchem_client = external
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))),
+                                     base_url="http://testserver") as client:
+            response = await client.post("/v1/chat", headers=headers, json={"text": "ahora de PubChem", "conversation_id": conv})
+            result = next(e["result"] for e in events(response) if e["type"] == "result")
+            assert result["references"][0]["cid"] == 3672
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", ["created", "exists", "failed", "unknown"])
+async def test_case_creation_waits_for_host(tmp_path, monkeypatch, status):
+    state, registry, headers = state_for(tmp_path)
+    provider = registry.get("fake")
+    async def model(messages, tools):
+        if messages[-1]["role"] == "user":
+            return {"role": "assistant", "content": None, "tool_calls": [{"id": "c1", "type": "function",
+                    "function": {"name": "create_case", "arguments": '{"name":"hola"}'}}]}
+        assert json.loads(messages[-1]["content"])["status"] == status
+        return {"role": "assistant", "content": "Procesado."}
+    monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))),
+                                 base_url="http://testserver") as client:
+        turn = asyncio.create_task(client.post("/v1/chat", headers=headers, json={"text": "crea un caso hola"}))
+        for _ in range(100):
+            if state.case_requests:
+                break
+            await asyncio.sleep(0.01)
+        assert len(state.case_requests) == 1 and not turn.done()
+        request_id = next(iter(state.case_requests))
+        assert (await client.post(f"/v1/case-requests/{request_id}/result", headers=headers, json={"status": status})).status_code == 200
+        result = next(e["result"]["text"] for e in events(await turn) if e["type"] == "result")
+        expected = {"created": "Se creó", "exists": "Ya existe", "failed": "no pudo", "unknown": "No pude confirmar"}
+        assert expected[status] in result

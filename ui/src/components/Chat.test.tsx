@@ -4,15 +4,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Chat from "./Chat";
 import { strings } from "../lib/i18n";
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); sessionStorage.clear(); });
 
-const { mockList, mockStream, mockCreateCase, mockReportCase, mockStartVoice, mockTranscribeVoice } = vi.hoisted(() => ({
+const { mockList, mockGet, mockStream, mockCreateCase, mockReportCase, mockStartVoice, mockTranscribeVoice, mockSelectPubchem } = vi.hoisted(() => ({
   mockList: vi.fn(),
+  mockGet: vi.fn(),
   mockStream: vi.fn(),
   mockCreateCase: vi.fn(),
   mockReportCase: vi.fn(),
   mockStartVoice: vi.fn(),
   mockTranscribeVoice: vi.fn(),
+  mockSelectPubchem: vi.fn(),
 }));
 
 vi.mock("../lib/caseHost", () => ({ createCaseInHost: mockCreateCase }));
@@ -22,7 +24,7 @@ vi.mock("../lib/api", async (importOriginal) => {
   const original = await importOriginal<typeof import("../lib/api")>();
   return {
     ...original,
-    api: { ...original.api, listConversations: mockList, reportCaseResult: mockReportCase, transcribe: mockTranscribeVoice },
+    api: { ...original.api, listConversations: mockList, getConversation: mockGet, reportCaseResult: mockReportCase, transcribe: mockTranscribeVoice, selectPubchem: mockSelectPubchem },
     openChatStream: mockStream,
   };
 });
@@ -39,7 +41,56 @@ function renderChat() {
 }
 
 describe("Chat error turn with idempotent retry", () => {
-  beforeEach(() => { mockList.mockReset(); mockStream.mockReset(); mockCreateCase.mockReset(); mockReportCase.mockReset(); mockStartVoice.mockReset(); mockTranscribeVoice.mockReset(); });
+  beforeEach(() => { mockList.mockReset(); mockGet.mockReset(); mockStream.mockReset(); mockCreateCase.mockReset(); mockReportCase.mockReset(); mockStartVoice.mockReset(); mockTranscribeVoice.mockReset(); mockSelectPubchem.mockReset(); });
+  it("reopens the current conversation without creating another", async () => {
+    mockList.mockResolvedValue([]);
+    mockGet.mockResolvedValue({ messages: [{ role: "user", content: "hola" }, { role: "assistant", content: "respuesta guardada" }] });
+    mockStream.mockImplementation((_token: string, _body: unknown, onEvent: (e: Record<string, unknown>) => void) => {
+      queueMicrotask(() => {
+        onEvent({ type: "conversation", id: "saved-conversation" });
+        onEvent({ type: "result", result: { text: "respuesta guardada", used_llm: true, latency_ms: 1, verified_values: [], evidence: [] } });
+      });
+      return () => {};
+    });
+    const rendered = renderChat();
+    fireEvent.change(screen.getByPlaceholderText(/pregunta/i), { target: { value: "hola" } });
+    fireEvent.click(screen.getByText("Enviar"));
+    await screen.findByText("respuesta guardada");
+    rendered.unmount();
+    renderChat();
+    expect(await screen.findByText("respuesta guardada")).toBeInTheDocument();
+    expect(mockGet).toHaveBeenCalledWith("test-token", "saved-conversation");
+    expect(mockStream).toHaveBeenCalledTimes(1);
+  });
+  it("restores selectable references when reopening a conversation", async () => {
+    mockList.mockResolvedValue([{ id: "conv", summary: "Consulta", message_count: 2 }]);
+    mockGet.mockResolvedValue({ messages: [{ role: "user", content: "aspirina" }, { role: "assistant", content: "Elige" }],
+      pending_references: [{ cid: 2244, name: "Aspirin", source: "https://pubchem.ncbi.nlm.nih.gov/compound/2244" }] });
+    renderChat();
+    fireEvent.click(screen.getByRole("button", { name: /mostrar historial/i }));
+    fireEvent.click(await screen.findByText(/Consulta/));
+    expect(await screen.findByRole("link", { name: /Aspirin/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Seleccionar" })).toBeInTheDocument();
+  });
+  it("shows source choices and records only the user's selection", async () => {
+    mockList.mockResolvedValue([]);
+    mockSelectPubchem.mockResolvedValue({ text: "Seleccionaste Aspirin." });
+    mockStream.mockImplementation((_token: string, _body: unknown, onEvent: (e: Record<string, unknown>) => void) => {
+      queueMicrotask(() => {
+        onEvent({ type: "conversation", id: "conversation-1" });
+        onEvent({ type: "result", result: { text: "Coincidencias", used_llm: true, latency_ms: 1, verified_values: [], evidence: [], references: [{ cid: 2244, name: "Aspirin", source: "https://pubchem.ncbi.nlm.nih.gov/compound/2244" }] } });
+      });
+      return () => {};
+    });
+    renderChat();
+    fireEvent.change(screen.getByPlaceholderText(/pregunta/i), { target: { value: "busca aspirina en PubChem" } });
+    fireEvent.click(screen.getByText("Enviar"));
+    expect(await screen.findByRole("link", { name: /Aspirin/ })).toHaveAttribute("href", "https://pubchem.ncbi.nlm.nih.gov/compound/2244");
+    expect(mockSelectPubchem).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Seleccionar" }));
+    await screen.findByText("Seleccionaste Aspirin.");
+    expect(mockSelectPubchem).toHaveBeenCalledWith("test-token", "conversation-1", 2244);
+  });
   it("discarding a voice transcription never resends the previous message", async () => {
     mockList.mockResolvedValue([]);
     mockStartVoice.mockResolvedValue({ stop: vi.fn().mockResolvedValue(new Blob(["audio"])) });

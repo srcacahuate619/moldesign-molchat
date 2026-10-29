@@ -1,5 +1,23 @@
 # Procedencia — MolChat Agent
 
+### src/molchat_agent/conversation/tool_loop.py, src/molchat_agent/conversation/harness_tools.py, tests/conversation/test_tool_loop.py, tests/conversation/test_harness_tools.py, tests/server/test_harness_chat.py
+
+- Origen: código propio experimental de MolChat, commit 94605d715877f9de04814b42392772e2ec96297c, con ejecutores nuevos.
+- Commit de MolDesign: N/A.
+- Autoría: Johan Amezcua, con colaboración de un agente de código.
+- Transformación: ciclo estructurado y herramientas del agente; la consulta pública vive en MolChat y la operación de casos se delega al host.
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/conversation/test_tool_loop.py, tests/conversation/test_harness_tools.py.
+
+### src/molchat_agent/conversation/pubchem.py, tests/conversation/test_pubchem_owned.py
+
+- Origen: código propio previamente desarrollado en MolDesign para la consulta informativa, trasladado al lado MolChat.
+- Commit de MolDesign: N/A; la versión de origen estaba sin registrar en la copia local.
+- Autoría: Johan Amezcua, con colaboración de un agente de código.
+- Transformación: consulta HTTPS en MolChat; autorización asíncrona por cuenta antes de cada petición.
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/conversation/test_pubchem_owned.py.
+
 ### src/molchat_agent/conversation/case_selection.py, tests/conversation/test_case_selection.py, tests/server/test_case_host_action.py
 
 - Origen: código nuevo de este repositorio para una solicitud de creación de caso al host.

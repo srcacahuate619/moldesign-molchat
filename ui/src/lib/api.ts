@@ -24,6 +24,7 @@ export interface TurnResult {
   latency_ms: number;
   used_llm: boolean;
   verified_values: number[];
+  references?: { cid: number; name: string; source: string }[];
 }
 
 export interface ConversationSummary {
@@ -95,6 +96,10 @@ export const api = {
     return (await response.json()) as { stt?: string };
   },
   catalog: (t: string) => request(t, "/v1/catalog") as Promise<CatalogEntry[]>,
+  pubchemPermission: (t: string) => request(t, "/v1/pubchem/permission") as Promise<{ authorized: boolean; offline: boolean }>,
+  setPubchemPermission: (t: string, grant: boolean) => request(t, "/v1/pubchem/permission", { method: grant ? "POST" : "DELETE" }) as Promise<{ authorized: boolean; offline: boolean }>,
+  selectPubchem: (t: string, conversation: string, cid: number) =>
+    postJson(t, `/v1/conversations/${encodeURIComponent(conversation)}/pubchem-selection`, { cid }) as Promise<{ text: string }>,
   reportCaseResult: (t: string, id: string, status: "created" | "exists" | "failed" | "unknown") =>
     postJson(t, `/v1/case-requests/${encodeURIComponent(id)}/result`, { status }),
   createConversation: (t: string) =>
@@ -104,6 +109,7 @@ export const api = {
   getConversation: (t: string, id: string) =>
     request(t, `/v1/conversations/${id}`) as Promise<{
       messages: { role: string; content: string }[];
+      pending_references?: { cid: number; name: string; source: string }[];
     }>,
   deleteConversation: (t: string, id: string) =>
     request(t, `/v1/conversations/${id}`, { method: "DELETE" }),

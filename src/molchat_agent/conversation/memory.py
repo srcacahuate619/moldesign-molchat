@@ -162,6 +162,9 @@ class MemoryStore:
             """)
             conn.execute("CREATE INDEX IF NOT EXISTS idx_conv_user ON conversations(user_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_mol_conv ON session_molecules(conv_id)")
+            conn.execute("""CREATE TABLE IF NOT EXISTS harness_pending (
+                conv_id TEXT PRIMARY KEY, user_id TEXT NOT NULL, payload TEXT NOT NULL,
+                FOREIGN KEY (conv_id) REFERENCES conversations(id))""")
 
     @staticmethod
     def _row_to_conversation(row: Any) -> Conversation:
@@ -197,6 +200,7 @@ class MemoryStore:
 
     def delete_conversation(self, conv_id: str, user_id: str) -> bool:
         with self._connect() as conn:
+            conn.execute("DELETE FROM harness_pending WHERE conv_id = ? AND user_id = ?", (conv_id, user_id))
             cursor = conn.execute(
                 "DELETE FROM session_molecules WHERE conv_id IN "
                 "(SELECT id FROM conversations WHERE id = ? AND user_id = ?)",
@@ -208,6 +212,51 @@ class MemoryStore:
             deleted = cursor.rowcount > 0
             _ = molecules
         return deleted
+
+    def set_harness_pending(self, conv_id: str, user_id: str, payload: dict[str, Any]) -> None:
+        with self._connect() as conn:
+            exists = conn.execute("SELECT 1 FROM conversations WHERE id = ? AND user_id = ?",
+                                  (conv_id, user_id)).fetchone()
+            if not exists:
+                raise ConversationNotFound(conv_id)
+            conn.execute("INSERT OR REPLACE INTO harness_pending (conv_id, user_id, payload) VALUES (?, ?, ?)",
+                         (conv_id, user_id, json.dumps(payload, ensure_ascii=False)))
+
+    def get_harness_pending(self, conv_id: str, user_id: str) -> dict[str, Any] | None:
+        with self._connect() as conn:
+            row = conn.execute("SELECT payload FROM harness_pending WHERE conv_id = ? AND user_id = ?",
+                               (conv_id, user_id)).fetchone()
+        return json.loads(row[0]) if row else None
+
+    def clear_harness_pending(self, conv_id: str, user_id: str) -> None:
+        with self._connect() as conn:
+            conn.execute("DELETE FROM harness_pending WHERE conv_id = ? AND user_id = ?", (conv_id, user_id))
+
+    def claim_harness_reference(self, conv_id: str, user_id: str, cid: int) -> dict[str, Any] | None:
+        """Consume exactly one offered reference, atomically, scoped to its owner."""
+        with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute("SELECT payload FROM harness_pending WHERE conv_id = ? AND user_id = ?",
+                               (conv_id, user_id)).fetchone()
+            if not row:
+                return None
+            payload = json.loads(row[0])
+            selected = next((item for item in payload.get("references", [])
+                             if isinstance(item, dict) and item.get("cid") == cid), None)
+            if not selected:
+                return None
+            conv = conn.execute("SELECT messages FROM conversations WHERE id = ? AND user_id = ?",
+                                (conv_id, user_id)).fetchone()
+            if not conv:
+                return None
+            messages = json.loads(conv[0])
+            selected_text = f"Seleccionaste {selected['name']} (PubChem {cid})."
+            messages.append({"role": "assistant", "content": selected_text})
+            conn.execute("UPDATE conversations SET messages = ?, updated_at = ? WHERE id = ? AND user_id = ?",
+                         (json.dumps(messages, ensure_ascii=False), time.time(), conv_id, user_id))
+            conn.execute("DELETE FROM harness_pending WHERE conv_id = ? AND user_id = ?", (conv_id, user_id))
+            payload["selection_text"] = selected_text
+            return payload
 
     def add_message(self, conv_id: str, user_id: str, role: str, content: str) -> None:
         conv = self.get_conversation(conv_id, user_id)
