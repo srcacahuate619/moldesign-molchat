@@ -3,7 +3,7 @@ import httpx
 import pytest
 
 from molchat_agent.bridge import MolDesignBridge
-from molchat_agent.conversation.harness_tools import create_case_tool, load_case_smiles_tool, properties_tool, pubchem_tool
+from molchat_agent.conversation.harness_tools import create_case_tool, load_case_smiles_tool, properties_tool, pubchem_tool, receptor_catalog_tool
 from molchat_agent.conversation.tool_loop import run_tool_loop
 from molchat_agent.conversation.tools import MoleculeRecord
 
@@ -83,3 +83,36 @@ async def test_load_smiles_requires_valid_chemical_structure_and_host_ack():
     assert invalid["status"] == "invalid_smiles" and calls == []
     valid = await tool.execute({"case_name": "ejemplo", "smiles": "CCO"})
     assert valid["status"] == "applied" and calls == [("ejemplo", "CCO")]
+
+
+@pytest.mark.asyncio
+async def test_receptor_catalog_is_account_scoped_paginated_and_preserves_uncertainty():
+    requests = []
+    async def host(request):
+        requests.append(request)
+        assert request.url.path == "/targets/"
+        assert request.headers["authorization"] == "Bearer account-token"
+        return httpx.Response(200, json=[{"pdb_id": f"{i:04d}", "name": f"Receptor cardíaco {i}",
+            "organism": "human", "disponible": i != 1, "seccion_catalogo": "demostracion", "calibracion": None} for i in range(12)])
+    async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", transport=httpx.MockTransport(host)) as client:
+        tool = receptor_catalog_tool(MolDesignBridge(client=client, token="account-token"))
+        first = await tool.execute({"query": "cardiaco", "page": "1"})
+        second = await tool.execute({"query": "cardiaco", "page": "2"})
+        assert first["total"] == 12 and first["has_next"] and len(first["receptors"]) == 10
+        assert not second["has_next"] and len(second["receptors"]) == 2
+        assert first["receptors"][1]["disponible"] is False
+        assert first["receptors"][0]["seccion_catalogo"] == "demostracion"
+        assert first["receptors"][0]["calibracion"] is None
+        filtered = await tool.execute({"query": "*", "section": "demostracion", "availability": "unavailable"})
+        assert filtered["total"] == 1 and filtered["receptors"][0]["disponible"] is False
+        assert (await tool.execute({"query": "*", "section": "verificado"}))["total"] == 0
+        assert len(requests) == 1
+        assert (await tool.execute({"query": "*", "page": "0"}))["status"] == "invalid"
+
+
+@pytest.mark.asyncio
+async def test_receptor_catalog_fails_closed_when_host_unavailable():
+    async def host(_request): return httpx.Response(503)
+    async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", transport=httpx.MockTransport(host)) as client:
+        result = await receptor_catalog_tool(MolDesignBridge(client=client, token="owner")).execute({"query": "*"})
+    assert result["status"] == "unavailable" and "receptors" not in result

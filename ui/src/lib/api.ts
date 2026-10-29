@@ -52,6 +52,15 @@ export interface ConversationSummary {
   message_count: number;
 }
 
+export interface HarnessJob {
+  id: string;
+  conversation_id: string;
+  state: string;
+  steps: { id: string; tool: string; status: string; detail?: string }[];
+  created_at: number;
+  updated_at: number;
+}
+
 export interface PlanStep {
   id: string;
   capability: string;
@@ -126,6 +135,7 @@ export const api = {
     postJson(t, "/v1/conversations", {}) as Promise<{ id: string }>,
   listConversations: (t: string) =>
     request(t, "/v1/conversations") as Promise<ConversationSummary[]>,
+  listHarnessJobs: (t: string) => request(t, "/v1/harness-jobs") as Promise<HarnessJob[]>,
   getConversation: (t: string, id: string) =>
     request(t, `/v1/conversations/${id}`) as Promise<{
       messages: { role: string; content: string; references?: PubChemReference[]; evidence?: Evidence[] }[];

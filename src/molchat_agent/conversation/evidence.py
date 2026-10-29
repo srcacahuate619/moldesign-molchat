@@ -85,7 +85,7 @@ _ORDINAL_RE = re.compile(r"(?:^|\n)\s*(?:#{1,6}\s+)?(?:\*\*)?\d+(?:\.(?!\d)|[):]
 
 def context_literals(text: str) -> set[str]:
     """Extract exact identifiers and quoted names, never bare scientific values."""
-    literals = set(re.findall(r"(?<![\w.])(?:[A-Za-z][A-Za-z0-9@+=()\[\]#\\/.-]*\d[A-Za-z0-9@+=()\[\]#\\/.-]*|\d+(?:\.\d+){2,})(?![\w.])", text))
+    literals = set(re.findall(r"(?<![\w.])(?:[A-Za-z][A-Za-z0-9@+=()\[\]#\\/.-]*\d[A-Za-z0-9@+=()\[\]#\\/.-]*|\d[A-Za-z][A-Za-z0-9]*|\d+(?:\.\d+){2,})(?![\w.])", text))
     for match in re.finditer(r'[`"“]([^`"”\n]{2,200})[`"”]', text):
         value = match.group(1).strip()
         if re.search(r"[A-Za-z]", value) and re.search(r"\d", value):

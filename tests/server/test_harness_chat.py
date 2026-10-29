@@ -6,6 +6,7 @@ import httpx
 import pytest
 
 from molchat_agent.config import MolChatConfig
+from molchat_agent.bridge import MolDesignBridge
 from molchat_agent.conversation.memory import MemoryStore
 from molchat_agent.conversation.tools import MoleculeRecord, QualityBackend
 from molchat_agent.providers import build_registry
@@ -37,7 +38,7 @@ async def test_chat_uses_direct_pubchem_and_resumes_selection(tmp_path, monkeypa
     async def model(messages, tools):
         seen.append(list(messages))
         if len(seen) == 1:
-            assert {t["function"]["name"] for t in tools} == {"pubchem_lookup", "create_case", "compute_properties", "load_case_smiles"}
+            assert {t["function"]["name"] for t in tools} == {"pubchem_lookup", "create_case", "compute_properties", "load_case_smiles", "search_receptors"}
             return {"role": "assistant", "content": None, "tool_calls": [{"id": "c1", "type": "function",
                     "function": {"name": "pubchem_lookup", "arguments": '{"name":"ibuprofeno"}'}}]}
         if len(seen) == 2:
@@ -454,5 +455,37 @@ async def test_smiles_tool_waits_for_owner_scoped_host_result(tmp_path, monkeypa
         entries = events(await turn)
         assert any(e.get("type") == "case_smiles" and e["case_name"] == "prueba" and e["smiles"] == "CCO" for e in entries)
         answer = next(e["result"]["text"] for e in entries if e["type"] == "result")
-        assert ("confirmó que el SMILES" in answer) == (status == "applied")
+        assert ("SMILES cargado en el campo del caso «prueba»" in answer) == (status == "applied")
+        jobs = (await client.get("/v1/harness-jobs", headers=headers)).json()
+        assert jobs[0]["steps"] == [{"id": "load", "tool": "load_case_smiles", "status": status, "detail": "case_name: prueba"}]
+        assert jobs[0]["state"] == ("completed" if status == "applied" else "partial")
+        assert state.memory.list_harness_jobs("otra-cuenta") == []
         assert (await client.post(f"/v1/smiles-requests/{request_id}/result", headers=headers, json={"status": status})).status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_chat_can_search_catalog_and_retain_receptor_identifier(tmp_path, monkeypatch):
+    state, registry, headers = state_for(tmp_path)
+    provider = registry.get("fake")
+    async def model(messages, tools):
+        if messages[-1]["role"] == "user":
+            assert "search_receptors" in {item["function"]["name"] for item in tools}
+            return {"role": "assistant", "content": None, "tool_calls": [{"id": "find", "type": "function",
+                "function": {"name": "search_receptors", "arguments": '{"query":"7E2Y"}'}}]}
+        data = json.loads(messages[-1]["content"])
+        assert data["receptors"][0]["seccion_catalogo"] == "demostracion"
+        return {"role": "assistant", "content": "Encontré 7E2Y; está en demostración, sin calibración confirmada."}
+    monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
+    async def registry_for_turn(_token): return registry
+    monkeypatch.setattr(state, "registro_de_turno", registry_for_turn)
+    async def host(request):
+        assert request.url.path == "/targets/" and request.headers["authorization"] == headers["Authorization"]
+        return httpx.Response(200, json=[{"pdb_id": "7E2Y", "name": "Ejemplo", "disponible": True,
+            "seccion_catalogo": "demostracion", "calibracion": None}])
+    async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", transport=httpx.MockTransport(host)) as host_client:
+        state.bridge = MolDesignBridge(client=host_client)
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+            response = await client.post("/v1/chat", headers=headers, json={"text": "busca 7E2Y"})
+            result = next(e["result"] for e in events(response) if e["type"] == "result")
+            assert "7E2Y" in result["text"] and result["evidence"][0]["tool"] == "search_receptors"
+            assert (await client.get("/v1/harness-jobs", headers=headers)).json()[0]["steps"][0]["tool"] == "search_receptors"

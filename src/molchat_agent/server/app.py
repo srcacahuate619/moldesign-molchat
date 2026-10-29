@@ -31,7 +31,7 @@ from ..conversation.memory import Conversation, ConversationNotFound, Persistenc
 from ..conversation.case_selection import select_case
 from ..conversation.intents import classify
 from ..conversation.tool_loop import Tool, run_tool_loop
-from ..conversation.harness_tools import create_case_tool, load_case_smiles_tool, properties_tool, pubchem_tool
+from ..conversation.harness_tools import create_case_tool, load_case_smiles_tool, properties_tool, pubchem_tool, receptor_catalog_tool
 from ..conversation.evidence import context_literals, numbers_in, redact_unverified, split_flow, VERIFICATION_NOTE
 from ..conversation.tools import PlatformBackend
 from ..plan import Plan
@@ -305,6 +305,13 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
         pending[1].set_result({"status": payload["status"]})
         return JSONResponse({"accepted": True})
 
+    async def list_harness_jobs(request: Request) -> JSONResponse:
+        session = await need_chat(request)
+        try:
+            return JSONResponse(state.memory.list_harness_jobs(session.sub))
+        except PersistenciaFallida:
+            return _error(503, "No se pudo consultar la trazabilidad de los trabajos")
+
     async def pubchem_permission(request: Request) -> JSONResponse:
         await need_chat(request)
         if not state.hosted or state.bridge is None:
@@ -549,6 +556,7 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
             Route("/v1/conversations", create_conversation, methods=["POST"]),
             Route("/v1/case-requests/{request_id}/result", case_result, methods=["POST"]),
             Route("/v1/smiles-requests/{request_id}/result", smiles_result, methods=["POST"]),
+            Route("/v1/harness-jobs", list_harness_jobs, methods=["GET"]),
             Route("/v1/pubchem/permission", pubchem_permission, methods=["GET", "POST", "DELETE"]),
             Route("/v1/conversations/{conv_id}/pubchem-selection", select_pubchem_reference, methods=["POST"]),
             Route("/v1/conversations", list_conversations, methods=["GET"]),
@@ -642,12 +650,45 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
     state.memory.clear_harness_pending(conv_id, owner)
     refs: list[dict[str, Any]] = []
     evidence: list[dict[str, Any]] = []
+    receptor_results: list[dict[str, Any]] = []
     verified: set[float] = set()
     events: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
     case_status: dict[str, Any] | None = None
     case_started = False
     smiles_started = False
     smiles_result_data: dict[str, Any] | None = None
+    trace_id = uuid.uuid4().hex
+    trace: list[dict[str, str]] = []
+    trace_error = False
+    trace_finished = False
+
+    def save_trace(status: str) -> None:
+        nonlocal trace_error
+        if not trace:
+            return
+        try:
+            state.memory.save_harness_job(trace_id, owner, conv_id, status, trace)
+            trace_error = False
+        except PersistenciaFallida:
+            trace_error = True
+
+    def observe_tool(phase: str, value: str, call_id: str, args: dict[str, Any] | None) -> None:
+        if phase == "start":
+            trace.append({"id": call_id, "tool": value, "status": "running"})
+        elif phase == "arguments" and args:
+            for step in reversed(trace):
+                if step["id"] == call_id:
+                    details = [f"{key}: {args[key][:120]}" for key in ("case_name", "name", "query", "page", "section", "availability")
+                               if isinstance(args.get(key), str)]
+                    if details:
+                        step["detail"] = " · ".join(details)
+                    break
+        else:
+            for step in reversed(trace):
+                if step["id"] == call_id:
+                    step["status"] = value
+                    break
+        save_trace("running")
 
     async def request_smiles(case_name: str, smiles: str) -> dict[str, Any]:
         nonlocal smiles_started
@@ -712,6 +753,9 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         "Si se desconocen las reglas o la identidad, explica que la causa no está comprobada. "
         "Al cargar un SMILES, solo afirma que el campo se actualizó si la herramienta devuelve applied; "
         "ese resultado no confirma guardado en disco ni que Ketcher haya dibujado. "
+        "Para buscar receptores usa search_receptors: conserva disponibilidad, sección y calibración tal como "
+        "las devuelve el catálogo; no supongas que estar disponible signifique verificado o calibrado. "
+        "Para listas paginadas indica la página, el total y si hay una siguiente página. "
         "No promete información que no llegó. Comunica los errores con claridad. Responde en español.") }]
     conv = state.memory.get_conversation(conv_id, owner)
     historical_refs: list[dict[str, Any]] = []
@@ -784,9 +828,22 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
                             pass
             return result
         tools.append(Tool(lookup.name, lookup.description, lookup.parameters, capture))
+    if state.bridge is not None:
+        receptor_tool = receptor_catalog_tool(state.bridge.with_token(token))
+        async def capture_receptors(args: dict[str, Any]) -> dict[str, Any]:
+            result = await receptor_tool.execute(args)
+            if result.get("status") == "ok":
+                receptor_results.append(result)
+                verified.update((float(result["page"]), float(result["total"])))
+                evidence.append({"tool": receptor_tool.name, "label": args["query"],
+                    "epistemic_class": "dato persistido", "source": result["source"],
+                    "values": {str(row.get("pdb_id") or row.get("id") or "receptor"): str(row.get("name") or "")
+                               for row in result["receptors"]}, "error": None})
+            return result
+        tools.append(Tool(receptor_tool.name, receptor_tool.description, receptor_tool.parameters, capture_receptors))
     if not registro.content_granted(provider.id):
         tools = []
-    task = asyncio.create_task(run_tool_loop(provider, messages, tools))
+    task = asyncio.create_task(run_tool_loop(provider, messages, tools, max_steps=6, observe=observe_tool))
     next_event = asyncio.create_task(events.get())
     try:
         while True:
@@ -816,7 +873,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         if displayed_refs:
             quoted.append(str(len(displayed_refs)))
         context = "\n".join(m["content"] for m in messages if m.get("role") in ("user", "assistant"))
-        context += "\n" + json.dumps(displayed_refs, ensure_ascii=False) + "\n" + "\n".join(e["source"] for e in evidence)
+        context += "\n" + json.dumps(displayed_refs, ensure_ascii=False) + "\n" + json.dumps(receptor_results, ensure_ascii=False) + "\n" + "\n".join(e["source"] for e in evidence)
         literals = context_literals(context)
         if displayed_refs:
             # PubChem's cited glossary states this; protect the phrase, not the
@@ -839,7 +896,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
                 answer = re.sub(r"(?<!no )\b(?:se\s+)?(?:carg[oó]|aplic[oó]|actualiz[oó])\s+(?:el\s+)?SMILES\b",
                                 "No se confirmó la carga del SMILES", answer, flags=re.I)
             result_message = {
-                "applied": "MolDesign confirmó que el SMILES está en el campo del caso; el guardado y el dibujo de Ketcher no se confirmaron en este paso.",
+                "applied": f'SMILES cargado en el campo del caso «{smiles_result_data.get("case_name", "")}». El guardado y el dibujo de Ketcher no se confirmaron en este paso.',
                 "not_found": "No encontré el caso indicado; no se aplicó el SMILES.",
                 "ambiguous": "Hay varios casos con ese nombre; indica cuál deseas usar.",
                 "busy": "No pude abrir el caso porque hay otra operación en curso.",
@@ -849,6 +906,14 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
                 "unknown": "No se pudo confirmar el resultado; revisa el caso antes de reintentar.",
             }.get(status, "No se pudo confirmar el resultado; revisa el caso antes de reintentar.")
             answer += "\n\n" + result_message
+        if trace:
+            incomplete = result.exhausted or any(step["status"] not in {"ok", "created", "applied", "exists"}
+                and not (step["tool"] in {"pubchem_lookup", "search_receptors"} and step["status"] == "not_found")
+                for step in trace)
+            save_trace("partial" if incomplete else "completed")
+            trace_finished = True
+        if trace_error:
+            answer += "\n\nNo se pudo guardar la trazabilidad en Trabajos."
         if len(refs) > 1:
             state.memory.set_harness_pending(conv_id, owner, {
                 "messages": result.messages, "provider_id": provider.id, "references": refs})
@@ -858,7 +923,15 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
                "references": displayed_refs, "used_llm": True, "verified_values": sorted(verified),
                "latency_ms": int((time.monotonic() - started) * 1000)}}
     except (ProviderError, ProviderDisabled, ValueError, RuntimeError):
+        save_trace("failed")
+        trace_finished = True
         answer = (case_answer() if case_started else "No pude completar el turno con el proveedor de herramientas.")
+        if smiles_result_data and smiles_result_data.get("status") == "applied":
+            answer += f' MolDesign confirmó el SMILES en el campo del caso «{smiles_result_data.get("case_name", "")}»; no se confirmó el guardado ni el dibujo.'
+        elif smiles_started:
+            answer += " No pude confirmar la carga del SMILES; revisa el caso antes de reintentar."
+        if trace_error:
+            answer += " No se pudo guardar la trazabilidad en Trabajos."
         try:
             state.memory.add_message(conv_id, owner, "user", text)
             state.memory.add_message(conv_id, owner, "assistant", answer)
@@ -867,6 +940,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         yield {"type": "result", "result": {"text": answer, "intent": "harness", "evidence": [],
                "used_llm": True, "verified_values": [], "latency_ms": int((time.monotonic() - started) * 1000)}}
     finally:
+        if not trace_finished:
+            save_trace("interrupted")
         next_event.cancel()
         if not task.done():
             task.cancel()

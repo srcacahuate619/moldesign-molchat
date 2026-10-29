@@ -165,6 +165,26 @@ class MemoryStore:
             conn.execute("""CREATE TABLE IF NOT EXISTS harness_pending (
                 conv_id TEXT PRIMARY KEY, user_id TEXT NOT NULL, payload TEXT NOT NULL,
                 FOREIGN KEY (conv_id) REFERENCES conversations(id))""")
+            conn.execute("""CREATE TABLE IF NOT EXISTS harness_jobs (
+                id TEXT PRIMARY KEY, user_id TEXT NOT NULL, conv_id TEXT NOT NULL,
+                state TEXT NOT NULL, steps TEXT NOT NULL, created_at REAL NOT NULL, updated_at REAL NOT NULL)""")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_harness_jobs_user ON harness_jobs(user_id, created_at)")
+
+    def save_harness_job(self, job_id: str, user_id: str, conv_id: str, state: str,
+                         steps: list[dict[str, str]]) -> None:
+        now = time.time()
+        with self._connect() as conn:
+            conn.execute("""INSERT INTO harness_jobs (id, user_id, conv_id, state, steps, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET state=excluded.state,
+                steps=excluded.steps, updated_at=excluded.updated_at WHERE harness_jobs.user_id=excluded.user_id""",
+                (job_id, user_id, conv_id, state, json.dumps(steps, ensure_ascii=False), now, now))
+
+    def list_harness_jobs(self, user_id: str) -> list[dict[str, Any]]:
+        with self._connect() as conn:
+            rows = conn.execute("SELECT id, conv_id, state, steps, created_at, updated_at FROM harness_jobs "
+                                "WHERE user_id=? ORDER BY created_at DESC LIMIT 100", (user_id,)).fetchall()
+        return [{"id": row[0], "conversation_id": row[1], "state": row[2], "steps": json.loads(row[3]),
+                 "created_at": row[4], "updated_at": row[5]} for row in rows]
 
     @staticmethod
     def _row_to_conversation(row: Any) -> Conversation:
@@ -201,6 +221,7 @@ class MemoryStore:
     def delete_conversation(self, conv_id: str, user_id: str) -> bool:
         with self._connect() as conn:
             conn.execute("DELETE FROM harness_pending WHERE conv_id = ? AND user_id = ?", (conv_id, user_id))
+            conn.execute("DELETE FROM harness_jobs WHERE conv_id = ? AND user_id = ?", (conv_id, user_id))
             cursor = conn.execute(
                 "DELETE FROM session_molecules WHERE conv_id IN "
                 "(SELECT id FROM conversations WHERE id = ? AND user_id = ?)",

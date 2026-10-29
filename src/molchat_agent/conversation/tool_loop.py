@@ -51,7 +51,8 @@ def _arguments(raw: Any, schema: dict[str, Any]) -> dict[str, Any]:
 
 
 async def run_tool_loop(provider: Any, messages: list[dict[str, Any]],
-                        tools: list[Tool], *, max_steps: int = 4) -> LoopResult:
+                        tools: list[Tool], *, max_steps: int = 4,
+                        observe: Callable[[str, str, str, dict[str, Any] | None], None] | None = None) -> LoopResult:
     """Run at most max_steps model requests, preserving structured call/result pairs.
 
     The caller supplies authorized context and only the tool implementations
@@ -102,6 +103,8 @@ async def run_tool_loop(provider: Any, messages: list[dict[str, Any]],
         transcript.append(assistant_message)
         for call in clean_calls:
             function = call["function"]
+            if observe:
+                observe("start", function["name"], call["id"], None)
             tool = by_name.get(function["name"])
             try:
                 if tool is None:
@@ -110,6 +113,8 @@ async def run_tool_loop(provider: Any, messages: list[dict[str, Any]],
             except (ValueError, TypeError):
                 result = {"error": "Herramienta o argumentos no válidos; no se ejecutó la solicitud."}
             else:
+                if observe:
+                    observe("arguments", "", call["id"], args)
                 try:
                     result = await tool.execute(args)
                     if not isinstance(result, dict):
@@ -121,6 +126,9 @@ async def run_tool_loop(provider: Any, messages: list[dict[str, Any]],
                 if len(serialized) > 100_000:
                     raise ValueError("resultado demasiado grande")
             except (ValueError, TypeError):
-                serialized = json.dumps({"error": "El resultado no se pudo comunicar; verifica el estado antes de reintentar."})
+                result = {"error": "El resultado no se pudo comunicar; verifica el estado antes de reintentar."}
+                serialized = json.dumps(result)
             transcript.append({"role": "tool", "tool_call_id": call["id"], "content": serialized})
-    return LoopResult("Alcancé el límite de pasos. Revisa el resultado antes de continuar.", transcript, True)
+            if observe:
+                observe("end", str(result.get("status") or ("error" if result.get("error") else "ok")), call["id"], None)
+    return LoopResult("La respuesta quedó incompleta al alcanzar el límite de pasos. Revisa los resultados confirmados antes de continuar.", transcript, True)

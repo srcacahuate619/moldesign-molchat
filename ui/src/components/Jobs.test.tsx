@@ -6,10 +6,11 @@ import { strings } from "../lib/i18n";
 
 afterEach(cleanup);
 
-const { mockGet, mockCancel, mockStream } = vi.hoisted(() => ({
+const { mockGet, mockCancel, mockStream, mockListJobs } = vi.hoisted(() => ({
   mockGet: vi.fn(),
   mockCancel: vi.fn(),
   mockStream: vi.fn(),
+  mockListJobs: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock("../lib/api", async (importOriginal) => {
@@ -20,6 +21,7 @@ vi.mock("../lib/api", async (importOriginal) => {
       ...original.api,
       getExecution: mockGet,
       cancelExecution: mockCancel,
+      listHarnessJobs: mockListJobs,
     },
     openEventStream: mockStream,
   };
@@ -53,9 +55,19 @@ function renderJobs(focusId: string | null = "e-1") {
 }
 
 describe("Jobs", () => {
-  it("shows the empty state without executions", () => {
+  it("shows the empty state without executions", async () => {
     renderJobs(null);
-    expect(screen.getByText(/Sin trabajos/)).toBeInTheDocument();
+    expect(await screen.findByText(/Sin trabajos/)).toBeInTheDocument();
+  });
+
+  it("shows the tools and outcomes from a persisted conversation flow", async () => {
+    mockListJobs.mockResolvedValueOnce([{ id: "job-1", conversation_id: "conv", state: "completed", created_at: 1,
+      steps: [{ id: "a", tool: "pubchem_lookup", status: "ok" }, { id: "b", tool: "load_case_smiles", status: "applied" }] }]);
+    renderJobs(null);
+    expect(await screen.findByText("Flujo de MolChat")).toBeInTheDocument();
+    expect(screen.getByText("pubchem_lookup")).toBeInTheDocument();
+    expect(screen.getByText("load_case_smiles")).toBeInTheDocument();
+    expect(screen.getByText("Completado")).toBeInTheDocument();
   });
 
   it("renders the terminal report with outcome hashes", async () => {
