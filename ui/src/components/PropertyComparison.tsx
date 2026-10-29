@@ -40,7 +40,6 @@ export default function PropertyComparison({ evidence, reference, t }: {
         <p>{t("comparison.verifier")}: {structure.verifier ?? t("comparison.unavailable")}</p>
         <p>{t("comparison.processing")}</p>
         {structure.warnings?.map((warning, index) => <p key={index}>{warning}</p>)}
-        <a href={reference.source} target="_blank" rel="noreferrer">{reference.name} · PubChem {reference.cid}</a>
       </details>
     </details>
   </section>;

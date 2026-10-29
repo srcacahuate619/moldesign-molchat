@@ -25,6 +25,7 @@ interface Message {
   meta: string;
   references?: PubChemReference[];
   selectable?: boolean;
+  comparisonCids?: number[];
 }
 
 const ACTIVE_CONVERSATION = "molchat.activeConversation";
@@ -93,6 +94,7 @@ export default function Chat({
             evidence: m.evidence ?? [],
             meta: "",
             references: m.references ?? (index === lastAssistant ? detail.pending_references : undefined),
+            comparisonCids: m.comparison_cids,
             selectable: index === lastAssistant && (detail.pending_references?.length ?? 0) > 1,
           })),
         );
@@ -182,6 +184,7 @@ export default function Chat({
                 evidence: result.evidence,
                 meta,
                 references: result.references,
+                comparisonCids: result.comparison_cids,
                 selectable: (result.references?.length ?? 0) > 1,
               },
             ]);
@@ -257,7 +260,7 @@ export default function Chat({
             const remainder = summary !== message.content ? message.content.slice(splitAt + 2) : "";
             const comparisons = message.evidence.flatMap((item) => {
               const reference = message.references?.find((ref) => ref.cid === item.structure?.pubchem_cid);
-              return reference ? [{ item, reference }] : [];
+              return reference && (message.comparisonCids === undefined || message.comparisonCids.includes(reference.cid)) ? [{ item, reference }] : [];
             });
             return (
             <li key={index} className={`message ${message.role}`}>
@@ -313,18 +316,26 @@ export default function Chat({
                         void api.selectPubchem(token, id, reference.cid).then((result) => {
                           if (activeIdRef.current !== id) return;
                           setMessages((prev) => [...prev.map((entry) => ({ ...entry, selectable: false })),
-                            { role: "assistant", content: result.text, evidence: [], meta: "" }]);
+                            { role: "assistant", content: result.text, evidence: [], meta: "", references: [reference] }]);
                         }).catch(() => { setLastText(null); setError(t("error.generic")); });
                       }}>{t("chat.selectReference")}</button>}
                     </li>
                   ))}
                 </ul>
               )}
-              {message.role === "assistant" && (message.references?.length || message.evidence.length) ? <details className="context-actions">
-                <summary>{t("chat.actions")}</summary>
-                {["chat.openKetcher", "chat.compareMolecule"].map((key) => <button key={key} type="button" disabled title={t("chat.actionUnavailable")}>{t(key as StringKey)}</button>)}
-                <p className="muted">{t("chat.actionUnavailable")}</p>
-              </details> : null}
+              {message.role === "assistant" && message.references?.length === 1 && !message.selectable &&
+                typeof message.references[0].properties?.SMILES === "string" && message.references[0].properties.SMILES.length > 0 && (
+                <div className="context-actions" role="group" aria-label={t("chat.actions")}>
+                  <button type="button" disabled={streaming} onClick={() => {
+                    const reference = message.references![0];
+                    send(`${t("chat.compareRequest")} ${reference.name} (PubChem CID ${reference.cid}).`);
+                  }}>{t("chat.compareWithMolDesign")}</button>
+                  <button type="button" disabled={streaming} onClick={() => {
+                    const reference = message.references![0];
+                    send(`${t("chat.verifyRequest")} PubChem CID ${reference.cid}.`);
+                  }}>{t("chat.verifyDrawing")}</button>
+                </div>
+              )}
             </li>
           ); })}
           {streaming && (

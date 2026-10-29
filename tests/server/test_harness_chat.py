@@ -38,7 +38,7 @@ async def test_chat_uses_direct_pubchem_and_resumes_selection(tmp_path, monkeypa
     async def model(messages, tools):
         seen.append(list(messages))
         if len(seen) == 1:
-            assert {t["function"]["name"] for t in tools} == {"pubchem_lookup", "create_case", "compute_properties", "load_case_smiles", "search_receptors", "verify_editor_structure"}
+            assert {t["function"]["name"] for t in tools} == {"pubchem_lookup", "create_case", "compute_properties", "load_case_smiles", "search_receptors", "verify_editor_structure", "show_property_comparison"}
             return {"role": "assistant", "content": None, "tool_calls": [{"id": "c1", "type": "function",
                     "function": {"name": "pubchem_lookup", "arguments": '{"name":"ibuprofeno"}'}}]}
         if len(seen) == 2:
@@ -349,6 +349,111 @@ async def test_comparison_restores_verified_pubchem_reference_across_turns(tmp_p
         assert "999.9" not in result["text"]
         restored = (await client.get(f"/v1/conversations/{conv}", headers=headers)).json()
         assert restored["messages"][-1]["references"] == [reference]
+
+
+@pytest.mark.asyncio
+async def test_explicit_comparison_marker_requires_linked_results_and_survives_reload(tmp_path, monkeypatch):
+    state, registry, headers = state_for(tmp_path)
+    provider = registry.get("fake")
+    reference = {"cid": 702, "name": "Ethanol", "source": "https://pubchem.ncbi.nlm.nih.gov/compound/702",
+                 "properties": {"SMILES": "CCO", "MolecularWeight": 46.07}, "properties_available": True}
+    class Backend:
+        async def properties(self, smiles):
+            assert smiles == "CCO"
+            return MoleculeRecord(name="ethanol", smiles="CCO", props={"mw": 46.07}, source="RDKit")
+    state.backend = Backend()
+    conv = state.memory.create_conversation("owner")
+    state.memory.add_message(conv, "owner", "assistant", "Encontré etanol en PubChem.", references=[reference])
+    async def model(messages, _tools):
+        if messages[-1]["role"] == "user":
+            name, args = "compute_properties", {"name": "CCO"}
+        elif json.loads(messages[-1]["content"]).get("properties"):
+            name, args = "show_property_comparison", {"cid": "702"}
+        else:
+            assert json.loads(messages[-1]["content"])["status"] == "ok"
+            return {"role": "assistant", "content": "Aquí está la comparación solicitada."}
+        return {"role": "assistant", "content": None, "tool_calls": [{"id": name, "type": "function",
+                "function": {"name": name, "arguments": json.dumps(args)}}]}
+    monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+        response = await client.post("/v1/chat", headers=headers, json={"text": "compara PubChem con MolDesign", "conversation_id": conv})
+        result = next(e["result"] for e in events(response) if e["type"] == "result")
+        assert result["comparison_cids"] == [702]
+        assert result["references"][0]["cid"] == 702 and result["evidence"][0]["structure"]["pubchem_cid"] == 702
+        restored = (await client.get(f"/v1/conversations/{conv}", headers=headers)).json()
+        assert restored["messages"][-1]["comparison_cids"] == [702]
+
+
+@pytest.mark.asyncio
+async def test_comparison_marker_does_not_invent_missing_calculation(tmp_path, monkeypatch):
+    state, registry, headers = state_for(tmp_path)
+    provider = registry.get("fake")
+    conv = state.memory.create_conversation("owner")
+    state.memory.add_message(conv, "owner", "assistant", "Referencia PubChem.", references=[{"cid": 702, "name": "Ethanol",
+        "source": "https://pubchem.ncbi.nlm.nih.gov/compound/702", "properties": {"SMILES": "CCO"}}])
+    async def model(messages, _tools):
+        if messages[-1]["role"] == "user":
+            return {"role": "assistant", "content": None, "tool_calls": [{"id": "cmp", "type": "function",
+                "function": {"name": "show_property_comparison", "arguments": '{"cid":"702"}'}}]}
+        assert json.loads(messages[-1]["content"])["status"] == "unavailable"
+        return {"role": "assistant", "content": "Falta calcular las propiedades."}
+    monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+        response = await client.post("/v1/chat", headers=headers, json={"text": "compara", "conversation_id": conv})
+        result = next(e["result"] for e in events(response) if e["type"] == "result")
+        assert result["comparison_cids"] == [] and not result["evidence"]
+
+
+@pytest.mark.asyncio
+async def test_requested_lookup_load_and_receptor_search_leave_comparison_optional(tmp_path, monkeypatch):
+    pytest.importorskip("rdkit")
+    state, registry, headers = state_for(tmp_path)
+    provider = registry.get("fake")
+    async def model(messages, tools):
+        assert "no ejecutes cálculos de MolDesign ni compares fuentes por iniciativa propia" in messages[0]["content"]
+        tool_responses = [item for item in messages if item.get("role") == "tool"]
+        if not tool_responses:
+            name, args = "pubchem_lookup", {"name": "atorvastatin"}
+        elif len(tool_responses) == 1:
+            name, args = "search_receptors", {"query": "*", "section": "verificado"}
+        elif len(tool_responses) == 2:
+            name, args = "load_case_smiles", {"case_name": "prueba2", "smiles": "CCO"}
+        else:
+            return {"role": "assistant", "content": "Referencia consultada. Encontré 8T69, pero no puedo asignarlo al caso."}
+        return {"role": "assistant", "content": None, "tool_calls": [{"id": name, "type": "function",
+                "function": {"name": name, "arguments": json.dumps(args)}}]}
+    monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
+    async def registry_for_turn(_token): return registry
+    monkeypatch.setattr(state, "registro_de_turno", registry_for_turn)
+    async def host(request):
+        if request.url.path == "/ai/consent/red":
+            return httpx.Response(200, json={"modo_offline": False, "destinos": [{"servicio": "pubchem", "host": "pubchem.ncbi.nlm.nih.gov", "consentido": True}]})
+        if request.url.path == "/targets/":
+            return httpx.Response(200, json=[{"pdb_id": "8T69", "name": "VMAT2", "seccion_catalogo": "verificado", "disponible": True}])
+        return httpx.Response(404)
+    async def public(request):
+        if "/name/" in request.url.path: return httpx.Response(200, json={"IdentifierList": {"CID": [60823]}})
+        if "/property/" in request.url.path: return httpx.Response(200, json={"PropertyTable": {"Properties": [{"CID": 60823, "SMILES": "CCO"}]}})
+        return httpx.Response(200, json={"InformationList": {"Information": [{"CID": 60823, "Title": "Atorvastatin"}]}})
+    async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", transport=httpx.MockTransport(host)) as host_client, \
+               httpx.AsyncClient(transport=httpx.MockTransport(public)) as external:
+        state.bridge = MolDesignBridge(client=host_client)
+        state.pubchem_client = external
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+            turn = asyncio.create_task(client.post("/v1/chat", headers=headers, json={"text": "investiga atorvastatina, colócala en prueba2 junto con el receptor verificado"}))
+            for _ in range(300):
+                if state.smiles_requests: break
+                await asyncio.sleep(0.01)
+            assert state.smiles_requests
+            request_id = next(iter(state.smiles_requests))
+            await client.post(f"/v1/smiles-requests/{request_id}/result", headers=headers, json={"status": "applied"})
+            entries = events(await turn)
+            result = next(e["result"] for e in entries if e["type"] == "result")
+            assert result["comparison_cids"] == []
+            assert "no puedo asignarlo" in result["text"] and "SMILES cargado" in result["text"]
+            assert not any(e["type"] == "case_create" for e in entries)
+            job = (await client.get("/v1/harness-jobs", headers=headers)).json()[0]
+            assert [item["tool"] for item in job["steps"]] == ["pubchem_lookup", "search_receptors", "load_case_smiles"]
 
 
 @pytest.mark.asyncio

@@ -43,6 +43,7 @@ export interface TurnResult {
   used_llm: boolean;
   verified_values: number[];
   references?: PubChemReference[];
+  comparison_cids?: number[];
 }
 
 export interface ConversationSummary {
@@ -140,7 +141,7 @@ export const api = {
   listHarnessJobs: (t: string) => request(t, "/v1/harness-jobs") as Promise<HarnessJob[]>,
   getConversation: (t: string, id: string) =>
     request(t, `/v1/conversations/${id}`) as Promise<{
-      messages: { role: string; content: string; references?: PubChemReference[]; evidence?: Evidence[] }[];
+      messages: { role: string; content: string; references?: PubChemReference[]; evidence?: Evidence[]; comparison_cids?: number[] }[];
       pending_references?: PubChemReference[];
     }>,
   deleteConversation: (t: string, id: string) =>
