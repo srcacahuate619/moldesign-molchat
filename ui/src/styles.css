@@ -73,6 +73,9 @@ input, textarea { max-width: 100%; }
 .message-text code { overflow-wrap: anywhere; }
 .comparison { margin: 10px 0; }
 .comparison-scroll { overflow-x: auto; }
+.markdown-table-scroll { overflow-x: auto; max-width: 100%; }
+.markdown-table-scroll table { border-collapse: collapse; font-size: 12px; }
+.markdown-table-scroll th, .markdown-table-scroll td { border: 1px solid var(--line); padding: 5px; text-align: left; vertical-align: top; }
 .comparison table { border-collapse: collapse; width: 100%; font-size: 12px; }
 .comparison th, .comparison td { border-bottom: 1px solid var(--line); text-align: left; padding: 5px; vertical-align: top; }
 .comparison-different { background: var(--evidence); }

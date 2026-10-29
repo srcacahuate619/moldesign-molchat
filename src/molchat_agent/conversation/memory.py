@@ -251,7 +251,7 @@ class MemoryStore:
                 return None
             messages = json.loads(conv[0])
             selected_text = f"Seleccionaste {selected['name']} (PubChem {cid})."
-            messages.append({"role": "assistant", "content": selected_text})
+            messages.append({"role": "assistant", "content": selected_text, "references": [selected]})
             conn.execute("UPDATE conversations SET messages = ?, updated_at = ? WHERE id = ? AND user_id = ?",
                          (json.dumps(messages, ensure_ascii=False), time.time(), conv_id, user_id))
             conn.execute("DELETE FROM harness_pending WHERE conv_id = ? AND user_id = ?", (conv_id, user_id))

@@ -83,6 +83,10 @@ async def test_chat_uses_direct_pubchem_and_resumes_selection(tmp_path, monkeypa
                                      base_url="http://testserver") as client:
             selection = await client.post(f"/v1/conversations/{conv_id}/pubchem-selection", headers=headers, json={"cid": 3672})
             assert selection.status_code == 200 and "no dispongo" in selection.json()["text"]
+            restored = (await client.get(f"/v1/conversations/{conv_id}", headers=headers)).json()
+            assert any(message.get("content", "").startswith("Seleccionaste")
+                       and len(message.get("references", [])) == 1
+                       and message["references"][0]["cid"] == 3672 for message in restored["messages"])
             assert (await client.post(f"/v1/conversations/{conv_id}/pubchem-selection", headers=headers, json={"cid": 3672})).status_code == 404
 
 
@@ -312,6 +316,65 @@ async def test_comparison_links_only_exact_pubchem_smiles_and_survives_reload(tm
             conv_id = next(e["id"] for e in entries if e["type"] == "conversation")
             restored = (await client.get(f"/v1/conversations/{conv_id}", headers=headers)).json()
             assert restored["messages"][-1]["evidence"][0]["structure"] == structure
+
+
+@pytest.mark.asyncio
+async def test_comparison_restores_verified_pubchem_reference_across_turns(tmp_path, monkeypatch):
+    state, registry, headers = state_for(tmp_path)
+    provider = registry.get("fake")
+    reference = {"cid": 2244, "name": "Aspirin", "source": "https://pubchem.ncbi.nlm.nih.gov/compound/2244",
+                 "properties": {"SMILES": "CCO", "MolecularWeight": "180.16", "XLogP": 1.2}, "properties_available": True}
+    class Backend:
+        async def properties(self, smiles):
+            assert smiles == "CCO"
+            return MoleculeRecord(name="test", smiles="CCO", props={"mw": 180.16, "logp": 1.31}, source="RDKit")
+    state.backend = Backend()
+    async def model(messages, _tools):
+        if messages[-1]["role"] == "user":
+            assert any('2244' in m.get('content', '') and 'CCO' in m.get('content', '') for m in messages)
+            return {"role": "assistant", "content": None, "tool_calls": [{"id": "calc", "type": "function",
+                    "function": {"name": "compute_properties", "arguments": '{"name":"CCO"}'}}]}
+        assert json.loads(messages[-1]["content"])["structure"]["pubchem_cid"] == 2244
+        return {"role": "assistant", "content": "CID 2244, XLogP 1.2. PubChem refiere una clasificación de 1997. Valor inventado 999.9."}
+    monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
+    conv = state.memory.create_conversation("owner")
+    state.memory.add_message(conv, "owner", "assistant", "Encontré aspirina.", references=[reference])
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+        response = await client.post("/v1/chat", headers=headers, json={"text": "calcula con MolDesign", "conversation_id": conv})
+        result = next(e["result"] for e in events(response) if e["type"] == "result")
+        assert result["evidence"][0]["structure"]["pubchem_cid"] == 2244
+        assert result["references"] == [reference]
+        assert "CID 2244" in result["text"] and "clasificación de 1997" in result["text"]
+        assert "999.9" not in result["text"]
+        restored = (await client.get(f"/v1/conversations/{conv}", headers=headers)).json()
+        assert restored["messages"][-1]["references"] == [reference]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("reference_count", [1, 2])
+async def test_no_provenance_for_wrong_or_ambiguous_previous_smiles(tmp_path, monkeypatch, reference_count):
+    state, registry, headers = state_for(tmp_path)
+    provider = registry.get("fake")
+    class Backend:
+        async def properties(self, smiles):
+            return MoleculeRecord(name="test", smiles=smiles, props={"mw": 1}, source="RDKit")
+    state.backend = Backend()
+    async def model(messages, _tools):
+        if messages[-1]["role"] == "user":
+            return {"role": "assistant", "content": None, "tool_calls": [{"id": "calc", "type": "function",
+                    "function": {"name": "compute_properties", "arguments": '{"name":"CCC"}'}}]}
+        assert "pubchem_cid" not in json.loads(messages[-1]["content"])["structure"]
+        return {"role": "assistant", "content": "Cálculo realizado."}
+    monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
+    conv = state.memory.create_conversation("owner")
+    refs = [{"cid": i, "name": "test", "source": f"https://pubchem.ncbi.nlm.nih.gov/compound/{i}",
+             "properties": {"SMILES": "CCO" if reference_count == 1 else "CCC"}} for i in range(1, reference_count + 1)]
+    state.memory.add_message(conv, "owner", "assistant", "Resultados", references=refs)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+        response = await client.post("/v1/chat", headers=headers, json={"text": "calcula", "conversation_id": conv})
+        result = next(e["result"] for e in events(response) if e["type"] == "result")
+        assert "pubchem_cid" not in result["evidence"][0]["structure"]
+        assert result["references"] == []
 
 
 @pytest.mark.asyncio

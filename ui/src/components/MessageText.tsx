@@ -14,12 +14,35 @@ function inline(text: string): ReactNode[] {
 
 export default function MessageText({ text }: { text: string }) {
   const lines = text.split("\n");
-  return <div className="message-text">{lines.map((line, index) => {
+  const nodes: ReactNode[] = [];
+  const cells = (line: string) => line.trim().replace(/^\|/, "").replace(/\|$/, "").split(/(?<!\\)\|/).map((cell) => cell.trim().replace(/\\\|/g, "|"));
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
+    const separator = lines[index + 1];
+    if (line.includes("|") && separator && /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(separator)) {
+      const headers = cells(line);
+      const widths = cells(separator);
+      if (headers.length === widths.length) {
+        const rows: string[][] = [];
+        index += 2;
+        while (index < lines.length && lines[index].includes("|") && lines[index].trim()) {
+          rows.push(cells(lines[index]));
+          index++;
+        }
+        index--;
+        nodes.push(<div className="markdown-table-scroll" key={`table-${index}`}><table>
+          <thead><tr>{headers.map((header, i) => <th key={i} scope="col">{inline(header)}</th>)}</tr></thead>
+          <tbody>{rows.map((row, i) => <tr key={i}>{headers.map((_, j) => <td key={j}>{inline(row[j] ?? "")}</td>)}</tr>)}</tbody>
+        </table></div>);
+        continue;
+      }
+    }
     const heading = /^(#{1,6})\s+(.+)$/.exec(line);
-    if (heading) return <p className="message-heading" key={index}>{inline(heading[2])}</p>;
+    if (heading) { nodes.push(<p className="message-heading" key={index}>{inline(heading[2])}</p>); continue; }
     const list = /^\s*[-*]\s+(.+)$/.exec(line);
-    if (list) return <div className="message-list-item" key={index}>• {inline(list[1])}</div>;
-    if (!line) return <div className="message-gap" key={index} />;
-    return <div key={index}>{inline(line)}</div>;
-  })}</div>;
+    if (list) { nodes.push(<div className="message-list-item" key={index}>• {inline(list[1])}</div>); continue; }
+    if (!line) { nodes.push(<div className="message-gap" key={index} />); continue; }
+    nodes.push(<div key={index}>{inline(line)}</div>);
+  }
+  return <div className="message-text">{nodes}</div>;
 }

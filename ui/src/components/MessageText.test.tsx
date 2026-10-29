@@ -12,3 +12,11 @@ it("renders common Markdown without interpreting HTML", () => {
   expect(screen.getByText('CC1').tagName).toBe('CODE');
   expect(screen.getByText('<script>alert(1)</script>')).toBeInTheDocument();
 });
+
+it("renders model Markdown tables as accessible tables with escaped pipes", () => {
+  render(<MessageText text={'Comparación\n\n| Propiedad | PubChem | RDKit |\n| :--- | ---: | --- |\n| **LogP** | 1.2 | 1.31 |\n| Nota | A\\|B | correcto |'} />);
+  expect(screen.getByRole('table')).toBeInTheDocument();
+  expect(screen.getByRole('columnheader', { name: 'PubChem' })).toBeInTheDocument();
+  expect(screen.getByRole('cell', { name: '1.31' })).toBeInTheDocument();
+  expect(screen.getByRole('cell', { name: 'A|B' })).toBeInTheDocument();
+});
