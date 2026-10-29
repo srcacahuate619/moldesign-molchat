@@ -14,7 +14,9 @@ export default function Settings({
   onRevoke: () => void;
 }) {
   const sttNote =
-    stt === "cloud"
+    stt === "platform"
+      ? t("settings.sttPlatform")
+      : stt === "cloud"
       ? t("settings.sttCloud")
       : stt === "local"
         ? t("settings.sttLocal")

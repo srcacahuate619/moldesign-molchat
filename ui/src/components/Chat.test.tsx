@@ -6,20 +6,23 @@ import { strings } from "../lib/i18n";
 
 afterEach(cleanup);
 
-const { mockList, mockStream, mockCreateCase, mockReportCase } = vi.hoisted(() => ({
+const { mockList, mockStream, mockCreateCase, mockReportCase, mockStartVoice, mockTranscribeVoice } = vi.hoisted(() => ({
   mockList: vi.fn(),
   mockStream: vi.fn(),
   mockCreateCase: vi.fn(),
   mockReportCase: vi.fn(),
+  mockStartVoice: vi.fn(),
+  mockTranscribeVoice: vi.fn(),
 }));
 
 vi.mock("../lib/caseHost", () => ({ createCaseInHost: mockCreateCase }));
+vi.mock("../lib/voice", () => ({ isVoiceSupported: () => true, startRecording: mockStartVoice, toWavMono16: vi.fn().mockResolvedValue(new Blob(["wav"])) }));
 
 vi.mock("../lib/api", async (importOriginal) => {
   const original = await importOriginal<typeof import("../lib/api")>();
   return {
     ...original,
-    api: { ...original.api, listConversations: mockList, reportCaseResult: mockReportCase },
+    api: { ...original.api, listConversations: mockList, reportCaseResult: mockReportCase, transcribe: mockTranscribeVoice },
     openChatStream: mockStream,
   };
 });
@@ -36,7 +39,42 @@ function renderChat() {
 }
 
 describe("Chat error turn with idempotent retry", () => {
-  beforeEach(() => { mockList.mockReset(); mockStream.mockReset(); mockCreateCase.mockReset(); mockReportCase.mockReset(); });
+  beforeEach(() => { mockList.mockReset(); mockStream.mockReset(); mockCreateCase.mockReset(); mockReportCase.mockReset(); mockStartVoice.mockReset(); mockTranscribeVoice.mockReset(); });
+  it("discarding a voice transcription never resends the previous message", async () => {
+    mockList.mockResolvedValue([]);
+    mockStartVoice.mockResolvedValue({ stop: vi.fn().mockResolvedValue(new Blob(["audio"])) });
+    mockTranscribeVoice.mockResolvedValue("texto transcrito");
+    mockStream.mockImplementation((_token: string, _body: unknown, onEvent: (e: Record<string, unknown>) => void) => {
+      queueMicrotask(() => onEvent({ type: "result", result: { text: "respuesta anterior", used_llm: true, latency_ms: 1, verified_values: [], evidence: [] } }));
+      return () => {};
+    });
+    renderChat();
+    fireEvent.change(screen.getByPlaceholderText(/pregunta/i), { target: { value: "mensaje anterior" } });
+    fireEvent.click(screen.getByText("Enviar"));
+    await screen.findByText("respuesta anterior");
+    fireEvent.click(screen.getByRole("button", { name: /grabar/i }));
+    await screen.findByRole("button", { name: /detener grabación/i });
+    fireEvent.click(screen.getByRole("button", { name: /detener grabación/i }));
+    fireEvent.click(await screen.findByRole("button", { name: "Descartar" }));
+    expect(screen.queryByRole("button", { name: "Descartar" })).not.toBeInTheDocument();
+    expect(mockStream).toHaveBeenCalledTimes(1);
+  });
+  it("does not offer a retry of the previous chat message when microphone permission fails", async () => {
+    mockList.mockResolvedValue([]);
+    mockStartVoice.mockRejectedValue(new DOMException("denied", "NotAllowedError"));
+    mockStream.mockImplementation((_token: string, _body: unknown, onEvent: (e: Record<string, unknown>) => void) => {
+      queueMicrotask(() => onEvent({ type: "result", result: { text: "hola", used_llm: true, latency_ms: 1, verified_values: [], evidence: [] } }));
+      return () => {};
+    });
+    renderChat();
+    fireEvent.change(screen.getByPlaceholderText(/pregunta/i), { target: { value: "mensaje anterior" } });
+    fireEvent.click(screen.getByText("Enviar"));
+    await screen.findByText("hola");
+    fireEvent.click(screen.getByRole("button", { name: /grabar/i }));
+    await screen.findByText(/no se permitió el acceso al micrófono/i);
+    expect(screen.queryByText("Reintentar")).not.toBeInTheDocument();
+    expect(mockStream).toHaveBeenCalledTimes(1);
+  });
   it("reports the actual host result for a case request", async () => {
     mockList.mockResolvedValue([]);
     mockCreateCase.mockResolvedValue("created");

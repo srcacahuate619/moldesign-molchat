@@ -46,6 +46,7 @@ export default function VoiceButton({
   const toggle = async () => {
     if (working) return;
     if (!recording) {
+      setWorking(true);
       try {
         const started = generation.current;
         const recording = await startRecording();
@@ -55,22 +56,32 @@ export default function VoiceButton({
         }
         active.current = recording;
         setRecording(true);
-      } catch {
-        onError(t("voice.error"));
+      } catch (error) {
+        const errorName = typeof error === "object" && error !== null && "name" in error ? error.name : "";
+        onError(t(typeof errorName === "string" && ["NotAllowedError", "SecurityError"].includes(errorName)
+          ? "voice.permission" : "voice.error"));
+      } finally {
+        setWorking(false);
       }
       return;
     }
     setRecording(false);
     setWorking(true);
+    const started = generation.current;
     try {
-      const raw = await active.current?.stop();
+      const current = active.current;
       active.current = null;
+      const raw = await current?.stop();
+      if (started !== generation.current) return;
       if (!raw || raw.size === 0) throw new Error("empty");
       const wav = await toWavMono16(raw);
+      if (started !== generation.current) return;
       const text = await api.transcribe(token, wav, lang);
-      onTranscript(text);
+      if (started !== generation.current) return;
+      if (!text.trim()) onError(t("voice.noSpeech"));
+      else onTranscript(text);
     } catch {
-      onError(t("voice.error"));
+      if (started === generation.current) onError(t("voice.transcribeError"));
     } finally {
       setWorking(false);
     }
@@ -82,8 +93,8 @@ export default function VoiceButton({
       onClick={() => void toggle()}
       disabled={disabled || working}
       aria-pressed={recording}
-      title={recording ? t("voice.stop") : t("voice.record")}
-      aria-label={recording ? t("voice.stop") : t("voice.record")}
+      title={working ? t("voice.working") : recording ? t("voice.stop") : t("voice.record")}
+      aria-label={working ? t("voice.working") : recording ? t("voice.stop") : t("voice.record")}
       className={recording ? "voice-button recording" : "voice-button"}
     >
       {recording ? <StopIcon /> : <MicIcon />}

@@ -147,7 +147,7 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
     async def version(_request: Request) -> JSONResponse:
         return JSONResponse({"molchat": __version__, "contract": CONTRACT,
                              "plan_schemas": ["/1", "/2"],
-                             "stt": _stt_kind(state.stt)})
+                             "stt": "platform" if state.hosted and state.bridge is not None else _stt_kind(state.stt)})
 
     async def get_catalog(request: Request) -> JSONResponse:
         await need_read(request)
@@ -239,6 +239,8 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
                                 state.case_requests.pop(request_id, None)
                             if outcome.get("status") == "created":
                                 answer = f'Se creó el caso "{selection.name}" en MolDesign.'
+                            elif outcome.get("status") == "exists":
+                                answer = f'Ya existe un caso o carpeta con el nombre "{selection.name}". No se creó ni se modificó otro caso.'
                             elif outcome.get("status") == "failed":
                                 answer = "MolDesign no pudo crear el caso. Revisa el estado de la aplicación."
                             else:
@@ -272,7 +274,7 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
         if pending is None or pending[0] != session.sub or pending[1].done():
             return _error(404, "solicitud no encontrada")
         payload = await read_json(request)
-        if not isinstance(payload, dict) or set(payload) != {"status"} or payload["status"] not in ("created", "failed", "unknown"):
+        if not isinstance(payload, dict) or set(payload) != {"status"} or payload["status"] not in ("created", "exists", "failed", "unknown"):
             return _error(400, "resultado no válido")
         pending[1].set_result({"status": payload["status"]})
         return JSONResponse({"accepted": True})

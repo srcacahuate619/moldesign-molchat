@@ -230,7 +230,7 @@ export default function Chat({
           <p role="alert" className="error">
             {error}{" "}
             {lastText && (
-              <button onClick={() => send(lastText)}>{t("chat.retry")}</button>
+              <button type="button" onClick={() => send(lastText)}>{t("chat.retry")}</button>
             )}
           </p>
         )}
@@ -247,6 +247,7 @@ export default function Chat({
             </p>
             <p>
               <button
+                type="button"
                 onClick={() => {
                   const text = pendingVoice;
                   setPendingVoice(null);
@@ -256,7 +257,7 @@ export default function Chat({
               >
                 {t("voice.send")}
               </button>{" "}
-              <button onClick={() => setPendingVoice(null)}>
+              <button type="button" onClick={() => setPendingVoice(null)}>
                 {t("voice.discard")}
               </button>
             </p>
@@ -275,7 +276,7 @@ export default function Chat({
             t={t}
             disabled={streaming}
             onTranscript={(text) => setPendingVoice(text)}
-            onError={(message) => setError(message)}
+            onError={(message) => { setLastText(null); setError(message); }}
           />
           <label>
             <span className="visually-hidden">{t("chat.input")}</span>

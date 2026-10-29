@@ -51,6 +51,16 @@ def _auth(scopes):
 
 
 @pytest.mark.asyncio
+async def test_version_reports_hosted_platform_transcription(world):
+    client, _, state = world
+    state.hosted = True
+    state.bridge = object()
+    state.stt = None
+    response = await client.get("/v1/version")
+    assert response.json()["stt"] == "platform"
+
+
+@pytest.mark.asyncio
 async def test_transcribe_roundtrip_returns_text_only(world):
     client, stt, state = world
     headers = {**_auth({"transcribe"}), "Content-Type": "audio/wav"}

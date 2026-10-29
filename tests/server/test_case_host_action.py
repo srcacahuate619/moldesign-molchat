@@ -18,6 +18,7 @@ from molchat_agent.server.state import ServerState
 @pytest.mark.asyncio
 @pytest.mark.parametrize("status, expected", [
     ("created", 'Se creó el caso "holamundo"'),
+    ("exists", 'Ya existe un caso o carpeta con el nombre "holamundo"'),
     ("failed", "MolDesign no pudo crear el caso"),
     ("unknown", "No pude confirmar el resultado"),
 ])
