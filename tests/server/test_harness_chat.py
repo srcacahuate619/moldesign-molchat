@@ -37,7 +37,7 @@ async def test_chat_uses_direct_pubchem_and_resumes_selection(tmp_path, monkeypa
     async def model(messages, tools):
         seen.append(list(messages))
         if len(seen) == 1:
-            assert {t["function"]["name"] for t in tools} == {"pubchem_lookup", "create_case", "compute_properties"}
+            assert {t["function"]["name"] for t in tools} == {"pubchem_lookup", "create_case", "compute_properties", "load_case_smiles"}
             return {"role": "assistant", "content": None, "tool_calls": [{"id": "c1", "type": "function",
                     "function": {"name": "pubchem_lookup", "arguments": '{"name":"ibuprofeno"}'}}]}
         if len(seen) == 2:
@@ -424,3 +424,35 @@ async def test_confirmed_case_is_not_announced_twice(tmp_path, monkeypatch):
         await client.post(f"/v1/case-requests/{request_id}/result", headers=headers, json={"status": "created"})
         answer = next(e["result"]["text"] for e in events(await turn) if e["type"] == "result")
         assert 'fue creado correctamente' in answer and 'Se creó el caso' not in answer
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", ["applied", "not_found", "ambiguous", "busy", "failed", "unknown"])
+async def test_smiles_tool_waits_for_owner_scoped_host_result(tmp_path, monkeypatch, status):
+    pytest.importorskip("rdkit")
+    state, registry, headers = state_for(tmp_path)
+    provider = registry.get("fake")
+    async def model(messages, tools):
+        if messages[-1]["role"] == "user":
+            assert "load_case_smiles" in {item["function"]["name"] for item in tools}
+            return {"role": "assistant", "content": None, "tool_calls": [{"id": "load", "type": "function",
+                "function": {"name": "load_case_smiles", "arguments": '{"case_name":"prueba","smiles":"CCO"}'}}]}
+        assert json.loads(messages[-1]["content"])["status"] == status
+        return {"role": "assistant", "content": "Recibí el resultado."}
+    monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+        turn = asyncio.create_task(client.post("/v1/chat", headers=headers, json={"text": "carga CCO en el caso prueba"}))
+        for _ in range(200):
+            if state.smiles_requests: break
+            await asyncio.sleep(0.01)
+        request_id = next(iter(state.smiles_requests))
+        assert not turn.done()
+        bad = await client.post(f"/v1/smiles-requests/{request_id}/result", headers=headers, json={"status": "inventado"})
+        assert bad.status_code == 400
+        accepted = await client.post(f"/v1/smiles-requests/{request_id}/result", headers=headers, json={"status": status})
+        assert accepted.status_code == 200
+        entries = events(await turn)
+        assert any(e.get("type") == "case_smiles" and e["case_name"] == "prueba" and e["smiles"] == "CCO" for e in entries)
+        answer = next(e["result"]["text"] for e in entries if e["type"] == "result")
+        assert ("confirmó que el SMILES" in answer) == (status == "applied")
+        assert (await client.post(f"/v1/smiles-requests/{request_id}/result", headers=headers, json={"status": status})).status_code == 404

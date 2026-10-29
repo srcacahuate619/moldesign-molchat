@@ -120,6 +120,8 @@ export const api = {
     postJson(t, `/v1/conversations/${encodeURIComponent(conversation)}/pubchem-selection`, { cid }) as Promise<{ text: string }>,
   reportCaseResult: (t: string, id: string, status: "created" | "exists" | "failed" | "unknown") =>
     postJson(t, `/v1/case-requests/${encodeURIComponent(id)}/result`, { status }),
+  reportSmilesResult: (t: string, id: string, status: "applied" | "not_found" | "ambiguous" | "busy" | "failed" | "unknown") =>
+    postJson(t, `/v1/smiles-requests/${encodeURIComponent(id)}/result`, { status }),
   createConversation: (t: string) =>
     postJson(t, "/v1/conversations", {}) as Promise<{ id: string }>,
   listConversations: (t: string) =>

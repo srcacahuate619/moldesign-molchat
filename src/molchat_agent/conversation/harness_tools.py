@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+import asyncio
 from typing import Any
 import httpx
 
@@ -48,6 +49,36 @@ def create_case_tool(request_case: Callable[[str], Awaitable[dict[str, Any]]]) -
 
     return Tool("create_case", "Solicita a MolDesign crear un caso nuevo. Informa éxito solo cuando "
                 "el resultado del host sea created.", _named_input(100), create)
+
+
+def load_case_smiles_tool(request_load: Callable[[str, str], Awaitable[dict[str, Any]]]) -> Tool:
+    """Validate a structure, then ask the host to apply it to one named case."""
+    async def load(args: dict[str, Any]) -> dict[str, Any]:
+        case_name, smiles = args["case_name"].strip(), args["smiles"].strip()
+        try:
+            from rdkit import Chem
+            molecule = await asyncio.to_thread(Chem.MolFromSmiles, smiles)
+        except ImportError:
+            return {"status": "unavailable", "message": "No está disponible la validación de SMILES."}
+        except Exception:
+            return {"status": "invalid_smiles", "message": "No se pudo interpretar el SMILES."}
+        if molecule is None:
+            return {"status": "invalid_smiles", "message": "El SMILES no es válido; no se modificó el caso."}
+        result = await request_load(case_name, smiles)
+        valid = {"applied", "not_found", "ambiguous", "busy", "failed", "unknown"}
+        status = result.get("status") if isinstance(result, dict) else "unknown"
+        if status not in valid:
+            status = "unknown"
+        return {"status": status, "case_name": case_name, "smiles": smiles}
+
+    schema = {"type": "object", "properties": {
+        "case_name": {"type": "string", "maxLength": 100},
+        "smiles": {"type": "string", "maxLength": 2000}},
+        "required": ["case_name", "smiles"], "additionalProperties": False}
+    return Tool("load_case_smiles", "Carga un SMILES explícito en el campo del caso indicado en MolDesign. "
+                "Úsala solo si el usuario pide cargarlo y se conocen el caso y el SMILES exactos. "
+                "Si no son inequívocos pregunta. Confirma únicamente status=applied; no afirma que Ketcher "
+                "dibujó o que se guardó en disco sin confirmación adicional.", schema, load)
 
 
 def properties_tool(backend: ToolBackend) -> Tool:

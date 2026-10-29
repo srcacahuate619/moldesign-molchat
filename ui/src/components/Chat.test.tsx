@@ -6,25 +6,28 @@ import { strings } from "../lib/i18n";
 
 afterEach(() => { cleanup(); sessionStorage.clear(); });
 
-const { mockList, mockGet, mockStream, mockCreateCase, mockReportCase, mockStartVoice, mockTranscribeVoice, mockSelectPubchem } = vi.hoisted(() => ({
+const { mockList, mockGet, mockStream, mockCreateCase, mockReportCase, mockLoadSmiles, mockReportSmiles, mockStartVoice, mockTranscribeVoice, mockSelectPubchem } = vi.hoisted(() => ({
   mockList: vi.fn(),
   mockGet: vi.fn(),
   mockStream: vi.fn(),
   mockCreateCase: vi.fn(),
   mockReportCase: vi.fn(),
+  mockLoadSmiles: vi.fn(),
+  mockReportSmiles: vi.fn(),
   mockStartVoice: vi.fn(),
   mockTranscribeVoice: vi.fn(),
   mockSelectPubchem: vi.fn(),
 }));
 
 vi.mock("../lib/caseHost", () => ({ createCaseInHost: mockCreateCase }));
+vi.mock("../lib/smilesHost", () => ({ loadSmilesInHost: mockLoadSmiles }));
 vi.mock("../lib/voice", () => ({ isVoiceSupported: () => true, startRecording: mockStartVoice, toWavMono16: vi.fn().mockResolvedValue(new Blob(["wav"])) }));
 
 vi.mock("../lib/api", async (importOriginal) => {
   const original = await importOriginal<typeof import("../lib/api")>();
   return {
     ...original,
-    api: { ...original.api, listConversations: mockList, getConversation: mockGet, reportCaseResult: mockReportCase, transcribe: mockTranscribeVoice, selectPubchem: mockSelectPubchem },
+    api: { ...original.api, listConversations: mockList, getConversation: mockGet, reportCaseResult: mockReportCase, reportSmilesResult: mockReportSmiles, transcribe: mockTranscribeVoice, selectPubchem: mockSelectPubchem },
     openChatStream: mockStream,
   };
 });
@@ -117,7 +120,6 @@ describe("Chat error turn with idempotent retry", () => {
     expect(await screen.findByText("Resumen breve.")).toBeVisible();
     expect(screen.getByText("Explicación y respuesta completa").parentElement).not.toHaveAttribute("open");
     expect(screen.getByRole("button", { name: "Abrir en Ketcher", hidden: true })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Cargar en caso", hidden: true })).toBeDisabled();
   });
   it("shows source choices and records only the user's selection", async () => {
     mockList.mockResolvedValue([]);
@@ -188,6 +190,20 @@ describe("Chat error turn with idempotent retry", () => {
     fireEvent.click(screen.getByText("Enviar"));
     await waitFor(() => expect(mockCreateCase).toHaveBeenCalledWith("case-id", "holamundo"));
     await waitFor(() => expect(mockReportCase).toHaveBeenCalledWith("test-token", "case-id", "created"));
+  });
+  it("relays the requested SMILES and the host's actual confirmation", async () => {
+    mockList.mockResolvedValue([]);
+    mockLoadSmiles.mockResolvedValue("applied");
+    mockReportSmiles.mockResolvedValue({ accepted: true });
+    mockStream.mockImplementation((_token: string, _body: unknown, onEvent: (event: Record<string, unknown>) => void) => {
+      queueMicrotask(() => onEvent({ type: "case_smiles", request_id: "smiles-id", case_name: "prueba", smiles: "CCO" }));
+      return () => {};
+    });
+    renderChat();
+    fireEvent.change(screen.getByPlaceholderText(/pregunta/i), { target: { value: "carga CCO" } });
+    fireEvent.click(screen.getByText("Enviar"));
+    await waitFor(() => expect(mockLoadSmiles).toHaveBeenCalledWith("smiles-id", "prueba", "CCO"));
+    await waitFor(() => expect(mockReportSmiles).toHaveBeenCalledWith("test-token", "smiles-id", "applied"));
   });
   it("keeps history closed until requested in the compact panel", async () => {
     mockList.mockResolvedValue([{ id: "test-conversation", summary: "Mi conversación", message_count: 2 }]);

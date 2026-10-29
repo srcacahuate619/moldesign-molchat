@@ -31,7 +31,7 @@ from ..conversation.memory import Conversation, ConversationNotFound, Persistenc
 from ..conversation.case_selection import select_case
 from ..conversation.intents import classify
 from ..conversation.tool_loop import Tool, run_tool_loop
-from ..conversation.harness_tools import create_case_tool, properties_tool, pubchem_tool
+from ..conversation.harness_tools import create_case_tool, load_case_smiles_tool, properties_tool, pubchem_tool
 from ..conversation.evidence import context_literals, numbers_in, redact_unverified, split_flow, VERIFICATION_NOTE
 from ..conversation.tools import PlatformBackend
 from ..plan import Plan
@@ -294,6 +294,17 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
         pending[1].set_result({"status": payload["status"]})
         return JSONResponse({"accepted": True})
 
+    async def smiles_result(request: Request) -> JSONResponse:
+        session = await need_chat(request)
+        pending = state.smiles_requests.get(request.path_params["request_id"])
+        if pending is None or pending[0] != session.sub or pending[1].done():
+            return _error(404, "solicitud no encontrada")
+        payload = await read_json(request)
+        if not isinstance(payload, dict) or set(payload) != {"status"} or payload["status"] not in ("applied", "not_found", "ambiguous", "busy", "failed", "unknown"):
+            return _error(400, "resultado no válido")
+        pending[1].set_result({"status": payload["status"]})
+        return JSONResponse({"accepted": True})
+
     async def pubchem_permission(request: Request) -> JSONResponse:
         await need_chat(request)
         if not state.hosted or state.bridge is None:
@@ -537,6 +548,7 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
             Route("/v1/catalog", get_catalog, methods=["GET"]),
             Route("/v1/conversations", create_conversation, methods=["POST"]),
             Route("/v1/case-requests/{request_id}/result", case_result, methods=["POST"]),
+            Route("/v1/smiles-requests/{request_id}/result", smiles_result, methods=["POST"]),
             Route("/v1/pubchem/permission", pubchem_permission, methods=["GET", "POST", "DELETE"]),
             Route("/v1/conversations/{conv_id}/pubchem-selection", select_pubchem_reference, methods=["POST"]),
             Route("/v1/conversations", list_conversations, methods=["GET"]),
@@ -634,6 +646,25 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
     events: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
     case_status: dict[str, Any] | None = None
     case_started = False
+    smiles_started = False
+    smiles_result_data: dict[str, Any] | None = None
+
+    async def request_smiles(case_name: str, smiles: str) -> dict[str, Any]:
+        nonlocal smiles_started
+        if smiles_started:
+            return {"status": "unknown"}
+        smiles_started = True
+        request_id = uuid.uuid4().hex
+        future = asyncio.get_running_loop().create_future()
+        state.smiles_requests[request_id] = (owner, future)
+        try:
+            await events.put({"type": "case_smiles", "request_id": request_id, "case_name": case_name, "smiles": smiles})
+            try:
+                return await asyncio.wait_for(future, timeout=60)
+            except asyncio.TimeoutError:
+                return {"status": "unknown"}
+        finally:
+            state.smiles_requests.pop(request_id, None)
 
     async def request_case(name: str) -> dict[str, Any]:
         nonlocal case_started, case_status
@@ -679,6 +710,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         "Distingue hipótesis de causas demostradas: no atribuyas una diferencia a un método sin evidencia suficiente "
         "de las reglas específicas de ambos cálculos y de su aplicación a esta estructura. "
         "Si se desconocen las reglas o la identidad, explica que la causa no está comprobada. "
+        "Al cargar un SMILES, solo afirma que el campo se actualizó si la herramienta devuelve applied; "
+        "ese resultado no confirma guardado en disco ni que Ketcher haya dibujado. "
         "No promete información que no llegó. Comunica los errores con claridad. Responde en español.") }]
     conv = state.memory.get_conversation(conv_id, owner)
     historical_refs: list[dict[str, Any]] = []
@@ -725,7 +758,13 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
                              "values": values, "error": None, "structure": structure,
                              "methods": result.get("methods", {})})
         return result
+    load_tool = load_case_smiles_tool(request_smiles)
+    async def capture_load(args: dict[str, Any]) -> dict[str, Any]:
+        nonlocal smiles_result_data
+        smiles_result_data = await load_tool.execute(args)
+        return smiles_result_data
     tools: list[Tool] = [create_case_tool(request_case),
+                         Tool(load_tool.name, load_tool.description, load_tool.parameters, capture_load),
                          Tool(properties.name, properties.description, properties.parameters, capture_properties)]
     if state.bridge is not None and not registro.offline:
         lookup = pubchem_tool(state.bridge.with_token(token), client)
@@ -794,6 +833,22 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             and not re.search(r"\bno\b[^.\n]{0,100}(?:creado|creó)", normalized_answer, re.I))
         if case_started and not already_confirmed:
             answer += "\n\n" + case_answer()
+        if smiles_result_data:
+            status = smiles_result_data.get("status")
+            if status != "applied":
+                answer = re.sub(r"(?<!no )\b(?:se\s+)?(?:carg[oó]|aplic[oó]|actualiz[oó])\s+(?:el\s+)?SMILES\b",
+                                "No se confirmó la carga del SMILES", answer, flags=re.I)
+            result_message = {
+                "applied": "MolDesign confirmó que el SMILES está en el campo del caso; el guardado y el dibujo de Ketcher no se confirmaron en este paso.",
+                "not_found": "No encontré el caso indicado; no se aplicó el SMILES.",
+                "ambiguous": "Hay varios casos con ese nombre; indica cuál deseas usar.",
+                "busy": "No pude abrir el caso porque hay otra operación en curso.",
+                "invalid_smiles": "El SMILES no es válido; no se modificó el caso.",
+                "unavailable": "No está disponible la validación del SMILES; no se modificó el caso.",
+                "failed": "MolDesign no pudo aplicar el SMILES al campo.",
+                "unknown": "No se pudo confirmar el resultado; revisa el caso antes de reintentar.",
+            }.get(status, "No se pudo confirmar el resultado; revisa el caso antes de reintentar.")
+            answer += "\n\n" + result_message
         if len(refs) > 1:
             state.memory.set_harness_pending(conv_id, owner, {
                 "messages": result.messages, "provider_id": provider.id, "references": refs})

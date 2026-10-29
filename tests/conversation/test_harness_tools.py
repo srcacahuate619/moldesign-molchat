@@ -3,7 +3,7 @@ import httpx
 import pytest
 
 from molchat_agent.bridge import MolDesignBridge
-from molchat_agent.conversation.harness_tools import create_case_tool, properties_tool, pubchem_tool
+from molchat_agent.conversation.harness_tools import create_case_tool, load_case_smiles_tool, properties_tool, pubchem_tool
 from molchat_agent.conversation.tool_loop import run_tool_loop
 from molchat_agent.conversation.tools import MoleculeRecord
 
@@ -69,3 +69,17 @@ async def test_structure_check_detects_transformation(canonical, identity):
     assert result["structure"]["identity"] == identity
     assert result["structure"]["warnings"] == ["host warning"]
     assert result["methods"]["hba"] == "NOCount"
+
+
+@pytest.mark.asyncio
+async def test_load_smiles_requires_valid_chemical_structure_and_host_ack():
+    pytest.importorskip("rdkit")
+    calls = []
+    async def request(name, smiles):
+        calls.append((name, smiles))
+        return {"status": "applied"}
+    tool = load_case_smiles_tool(request)
+    invalid = await tool.execute({"case_name": "ejemplo", "smiles": "not-a-smiles"})
+    assert invalid["status"] == "invalid_smiles" and calls == []
+    valid = await tool.execute({"case_name": "ejemplo", "smiles": "CCO"})
+    assert valid["status"] == "applied" and calls == [("ejemplo", "CCO")]

@@ -38,6 +38,7 @@ class ServerState:
     user_id: str | None = None
     revoked: set[str] = field(default_factory=set)
     case_requests: dict[str, tuple[str, asyncio.Future[dict[str, str]]]] = field(default_factory=dict)
+    smiles_requests: dict[str, tuple[str, asyncio.Future[dict[str, str]]]] = field(default_factory=dict)
     pubchem_client: Any | None = None  # injected only for tests; production creates a restricted client
     # Hosted mode (MOLCHAT_HOST_SECRET set): platform calls forward the
     # request's Bearer instead of a fixed token. `bridge` is the shared

@@ -14,6 +14,7 @@ import MessageText from "./MessageText";
 import PropertyComparison from "./PropertyComparison";
 import VoiceButton from "./VoiceButton";
 import { createCaseInHost } from "../lib/caseHost";
+import { loadSmilesInHost } from "../lib/smilesHost";
 import { BotIcon, HistoryIcon, PlusIcon, SendIcon } from "./Icons";
 
 interface Message {
@@ -146,6 +147,12 @@ export default function Chat({
             const name = event["name"];
             if (typeof id === "string" && typeof name === "string") {
               void createCaseInHost(id, name).then((result) => api.reportCaseResult(token, id, result))
+                .catch(() => setError(t("error.generic")));
+            }
+          } else if (kind === "case_smiles") {
+            const id = event["request_id"], name = event["case_name"], smiles = event["smiles"];
+            if (typeof id === "string" && typeof name === "string" && typeof smiles === "string") {
+              void loadSmilesInHost(id, name, smiles).then((result) => api.reportSmilesResult(token, id, result))
                 .catch(() => setError(t("error.generic")));
             }
           } else if (kind === "result") {
@@ -307,7 +314,7 @@ export default function Chat({
               )}
               {message.role === "assistant" && (message.references?.length || message.evidence.length) ? <details className="context-actions">
                 <summary>{t("chat.actions")}</summary>
-                {["chat.openKetcher", "chat.loadCase", "chat.compareMolecule"].map((key) => <button key={key} type="button" disabled title={t("chat.actionUnavailable")}>{t(key as StringKey)}</button>)}
+                {["chat.openKetcher", "chat.compareMolecule"].map((key) => <button key={key} type="button" disabled title={t("chat.actionUnavailable")}>{t(key as StringKey)}</button>)}
                 <p className="muted">{t("chat.actionUnavailable")}</p>
               </details> : null}
             </li>
