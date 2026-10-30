@@ -44,6 +44,12 @@ export interface TurnResult {
   verified_values: number[];
   references?: PubChemReference[];
   comparison_cids?: number[];
+  suggested_actions?: SuggestedAction[];
+}
+
+export interface SuggestedAction {
+  kind: "compare_with_moldesign" | "verify_drawing";
+  cid: number;
 }
 
 export interface ConversationSummary {
@@ -143,7 +149,7 @@ export const api = {
   listHarnessJobs: (t: string) => request(t, "/v1/harness-jobs") as Promise<HarnessJob[]>,
   getConversation: (t: string, id: string) =>
     request(t, `/v1/conversations/${id}`) as Promise<{
-      messages: { role: string; content: string; references?: PubChemReference[]; evidence?: Evidence[]; comparison_cids?: number[] }[];
+      messages: { role: string; content: string; references?: PubChemReference[]; evidence?: Evidence[]; comparison_cids?: number[]; suggested_actions?: SuggestedAction[] }[];
       pending_references?: PubChemReference[];
     }>,
   deleteConversation: (t: string, id: string) =>

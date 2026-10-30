@@ -6,6 +6,7 @@ import {
   type ConversationSummary,
   type Evidence,
   type PubChemReference,
+  type SuggestedAction,
   type TurnResult,
 } from "../lib/api";
 import type { StringKey } from "../lib/i18n";
@@ -27,6 +28,7 @@ interface Message {
   references?: PubChemReference[];
   selectable?: boolean;
   comparisonCids?: number[];
+  suggestedActions?: SuggestedAction[];
 }
 
 const ACTIVE_CONVERSATION = "molchat.activeConversation";
@@ -96,6 +98,7 @@ export default function Chat({
             meta: "",
             references: m.references ?? (index === lastAssistant ? detail.pending_references : undefined),
             comparisonCids: m.comparison_cids,
+            suggestedActions: m.suggested_actions,
             selectable: index === lastAssistant && (detail.pending_references?.length ?? 0) > 1,
           })),
         );
@@ -192,6 +195,7 @@ export default function Chat({
                 meta,
                 references: result.references,
                 comparisonCids: result.comparison_cids,
+                suggestedActions: result.suggested_actions,
                 selectable: (result.references?.length ?? 0) > 1,
               },
             ]);
@@ -330,17 +334,19 @@ export default function Chat({
                   ))}
                 </ul>
               )}
-              {message.role === "assistant" && message.references?.length === 1 && !message.selectable &&
-                typeof message.references[0].properties?.SMILES === "string" && message.references[0].properties.SMILES.length > 0 && (
+              {message.role === "assistant" && index === messages.length - 1 && !message.selectable &&
+                message.suggestedActions?.some((action) => message.references?.some((reference) =>
+                  reference.cid === action.cid && typeof reference.properties?.SMILES === "string" && reference.properties.SMILES.length > 0 &&
+                  (action.kind === "compare_with_moldesign" || action.kind === "verify_drawing"))) && (
                 <div className="context-actions" role="group" aria-label={t("chat.actions")}>
-                  <button type="button" disabled={streaming} onClick={() => {
-                    const reference = message.references![0];
-                    send(`${t("chat.compareRequest")} ${reference.name} (PubChem CID ${reference.cid}).`);
-                  }}>{t("chat.compareWithMolDesign")}</button>
-                  <button type="button" disabled={streaming} onClick={() => {
-                    const reference = message.references![0];
-                    send(`${t("chat.verifyRequest")} PubChem CID ${reference.cid}.`);
-                  }}>{t("chat.verifyDrawing")}</button>
+                  {message.suggestedActions?.map((action, actionIndex) => {
+                    const reference = message.references?.find((item) => item.cid === action.cid && typeof item.properties?.SMILES === "string" && item.properties.SMILES.length > 0);
+                    if (!reference || (action.kind !== "compare_with_moldesign" && action.kind !== "verify_drawing")) return null;
+                    return <button key={`${action.kind}-${action.cid}-${actionIndex}`} type="button" disabled={streaming} onClick={() => {
+                      if (action.kind === "compare_with_moldesign") send(`${t("chat.compareRequest")} ${reference.name} (PubChem CID ${reference.cid}).`);
+                      else send(`${t("chat.verifyRequest")} PubChem CID ${reference.cid}.`);
+                    }}>{t(action.kind === "compare_with_moldesign" ? "chat.compareWithMolDesign" : "chat.verifyDrawing")}</button>;
+                  })}
                 </div>
               )}
             </li>

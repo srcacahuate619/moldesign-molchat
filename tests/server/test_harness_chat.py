@@ -38,7 +38,7 @@ async def test_chat_uses_direct_pubchem_and_resumes_selection(tmp_path, monkeypa
     async def model(messages, tools):
         seen.append(list(messages))
         if len(seen) == 1:
-            assert {t["function"]["name"] for t in tools} == {"pubchem_lookup", "create_case", "compute_properties", "load_case_smiles", "search_receptors", "assign_case_receptor", "verify_editor_structure", "show_property_comparison"}
+            assert {t["function"]["name"] for t in tools} == {"pubchem_lookup", "create_case", "compute_properties", "load_case_smiles", "search_receptors", "assign_case_receptor", "verify_editor_structure", "show_property_comparison", "suggest_next_actions"}
             return {"role": "assistant", "content": None, "tool_calls": [{"id": "c1", "type": "function",
                     "function": {"name": "pubchem_lookup", "arguments": '{"name":"ibuprofeno"}'}}]}
         if len(seen) == 2:
@@ -369,6 +369,8 @@ async def test_explicit_comparison_marker_requires_linked_results_and_survives_r
             name, args = "compute_properties", {"name": "CCO"}
         elif json.loads(messages[-1]["content"]).get("properties"):
             name, args = "show_property_comparison", {"cid": "702"}
+        elif messages[-1].get("tool_call_id") == "show_property_comparison":
+            name, args = "suggest_next_actions", {"cid": 702, "actions": "compare_with_moldesign,verify_drawing"}
         else:
             assert json.loads(messages[-1]["content"])["status"] == "ok"
             return {"role": "assistant", "content": "Aquí está la comparación solicitada."}
@@ -379,9 +381,11 @@ async def test_explicit_comparison_marker_requires_linked_results_and_survives_r
         response = await client.post("/v1/chat", headers=headers, json={"text": "compara PubChem con MolDesign", "conversation_id": conv})
         result = next(e["result"] for e in events(response) if e["type"] == "result")
         assert result["comparison_cids"] == [702]
+        assert result["suggested_actions"] == [{"kind": "verify_drawing", "cid": 702}]
         assert result["references"][0]["cid"] == 702 and result["evidence"][0]["structure"]["pubchem_cid"] == 702
         restored = (await client.get(f"/v1/conversations/{conv}", headers=headers)).json()
         assert restored["messages"][-1]["comparison_cids"] == [702]
+        assert restored["messages"][-1]["suggested_actions"] == result["suggested_actions"]
 
 
 @pytest.mark.asyncio
@@ -402,6 +406,94 @@ async def test_comparison_marker_does_not_invent_missing_calculation(tmp_path, m
         response = await client.post("/v1/chat", headers=headers, json={"text": "compara", "conversation_id": conv})
         result = next(e["result"] for e in events(response) if e["type"] == "result")
         assert result["comparison_cids"] == [] and not result["evidence"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("reference_status", ["missing", "ambiguous"])
+async def test_suggestion_rejects_unknown_or_ambiguous_reference(tmp_path, monkeypatch, reference_status):
+    state, registry, headers = state_for(tmp_path)
+    conv = state.memory.create_conversation("owner")
+    if reference_status == "ambiguous":
+        state.memory.add_message(conv, "owner", "assistant", "Elige", references=[
+            {"cid": 702, "name": "Uno", "properties": {"SMILES": "CCO"}},
+            {"cid": 703, "name": "Otro", "properties": {"SMILES": "CCC"}}])
+    async def model(messages, _tools):
+        if messages[-1]["role"] == "user":
+            return {"role": "assistant", "content": None, "tool_calls": [{"id": "suggest", "type": "function",
+                "function": {"name": "suggest_next_actions", "arguments": '{"cid":702,"actions":"verify_drawing"}'}}]}
+        assert json.loads(messages[-1]["content"])["status"] == "unavailable"
+        return {"role": "assistant", "content": "Necesito una referencia inequívoca."}
+    monkeypatch.setattr(registry.get("fake"), "chat_with_tools", model, raising=False)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+        response = await client.post("/v1/chat", headers=headers, json={"text": "propón un siguiente paso", "conversation_id": conv})
+        result = next(e["result"] for e in events(response) if e["type"] == "result")
+        assert result["suggested_actions"] == []
+
+
+@pytest.mark.asyncio
+async def test_suggestion_cannot_offer_an_unimplemented_action(tmp_path, monkeypatch):
+    state, registry, headers = state_for(tmp_path)
+    conv = state.memory.create_conversation("owner")
+    state.memory.add_message(conv, "owner", "assistant", "Referencia", references=[{
+        "cid": 702, "name": "Ethanol", "source": "https://pubchem.ncbi.nlm.nih.gov/compound/702", "properties": {"SMILES": "CCO"}}])
+    async def model(messages, _tools):
+        if messages[-1]["role"] == "user":
+            return {"role": "assistant", "content": None, "tool_calls": [{"id": "suggest", "type": "function",
+                "function": {"name": "suggest_next_actions", "arguments": '{"cid":702,"actions":"dockear"}'}}]}
+        assert json.loads(messages[-1]["content"])["status"] == "invalid"
+        return {"role": "assistant", "content": "No hay una acción disponible para eso."}
+    monkeypatch.setattr(registry.get("fake"), "chat_with_tools", model, raising=False)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+        response = await client.post("/v1/chat", headers=headers, json={"text": "recomienda un paso", "conversation_id": conv})
+        result = next(e["result"] for e in events(response) if e["type"] == "result")
+        assert result["suggested_actions"] == []
+
+
+@pytest.mark.asyncio
+async def test_completed_comparison_and_editor_check_are_not_suggested_again(tmp_path, monkeypatch):
+    Chem = pytest.importorskip("rdkit.Chem")
+    state, registry, headers = state_for(tmp_path)
+    conv = state.memory.create_conversation("owner")
+    state.memory.add_message(conv, "owner", "assistant", "Referencia", references=[{
+        "cid": 702, "name": "Ethanol", "source": "https://pubchem.ncbi.nlm.nih.gov/compound/702", "properties": {"SMILES": "CCO"}}])
+    class Backend:
+        async def properties(self, smiles):
+            return MoleculeRecord(name="ethanol", smiles=smiles, props={"mw": 46.07}, source="RDKit")
+    state.backend = Backend()
+    async def model(messages, _tools):
+        last = messages[-1]
+        if last["role"] == "user":
+            name, args = "compute_properties", {"name": "CCO"}
+        elif last.get("tool_call_id") == "compute_properties":
+            name, args = "show_property_comparison", {"cid": 702}
+        elif last.get("tool_call_id") == "show_property_comparison":
+            name, args = "verify_editor_structure", {"case_name": "prueba", "cid": 702}
+        elif last.get("tool_call_id") == "verify_editor_structure":
+            assert json.loads(last["content"])["status"] == "match"
+            name, args = "suggest_next_actions", {"cid": 702, "actions": "compare_with_moldesign,verify_drawing"}
+        else:
+            return {"role": "assistant", "content": "Comprobación terminada."}
+        return {"role": "assistant", "content": None, "tool_calls": [{"id": name, "type": "function",
+            "function": {"name": name, "arguments": json.dumps(args)}}]}
+    monkeypatch.setattr(registry.get("fake"), "chat_with_tools", model, raising=False)
+    molfile = Chem.MolToMolBlock(Chem.MolFromSmiles("CCO"))
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+        turn = asyncio.create_task(client.post("/v1/chat", headers=headers, json={"text": "compara y verifica el dibujo", "conversation_id": conv}))
+        for _ in range(300):
+            if state.editor_requests: break
+            await asyncio.sleep(0.01)
+        first = next(iter(state.editor_requests))
+        await client.post(f"/v1/editor-requests/{first}/result", headers=headers, json={"status": "ok", "molfile": molfile, "revision": "1:2"})
+        for _ in range(300):
+            pending = [key for key in state.editor_requests if key != first]
+            if pending: break
+            await asyncio.sleep(0.01)
+        await client.post(f"/v1/editor-requests/{pending[0]}/result", headers=headers, json={"status": "ok"})
+        result = next(e["result"] for e in events(await turn) if e["type"] == "result")
+        assert result["comparison_cids"] == [702]
+        assert result["suggested_actions"] == []
+        restored = (await client.get(f"/v1/conversations/{conv}", headers=headers)).json()
+        assert restored["messages"][-1]["suggested_actions"] == []
 
 
 @pytest.mark.asyncio
@@ -695,9 +787,13 @@ async def test_editor_verification_checks_revision_and_does_not_persist_molfile(
             assert "case_name, cid" in result["error"] and "no se ejecutó" in result["error"]
             return {"role": "assistant", "content": None, "tool_calls": [{"id": "verify-retry", "type": "function",
                 "function": {"name": "verify_editor_structure", "arguments": json.dumps({"case_name": "prueba", "cid": cid_arg})}}]}
+        if messages[-1].get("tool_call_id") == "suggest":
+            assert result["status"] == "ok"
+            return {"role": "assistant", "content": "Resultado de la comprobación."}
         assert result["status"] == ("changed" if changed else "match")
         assert "molfile" not in result
-        return {"role": "assistant", "content": "El dibujo coincide exactamente."}
+        return {"role": "assistant", "content": None, "tool_calls": [{"id": "suggest", "type": "function",
+            "function": {"name": "suggest_next_actions", "arguments": '{"cid":702,"actions":"compare_with_moldesign,verify_drawing"}'}}]}
     monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
         turn = asyncio.create_task(client.post("/v1/chat", headers=headers, json={"text": "verifica el dibujo en prueba con PubChem 702", "conversation_id": conv}))
@@ -715,6 +811,7 @@ async def test_editor_verification_checks_revision_and_does_not_persist_molfile(
         await client.post(f"/v1/editor-requests/{pending[0]}/result", headers=headers,
                           json={"status": "changed" if changed else "ok"})
         result = next(e["result"] for e in events(await turn) if e["type"] == "result")
+        assert {item["kind"] for item in result["suggested_actions"]} == ({"compare_with_moldesign", "verify_drawing"} if changed else {"compare_with_moldesign"})
         assert ("cambió durante" in result["text"]) == changed
         assert ("coincide con la referencia" in result["text"]) != changed
         if changed:

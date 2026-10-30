@@ -282,7 +282,8 @@ class MemoryStore:
     def add_message(self, conv_id: str, user_id: str, role: str, content: str, *,
                     references: list[dict[str, Any]] | None = None,
                     evidence: list[dict[str, Any]] | None = None,
-                    comparison_cids: list[int] | None = None) -> None:
+                    comparison_cids: list[int] | None = None,
+                    suggested_actions: list[dict[str, Any]] | None = None) -> None:
         conv = self.get_conversation(conv_id, user_id)
         if conv is None:
             raise ConversationNotFound(conv_id)
@@ -293,6 +294,8 @@ class MemoryStore:
             conv.messages[-1]["evidence"] = evidence
         if comparison_cids is not None:
             conv.messages[-1]["comparison_cids"] = comparison_cids
+        if suggested_actions is not None:
+            conv.messages[-1]["suggested_actions"] = suggested_actions
         with self._connect() as conn:
             conn.execute(
                 "UPDATE conversations SET messages = ?, updated_at = ? "

@@ -117,7 +117,7 @@ describe("Chat error turn with idempotent retry", () => {
   it("keeps a long response progressive and offers only supported actions", async () => {
     mockList.mockResolvedValue([]);
     mockStream.mockImplementation((_token: string, _body: unknown, onEvent: (e: Record<string, unknown>) => void) => {
-      queueMicrotask(() => onEvent({ type: "result", result: { text: "Resumen breve.\n\n" + "Detalle ".repeat(80), used_llm: true, latency_ms: 1, verified_values: [], evidence: [], references: [{ cid: 1, name: "Ejemplo", source: "https://pubchem.ncbi.nlm.nih.gov/compound/1", properties: { SMILES: "CCO" } }] } }));
+      queueMicrotask(() => onEvent({ type: "result", result: { text: "Resumen breve.\n\n" + "Detalle ".repeat(80), used_llm: true, latency_ms: 1, verified_values: [], evidence: [], references: [{ cid: 1, name: "Ejemplo", source: "https://pubchem.ncbi.nlm.nih.gov/compound/1", properties: { SMILES: "CCO" } }], suggested_actions: [{ kind: "verify_drawing", cid: 1 }] } }));
       return () => {};
     });
     renderChat();
@@ -125,7 +125,7 @@ describe("Chat error turn with idempotent retry", () => {
     fireEvent.click(screen.getByText("Enviar"));
     expect(await screen.findByText("Resumen breve.")).toBeVisible();
     expect(screen.getByText("Explicación y respuesta completa").parentElement).not.toHaveAttribute("open");
-    expect(screen.getByRole("button", { name: "Comparar con MolDesign" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "Comparar con MolDesign" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Verificar dibujo" })).toBeEnabled();
     expect(screen.queryByRole("button", { name: "Abrir en Ketcher" })).not.toBeInTheDocument();
   });
@@ -135,7 +135,7 @@ describe("Chat error turn with idempotent retry", () => {
     const evidence = [{ tool: "compute_properties", label: "Aspirin", epistemic_class: "cálculo", source: "RDKit", values: { mw: "180.16" }, error: null,
       structure: { input_smiles: "CCO", canonical_smiles: "CCO", identity: "same", pubchem_cid: 2244 } }];
     mockStream.mockImplementation((_token: string, _body: unknown, onEvent: (e: Record<string, unknown>) => void) => {
-      queueMicrotask(() => onEvent({ type: "result", result: { text: "Resultado", used_llm: true, latency_ms: 1, verified_values: [], evidence, references: [reference], comparison_cids: [] } }));
+      queueMicrotask(() => onEvent({ type: "result", result: { text: "Resultado", used_llm: true, latency_ms: 1, verified_values: [], evidence, references: [reference], comparison_cids: [], suggested_actions: [{ kind: "compare_with_moldesign", cid: 2244 }] } }));
       return () => {};
     });
     renderChat();
@@ -146,6 +146,35 @@ describe("Chat error turn with idempotent retry", () => {
     fireEvent.click(screen.getByRole("button", { name: "Comparar con MolDesign" }));
     await waitFor(() => expect(mockStream).toHaveBeenCalledTimes(2));
     expect(mockStream.mock.calls[1][1]).toMatchObject({ text: expect.stringContaining("CID 2244") });
+  });
+  it("does not invent buttons when a reference has no model recommendations", async () => {
+    mockList.mockResolvedValue([]);
+    mockStream.mockImplementation((_token: string, _body: unknown, onEvent: (e: Record<string, unknown>) => void) => {
+      queueMicrotask(() => onEvent({ type: "result", result: { text: "Referencia.", used_llm: true, latency_ms: 1, verified_values: [], evidence: [], references: [{ cid: 1, name: "Ejemplo", source: "https://pubchem.ncbi.nlm.nih.gov/compound/1", properties: { SMILES: "CCO" } }] } }));
+      return () => {};
+    });
+    renderChat();
+    fireEvent.change(screen.getByPlaceholderText(/pregunta/i), { target: { value: "consulta" } });
+    fireEvent.click(screen.getByText("Enviar"));
+    await screen.findByText("Referencia.");
+    expect(screen.queryByRole("button", { name: "Comparar con MolDesign" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Verificar dibujo" })).not.toBeInTheDocument();
+  });
+
+  it("restores only the latest assistant's recommended actions from history", async () => {
+    const reference = { cid: 702, name: "Ethanol", source: "https://pubchem.ncbi.nlm.nih.gov/compound/702", properties: { SMILES: "CCO" } };
+    mockList.mockResolvedValue([{ id: "saved-actions", summary: "Etanol", message_count: 4 }]);
+    mockGet.mockResolvedValue({ messages: [
+      { role: "assistant", content: "Anterior", references: [reference], suggested_actions: [{ kind: "verify_drawing", cid: 702 }] },
+      { role: "user", content: "hazlo" },
+      { role: "assistant", content: "Comprobado", references: [reference], suggested_actions: [{ kind: "compare_with_moldesign", cid: 702 }] },
+    ], pending_references: [] });
+    renderChat();
+    fireEvent.click(screen.getByRole("button", { name: /mostrar historial/i }));
+    fireEvent.click(await screen.findByText(/Etanol/));
+    await screen.findByText("Comprobado");
+    expect(screen.getByRole("button", { name: "Comparar con MolDesign" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "Verificar dibujo" })).not.toBeInTheDocument();
   });
   it("shows source choices and records only the user's selection", async () => {
     mockList.mockResolvedValue([]);
