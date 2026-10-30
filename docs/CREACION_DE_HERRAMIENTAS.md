@@ -15,6 +15,13 @@ misma lógica del selector y confirma únicamente tras el guardado del caso.
 La asignación no inicia una evaluación. Un error o una respuesta perdida no
 demuestra que el caso se haya guardado: se debe revisar antes de reintentar.
 
+Cuando el usuario pide un receptor al azar, `pick_random_receptor` lee todo el
+catálogo accesible para la cuenta, excluye los receptores no disponibles y los
+identificadores ambiguos, y devuelve una elección aleatoria con su sección.
+La elección no modifica el caso: el agente solicita la asignación mediante
+`assign_case_receptor` y espera la confirmación del host. El filtro de
+verificados solo se aplica cuando el usuario lo ha pedido.
+
 ## Primera herramienta: crear un caso (integración histórica)
 
 En modo alojado, el servidor identifica una petición de caso y pide al proveedor

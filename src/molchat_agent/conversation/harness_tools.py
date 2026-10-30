@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 import asyncio
+import re
+import secrets
 import unicodedata
 from typing import Any
 import httpx
@@ -93,6 +95,50 @@ def receptor_catalog_tool(bridge: MolDesignBridge) -> Tool:
                 "Disponible no equivale a verificado ni calibrado. No modifica el caso ni inicia cálculos.", schema, search)
 
 
+def random_receptor_tool(catalog: Tool) -> Tool:
+    """Sample the complete account-scoped catalog without modifying a case."""
+    async def pick(args: dict[str, Any]) -> dict[str, Any]:
+        section = args.get("section", "all")
+        if section not in {"all", "verificado", "demostracion"}:
+            return {"status": "invalid", "message": "Sección de catálogo no válida."}
+        first = await catalog.execute({"query": "*", "page": "1"})
+        if first.get("status") != "ok":
+            return {"status": "unavailable", "message": "No se pudo consultar el catálogo."}
+        total = first.get("total")
+        if type(total) is not int or total < 0 or total > 10000:
+            return {"status": "unavailable", "message": "No se pudo leer el catálogo completo."}
+        rows = list(first.get("receptors", []))
+        for page in range(2, (total + 9) // 10 + 1):
+            result = await catalog.execute({"query": "*", "page": str(page)})
+            if result.get("status") != "ok" or result.get("total") != total:
+                return {"status": "unavailable", "message": "No se pudo leer el catálogo completo."}
+            rows.extend(result.get("receptors", []))
+        if len(rows) != total:
+            return {"status": "unavailable", "message": "El catálogo está incompleto."}
+        counts: dict[str, int] = {}
+        for row in rows:
+            value = row.get("pdb_id")
+            if isinstance(value, str):
+                key = value.upper()
+                counts[key] = counts.get(key, 0) + 1
+        candidates = [row for row in rows if isinstance(row.get("pdb_id"), str)
+                      and re.fullmatch(r"[A-Za-z0-9_-]{1,64}", row["pdb_id"])
+                      and counts[row["pdb_id"].upper()] == 1 and row.get("disponible") is not False
+                      and (section == "all" or row.get("seccion_catalogo") == section)]
+        if not candidates:
+            return {"status": "not_found", "message": "No hay receptores seleccionables para ese filtro."}
+        selected = secrets.choice(candidates)
+        return {"status": "ok", "source": first["source"], "selection": "aleatoria",
+                "eligible_count": len(candidates), "receptor": selected}
+
+    schema = {"type": "object", "properties": {"section": {"type": "string", "maxLength": 20}},
+              "required": [], "additionalProperties": False}
+    return Tool("pick_random_receptor", "Elige al azar un receptor seleccionable del catálogo completo accesible a la cuenta. "
+                "Úsala solo si el usuario pidió una elección aleatoria; filtra section=verificado o demostracion solo si lo pidió. "
+                "Informa el receptor elegido y su sección real; no modifica un caso ni inicia docking. "
+                "Para asignarlo después usa assign_case_receptor con el PDB devuelto.", schema, pick)
+
+
 def create_case_tool(request_case: Callable[[str], Awaitable[dict[str, Any]]]) -> Tool:
     """MolChat requests a product action; only the host can confirm its result."""
     async def create(args: dict[str, Any]) -> dict[str, Any]:
@@ -101,8 +147,9 @@ def create_case_tool(request_case: Callable[[str], Awaitable[dict[str, Any]]]) -
             return {"status": "unknown", "message": "No se confirmó el resultado en MolDesign."}
         return {"status": result["status"], "name": args["name"]}
 
-    return Tool("create_case", "Solicita a MolDesign crear un caso nuevo. Informa éxito solo cuando "
-                "el resultado del host sea created.", _named_input(100), create)
+    return Tool("create_case", "Solicita a MolDesign crear un caso nuevo solo si el usuario pidió crearlo explícitamente. "
+                "Cuando el usuario pide usar un caso nombrado, no lo crees: usa la herramienta de la acción solicitada. "
+                "Informa éxito solo cuando el resultado del host sea created.", _named_input(100), create)
 
 
 def load_case_smiles_tool(request_load: Callable[[str, str], Awaitable[dict[str, Any]]]) -> Tool:

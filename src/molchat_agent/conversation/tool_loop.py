@@ -79,7 +79,7 @@ async def run_tool_loop(provider: Any, messages: list[dict[str, Any]],
     The caller supplies authorized context and only the tool implementations
     available for this user. This function never retries a tool automatically.
     """
-    if not 1 <= max_steps <= 8:
+    if not 1 <= max_steps <= 12:
         raise ValueError("límite de pasos no válido")
     by_name = {tool.name: tool for tool in tools}
     if len(by_name) != len(tools):

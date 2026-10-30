@@ -33,7 +33,7 @@ from ..conversation.case_selection import select_case
 from ..conversation.intents import classify
 from ..conversation.tool_loop import Tool, run_tool_loop
 from ..conversation.structure_check import compare_editor_structure
-from ..conversation.harness_tools import assign_case_receptor_tool, create_case_tool, load_case_smiles_tool, properties_tool, pubchem_tool, receptor_catalog_tool
+from ..conversation.harness_tools import assign_case_receptor_tool, create_case_tool, load_case_smiles_tool, properties_tool, pubchem_tool, receptor_catalog_tool, random_receptor_tool
 from ..conversation.evidence import context_literals, numbers_in, redact_unverified, split_flow, VERIFICATION_NOTE
 from ..conversation.tools import PlatformBackend
 from ..plan import Plan
@@ -685,6 +685,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
     refs: list[dict[str, Any]] = []
     evidence: list[dict[str, Any]] = []
     receptor_results: list[dict[str, Any]] = []
+    random_receptor_results: list[dict[str, Any]] = []
     comparison_cids: list[int] = []
     proposed_actions: list[dict[str, Any]] = []
     verified: set[float] = set()
@@ -770,8 +771,12 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         unique_search = any(result.get("total") == 1 and len(result.get("receptors", [])) == 1
                             and str(result["receptors"][0].get("pdb_id", "")).upper() == pdb_id
                             for result in receptor_results)
-        if not (explicit_id or unique_search):
-            return {"status": "needs_selection"}
+        random_selection = any(str(result.get("receptor", {}).get("pdb_id", "")).upper() == pdb_id
+                               for result in random_receptor_results)
+        if random_receptor_results and not explicit_id and not random_selection:
+            return {"status": "needs_selection", "message": "Asigna el receptor aleatorio devuelto por pick_random_receptor, o solicita otra elección al usuario."}
+        if not (explicit_id or unique_search or random_selection):
+            return {"status": "needs_selection", "message": "Indica un PDB explícito, busca una coincidencia única o usa pick_random_receptor si el usuario pidió uno al azar."}
         receptor_started = True
         request_id = uuid.uuid4().hex
         future = asyncio.get_running_loop().create_future()
@@ -818,6 +823,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         "Cumple solo las acciones que el usuario solicitó. No crees un caso para cargar algo en un caso ya nombrado; "
         "crea casos solo cuando el usuario pida crearlos. Para asignar un receptor usa assign_case_receptor y solo afirma éxito al recibir applied o already_selected. "
         "Si el usuario no indicó un PDB ID exacto busca en el catálogo y asigna únicamente si el resultado es inequívoco; si hay varias opciones pregunta. "
+        "Si el usuario pidió expresamente un receptor aleatorio o al azar, usa pick_random_receptor y asigna el receptor devuelto; "
+        "conserva su sección y disponibilidad, sin sustituirlo por uno verificado salvo que el usuario haya pedido ese filtro. "
         "Si el usuario pide propiedades sin pedir cálculos de MolDesign ni una comparación, consulta PubChem cuando esté disponible; "
         "no ejecutes cálculos de MolDesign ni compares fuentes por iniciativa propia. "
         "Usa compute_properties cuando solicite un cálculo de MolDesign o una comparación explícita. "
@@ -1037,9 +1044,21 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
                                for row in result["receptors"]}, "error": None})
             return result
         tools.append(Tool(receptor_tool.name, receptor_tool.description, receptor_tool.parameters, capture_receptors))
+        random_tool = random_receptor_tool(receptor_tool)
+        async def capture_random_receptor(args: dict[str, Any]) -> dict[str, Any]:
+            result = await random_tool.execute(args)
+            if result.get("status") == "ok":
+                random_receptor_results[:] = [result]
+                verified.add(float(result["eligible_count"]))
+                row = result["receptor"]
+                evidence.append({"tool": random_tool.name, "label": "selección aleatoria", "epistemic_class": "dato persistido",
+                    "source": result["source"], "values": {str(row["pdb_id"]): str(row.get("name") or ""),
+                    "sección": str(row.get("seccion_catalogo") or "no indicada")}, "error": None})
+            return result
+        tools.append(Tool(random_tool.name, random_tool.description, random_tool.parameters, capture_random_receptor))
     if not registro.content_granted(provider.id):
         tools = []
-    task = asyncio.create_task(run_tool_loop(provider, messages, tools, max_steps=7, observe=observe_tool))
+    task = asyncio.create_task(run_tool_loop(provider, messages, tools, max_steps=10, observe=observe_tool))
     next_event = asyncio.create_task(events.get())
     try:
         while True:
@@ -1083,7 +1102,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         if displayed_refs:
             quoted.append(str(len(displayed_refs)))
         context = "\n".join(m["content"] for m in messages if m.get("role") in ("user", "assistant"))
-        context += "\n" + json.dumps(displayed_refs, ensure_ascii=False) + "\n" + json.dumps(receptor_results, ensure_ascii=False) + "\n" + json.dumps(evidence, ensure_ascii=False)
+        context += "\n" + json.dumps(displayed_refs, ensure_ascii=False) + "\n" + json.dumps(receptor_results, ensure_ascii=False) + "\n" + json.dumps(random_receptor_results, ensure_ascii=False) + "\n" + json.dumps(evidence, ensure_ascii=False)
         literals = context_literals(context)
         if displayed_refs:
             # PubChem's cited glossary states this; protect the phrase, not the
@@ -1158,7 +1177,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             answer += f'\n\nComprobación del editor · caso «{editor_check_result["case_name"]}» · PubChem {editor_check_result["cid"]}: {explanation}'
         if trace:
             incomplete = result.exhausted or any(step["status"] not in {"ok", "created", "applied", "already_selected", "exists", "match", "match_stereo_unspecified", "different_stereochemistry", "different_structure"}
-                and not (step["tool"] in {"pubchem_lookup", "search_receptors"} and step["status"] == "not_found")
+                and not (step["tool"] in {"pubchem_lookup", "search_receptors", "pick_random_receptor"} and step["status"] == "not_found")
                 for step in trace)
             save_trace("partial" if incomplete else "completed")
             trace_finished = True

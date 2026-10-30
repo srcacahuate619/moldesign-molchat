@@ -3,7 +3,7 @@ import httpx
 import pytest
 
 from molchat_agent.bridge import MolDesignBridge
-from molchat_agent.conversation.harness_tools import create_case_tool, load_case_smiles_tool, properties_tool, pubchem_tool, receptor_catalog_tool
+from molchat_agent.conversation.harness_tools import create_case_tool, load_case_smiles_tool, properties_tool, pubchem_tool, receptor_catalog_tool, random_receptor_tool
 from molchat_agent.conversation.tool_loop import run_tool_loop
 from molchat_agent.conversation.tools import MoleculeRecord
 
@@ -116,3 +116,37 @@ async def test_receptor_catalog_fails_closed_when_host_unavailable():
     async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", transport=httpx.MockTransport(host)) as client:
         result = await receptor_catalog_tool(MolDesignBridge(client=client, token="owner")).execute({"query": "*"})
     assert result["status"] == "unavailable" and "receptors" not in result
+
+
+@pytest.mark.asyncio
+async def test_random_receptor_samples_complete_catalog_and_excludes_unavailable_and_ambiguous(monkeypatch):
+    rows = [{"pdb_id": f"{i:04d}", "name": f"Receptor {i}", "disponible": i != 2,
+             "seccion_catalogo": "verificado" if i == 12 else "demostracion"} for i in range(13)]
+    rows.append({"pdb_id": "0003", "name": "Duplicado", "disponible": False})
+    requests = []
+    async def host(request):
+        requests.append(request)
+        return httpx.Response(200, json=rows)
+    selected_candidates = []
+    def pick_last(items):
+        selected_candidates.extend(items)
+        return items[-1]
+    monkeypatch.setattr("molchat_agent.conversation.harness_tools.secrets.choice", pick_last)
+    async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", transport=httpx.MockTransport(host)) as client:
+        tool = random_receptor_tool(receptor_catalog_tool(MolDesignBridge(client=client, token="test-owner")))
+        result = await tool.execute({})
+        assert result["status"] == "ok" and result["selection"] == "aleatoria"
+        assert result["receptor"]["pdb_id"] == "0012"
+        assert result["eligible_count"] == 11
+        assert {row["pdb_id"] for row in selected_candidates}.isdisjoint({"0002", "0003"})
+        assert len(requests) == 1
+        filtered = await tool.execute({"section": "verificado"})
+        assert filtered["eligible_count"] == 1 and filtered["receptor"]["pdb_id"] == "0012"
+
+
+@pytest.mark.asyncio
+async def test_random_receptor_reports_no_available_candidates():
+    async def host(_request): return httpx.Response(200, json=[{"pdb_id": "1ABC", "disponible": False}])
+    async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", transport=httpx.MockTransport(host)) as client:
+        result = await random_receptor_tool(receptor_catalog_tool(MolDesignBridge(client=client, token="test-owner"))).execute({})
+    assert result["status"] == "not_found" and "receptor" not in result

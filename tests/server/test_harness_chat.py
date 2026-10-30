@@ -38,7 +38,7 @@ async def test_chat_uses_direct_pubchem_and_resumes_selection(tmp_path, monkeypa
     async def model(messages, tools):
         seen.append(list(messages))
         if len(seen) == 1:
-            assert {t["function"]["name"] for t in tools} == {"pubchem_lookup", "create_case", "compute_properties", "load_case_smiles", "search_receptors", "assign_case_receptor", "verify_editor_structure", "show_property_comparison", "suggest_next_actions"}
+            assert {t["function"]["name"] for t in tools} == {"pubchem_lookup", "create_case", "compute_properties", "load_case_smiles", "search_receptors", "pick_random_receptor", "assign_case_receptor", "verify_editor_structure", "show_property_comparison", "suggest_next_actions"}
             return {"role": "assistant", "content": None, "tool_calls": [{"id": "c1", "type": "function",
                     "function": {"name": "pubchem_lookup", "arguments": '{"name":"ibuprofeno"}'}}]}
         if len(seen) == 2:
@@ -743,6 +743,128 @@ async def test_receptor_assignment_requires_identified_receptor(tmp_path, monkey
         response = await client.post("/v1/chat", headers=headers, json={"text": "asigna un receptor al caso prueba"})
         assert not any(e.get("type") == "case_receptor" for e in events(response))
         assert not state.receptor_requests
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("wrong_first", [False, True])
+async def test_random_receptor_can_be_assigned_without_substituting_another(tmp_path, monkeypatch, wrong_first):
+    state, registry, headers = state_for(tmp_path)
+    monkeypatch.setattr("molchat_agent.conversation.harness_tools.secrets.choice", lambda items: items[-1])
+    async def model(messages, tools):
+        if messages[-1]["role"] == "user":
+            assert "pick_random_receptor" in {item["function"]["name"] for item in tools}
+            name, args = "pick_random_receptor", {}
+        elif messages[-1].get("tool_call_id") == "pick_random_receptor":
+            selected = json.loads(messages[-1]["content"])
+            assert selected["receptor"]["pdb_id"] == "1BN1" and selected["selection"] == "aleatoria"
+            if wrong_first:
+                return {"role": "assistant", "content": None, "tool_calls": [{"id": "different-search", "type": "function",
+                    "function": {"name": "search_receptors", "arguments": '{"query":"1AJ6"}'}}]}
+            name, args = "assign_case_receptor", {"case_name": "prueba2", "pdb_id": selected["receptor"]["pdb_id"]}
+        elif messages[-1].get("tool_call_id") == "different-search":
+            assert json.loads(messages[-1]["content"])["total"] == 1
+            return {"role": "assistant", "content": None, "tool_calls": [{"id": "wrong", "type": "function",
+                "function": {"name": "assign_case_receptor", "arguments": '{"case_name":"prueba2","pdb_id":"1AJ6"}'}}]}
+        elif messages[-1].get("tool_call_id") == "wrong":
+            assert json.loads(messages[-1]["content"])["status"] == "needs_selection"
+            name, args = "assign_case_receptor", {"case_name": "prueba2", "pdb_id": "1BN1"}
+        else:
+            assert json.loads(messages[-1]["content"])["status"] == "applied"
+            return {"role": "assistant", "content": "Se seleccionó y asignó el receptor aleatorio."}
+        return {"role": "assistant", "content": None, "tool_calls": [{"id": name, "type": "function",
+            "function": {"name": name, "arguments": json.dumps(args)}}]}
+    monkeypatch.setattr(registry.get("fake"), "chat_with_tools", model, raising=False)
+    async def registry_for_turn(_token): return registry
+    monkeypatch.setattr(state, "registro_de_turno", registry_for_turn)
+    async def host(_request): return httpx.Response(200, json=[
+        {"pdb_id": "1AJ6", "name": "Uno", "disponible": True, "seccion_catalogo": "demostracion"},
+        {"pdb_id": "1BN1", "name": "Dos", "disponible": True, "seccion_catalogo": "demostracion"}])
+    async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", transport=httpx.MockTransport(host)) as host_client:
+        state.bridge = MolDesignBridge(client=host_client)
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+            turn = asyncio.create_task(client.post("/v1/chat", headers=headers, json={"text": "asigna un receptor random al caso prueba2"}))
+            for _ in range(200):
+                if state.receptor_requests: break
+                await asyncio.sleep(0.01)
+            request_id = next(iter(state.receptor_requests))
+            await client.post(f"/v1/receptor-requests/{request_id}/result", headers=headers, json={"status": "applied"})
+            entries = events(await turn)
+            assert any(e.get("type") == "case_receptor" and e["pdb_id"] == "1BN1" for e in entries)
+            result = next(e["result"] for e in entries if e["type"] == "result")
+            assert "1BN1" in result["text"] and "asignado y guardado" in result["text"]
+            assert any(item["tool"] == "pick_random_receptor" for item in result["evidence"])
+
+
+@pytest.mark.asyncio
+async def test_multistep_random_receptor_flow_finishes_with_a_model_answer(tmp_path, monkeypatch):
+    Chem = pytest.importorskip("rdkit.Chem")
+    state, registry, headers = state_for(tmp_path)
+    monkeypatch.setattr("molchat_agent.conversation.harness_tools.secrets.choice", lambda items: items[-1])
+    async def model(messages, _tools):
+        last = messages[-1]
+        if last["role"] == "user":
+            call_id, name, args = "miss", "pubchem_lookup", {"name": "error-de-escritura"}
+        elif last.get("tool_call_id") == "miss":
+            assert json.loads(last["content"])["status"] == "not_found"
+            call_id, name, args = "found", "pubchem_lookup", {"name": "ethanol"}
+        elif last.get("tool_call_id") == "found":
+            call_id, name, args = "random", "pick_random_receptor", {}
+        elif last.get("tool_call_id") == "random":
+            assert json.loads(last["content"])["receptor"]["pdb_id"] == "1BN1"
+            call_id, name, args = "load", "load_case_smiles", {"case_name": "prueba2", "smiles": "CCO"}
+        elif last.get("tool_call_id") == "load":
+            call_id, name, args = "assign", "assign_case_receptor", {"case_name": "prueba2", "pdb_id": "1BN1"}
+        elif last.get("tool_call_id") == "assign":
+            assert json.loads(last["content"])["status"] == "applied"
+            call_id, name, args = "verify", "verify_editor_structure", {"case_name": "prueba2", "cid": 702}
+        elif last.get("tool_call_id") == "verify":
+            assert json.loads(last["content"])["status"] == "match"
+            call_id, name, args = "suggest", "suggest_next_actions", {"actions": [{"kind": "general", "text": "Explica el receptor seleccionado"}]}
+        else:
+            return {"role": "assistant", "content": "Consulta, selección y comprobación terminadas."}
+        return {"role": "assistant", "content": None, "tool_calls": [{"id": call_id, "type": "function", "function": {"name": name, "arguments": json.dumps(args)}}]}
+    monkeypatch.setattr(registry.get("fake"), "chat_with_tools", model, raising=False)
+    async def registry_for_turn(_token): return registry
+    monkeypatch.setattr(state, "registro_de_turno", registry_for_turn)
+    async def host(request):
+        if request.url.path == "/targets/":
+            return httpx.Response(200, json=[{"pdb_id": "1AJ6", "disponible": True}, {"pdb_id": "1BN1", "disponible": True}])
+        return httpx.Response(200, json={"modo_offline": False, "destinos": [{"servicio": "pubchem", "host": "pubchem.ncbi.nlm.nih.gov", "consentido": True}]})
+    async def public(request):
+        if "/name/error-de-escritura/" in request.url.path: return httpx.Response(404)
+        if "/name/" in request.url.path: return httpx.Response(200, json={"IdentifierList": {"CID": [702]}})
+        if "/property/" in request.url.path: return httpx.Response(200, json={"PropertyTable": {"Properties": [{"CID": 702, "SMILES": "CCO"}]}})
+        return httpx.Response(200, json={"InformationList": {"Information": [{"CID": 702, "Title": "Ethanol"}]}})
+    async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", transport=httpx.MockTransport(host)) as host_client, httpx.AsyncClient(transport=httpx.MockTransport(public)) as external:
+        state.bridge = MolDesignBridge(client=host_client)
+        state.pubchem_client = external
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+            turn = asyncio.create_task(client.post("/v1/chat", headers=headers, json={"text": "investiga, carga en prueba2, asigna un receptor random y verifica el dibujo"}))
+            for _ in range(300):
+                if state.smiles_requests: break
+                await asyncio.sleep(0.01)
+            await client.post(f"/v1/smiles-requests/{next(iter(state.smiles_requests))}/result", headers=headers, json={"status": "applied"})
+            for _ in range(300):
+                if state.receptor_requests: break
+                await asyncio.sleep(0.01)
+            await client.post(f"/v1/receptor-requests/{next(iter(state.receptor_requests))}/result", headers=headers, json={"status": "applied"})
+            for _ in range(300):
+                if state.editor_requests: break
+                await asyncio.sleep(0.01)
+            first = next(iter(state.editor_requests))
+            await client.post(f"/v1/editor-requests/{first}/result", headers=headers, json={"status": "ok", "molfile": Chem.MolToMolBlock(Chem.MolFromSmiles("CCO")), "revision": "1:2"})
+            for _ in range(300):
+                pending = [key for key in state.editor_requests if key != first]
+                if pending: break
+                await asyncio.sleep(0.01)
+            await client.post(f"/v1/editor-requests/{pending[0]}/result", headers=headers, json={"status": "ok"})
+            entries = events(await turn)
+            result = next(e["result"] for e in entries if e["type"] == "result")
+            assert "Consulta, selección y comprobación terminadas." in result["text"]
+            assert "límite de pasos" not in result["text"]
+            assert any(e.get("type") == "case_receptor" and e["pdb_id"] == "1BN1" for e in entries)
+            assert not any(e.get("type") == "case_create" for e in entries)
+            assert result["suggested_actions"][0]["text"] == "Explica el receptor seleccionado"
 
 
 @pytest.mark.asyncio

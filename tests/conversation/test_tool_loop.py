@@ -147,3 +147,20 @@ async def test_six_step_budget_allows_four_tool_calls_and_model_summary():
     assert result.text == "Acciones confirmadas." and not result.exhausted and len(calls) == 4
 
 
+@pytest.mark.asyncio
+async def test_ten_step_budget_allows_complex_turn_and_summary():
+    calls = []
+    class Provider:
+        async def chat_with_tools(self, messages, _tools):
+            done = sum(1 for message in messages if message.get("role") == "tool")
+            if done == 8:
+                return {"role": "assistant", "content": "Acciones confirmadas."}
+            return call(call_id=f"step-{done}")
+    async def execute(args):
+        calls.append(args)
+        return {"status": "ok"}
+    result = await run_tool_loop(Provider(), [{"role": "user", "content": "consulta"}],
+                                 [Tool("pubchem_lookup", "Busca", SCHEMA, execute)], max_steps=10)
+    assert result.text == "Acciones confirmadas." and not result.exhausted and len(calls) == 8
+
+
