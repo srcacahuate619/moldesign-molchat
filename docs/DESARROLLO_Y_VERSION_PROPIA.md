@@ -14,6 +14,15 @@ MolDesign ejecuta la copia que tiene fijada. Mientras no la vuelvas a vendorizar
    cd ui && npm test && npm run build
    ```
 
+   Algunas pruebas de estructuras necesitan RDKit. El flujo de CI lo instala
+   solo en su entorno temporal; para ejecutarlas localmente se puede añadir
+   `pip install rdkit`. Las pruebas también comprueban que, si falta, MolChat
+   indique que no pudo verificar la estructura. En la integración habitual,
+   el host inicia el sidecar con su intérprete de Python: si este incluye
+   RDKit, ambos procesos usan esa instalación sin añadir otra al paquete de
+   MolChat. Una instalación independiente necesita tener RDKit disponible
+   para las funciones de validación y comparación estructural.
+
 2. Haz commits limpios. Sólo lo commiteado se puede integrar.
 
 3. Para probar un cambio dentro de MolDesign sin tocar su copia publicada, vendoriza a una carpeta de prueba desde la raíz de MolDesign:

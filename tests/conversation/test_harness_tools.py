@@ -1,3 +1,4 @@
+import builtins
 import json
 import httpx
 import pytest
@@ -6,6 +7,7 @@ from molchat_agent.bridge import MolDesignBridge
 from molchat_agent.conversation.harness_tools import create_case_tool, load_case_smiles_tool, properties_tool, pubchem_tool, receptor_catalog_tool
 from molchat_agent.conversation.tool_loop import run_tool_loop
 from molchat_agent.conversation.tools import MoleculeRecord
+from molchat_agent.conversation.structure_check import compare_editor_structure
 
 
 @pytest.mark.asyncio
@@ -69,6 +71,30 @@ async def test_structure_check_detects_transformation(canonical, identity):
     assert result["structure"]["identity"] == identity
     assert result["structure"]["warnings"] == ["host warning"]
     assert result["methods"]["hba"] == "NOCount"
+
+
+@pytest.mark.asyncio
+async def test_absent_rdkit_does_not_confirm_structure_or_send_smiles(monkeypatch):
+    original_import = builtins.__import__
+    def without_rdkit(name, *args, **kwargs):
+        if name == "rdkit" or name.startswith("rdkit."):
+            raise ImportError("RDKit no está disponible")
+        return original_import(name, *args, **kwargs)
+    monkeypatch.setattr(builtins, "__import__", without_rdkit)
+    class Backend:
+        async def properties(self, _smiles):
+            return MoleculeRecord(name="example", smiles="CCO", props={"mw": 46})
+    result = await properties_tool(Backend()).execute({"name": "OCC"})
+    assert result["structure"]["identity"] == "unverified"
+    assert result["structure"]["verifier"] is None
+    calls = []
+    async def request(name, smiles):
+        calls.append((name, smiles))
+        return {"status": "applied"}
+    result = await load_case_smiles_tool(request).execute({"case_name": "ejemplo", "smiles": "CCO"})
+    assert result["status"] == "unavailable"
+    assert not calls
+    assert compare_editor_structure("CCO", "un dibujo")['status'] == "unverifiable"
 
 
 @pytest.mark.asyncio
