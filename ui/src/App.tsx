@@ -146,6 +146,7 @@ export default function App() {
       )}
       {tab === "settings" && (
         <Settings
+          token={token}
           t={t}
           locale={locale}
           stt={stt}

@@ -30,6 +30,19 @@ def test_crud_roundtrip(store):
     assert store.get_conversation(conv_id, ALICE) is None
 
 
+def test_harness_trace_persists_per_owner_and_is_deleted_with_conversation(store):
+    conv_id = store.create_conversation(ALICE)
+    steps = [{"id": "s1", "tool": "load_case_smiles", "status": "applied", "detail": "case_name: prueba"}]
+    store.save_harness_job("job-1", ALICE, conv_id, "completed", steps)
+    restarted = MemoryStore(store.path)
+    assert restarted.list_harness_jobs(ALICE)[0]["steps"] == steps
+    assert restarted.list_harness_jobs(MALLORY) == []
+    assert not restarted.delete_conversation(conv_id, MALLORY)
+    assert restarted.list_harness_jobs(ALICE)
+    assert restarted.delete_conversation(conv_id, ALICE)
+    assert restarted.list_harness_jobs(ALICE) == []
+
+
 def test_foreign_conversation_is_invisible(store):
     conv_id = store.create_conversation(ALICE)
     assert store.get_conversation(conv_id, MALLORY) is None

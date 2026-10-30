@@ -1,5 +1,32 @@
 # Procedencia — MolChat Agent
 
+### src/molchat_agent/conversation/tool_loop.py, src/molchat_agent/conversation/harness_tools.py, tests/conversation/test_tool_loop.py, tests/conversation/test_harness_tools.py, tests/server/test_harness_chat.py
+
+- Origen: código propio experimental de MolChat, commit 94605d715877f9de04814b42392772e2ec96297c, con ejecutores nuevos.
+- Commit de MolDesign: N/A.
+- Autoría: Johan Amezcua, con colaboración de un agente de código.
+- Transformación: ciclo estructurado y herramientas del agente; la consulta pública vive en MolChat y la operación de casos se delega al host.
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/conversation/test_tool_loop.py, tests/conversation/test_harness_tools.py.
+
+### src/molchat_agent/conversation/pubchem.py, tests/conversation/test_pubchem_owned.py
+
+- Origen: código propio previamente desarrollado en MolDesign para la consulta informativa, trasladado al lado MolChat.
+- Commit de MolDesign: N/A; la versión de origen estaba sin registrar en la copia local.
+- Autoría: Johan Amezcua, con colaboración de un agente de código.
+- Transformación: consulta HTTPS en MolChat; autorización asíncrona por cuenta antes de cada petición.
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/conversation/test_pubchem_owned.py.
+
+### src/molchat_agent/conversation/case_selection.py, tests/conversation/test_case_selection.py, tests/server/test_case_host_action.py
+
+- Origen: código nuevo de este repositorio para una solicitud de creación de caso al host.
+- Commit de MolDesign: N/A; integración mediante mensajes y resultado confirmado.
+- Autoría: Johan Amezcua, con colaboración de un agente de código.
+- Transformación: selección validada, respuesta del host por cuenta y pruebas de rechazo.
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/conversation/test_case_selection.py y tests/server/test_case_host_action.py.
+
 Ledger de porte desde MolDesign (PLAN §21). Ningún fichero entra desde
 MolDesign sin una entrada aquí. Formato obligatorio por pieza portada: origen
 exacto, commit fijado, autoría, transformación, licencia resultante y tests.
@@ -876,3 +903,12 @@ MolDesign es por API HTTP, no por copia de código.
 - Transformación: pruebas nuevas de la credencial con la sesión, de los motivos de rechazo sin claves y del error de transporte
 - Licencia resultante: GPL-3.0-or-later
 - Tests: son los tests
+
+### src/molchat_agent/conversation/structure_check.py, tests/conversation/test_structure_check.py
+
+- Origen: código nuevo en MolChat para comparar un molfile del editor con una referencia SMILES de PubChem usando RDKit.
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua, con colaboración de un agente de código.
+- Transformación: comparación de estructura y estereoquímica representada sin desalinización; pruebas de diferencias, fragmentos y abstención.
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/conversation/test_structure_check.py y tests/server/test_harness_chat.py

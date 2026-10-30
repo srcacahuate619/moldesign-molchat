@@ -236,6 +236,50 @@ class MolDesignBridge:
         return await self._pedir_proveedor("POST", "/molchat-host/credencial",
                                            {"proveedor": proveedor, "host": host})
 
+    async def authorize_pubchem(self) -> None:
+        """Check this account's current network policy; do not execute the lookup."""
+        if not self._token:
+            raise BridgeError("La consulta requiere una sesión MolDesign")
+        try:
+            response = await self._client.get("/ai/consent/red",
+                headers={"Authorization": f"Bearer {self._token}"}, timeout=30.0)
+            if response.status_code != 200 or len(response.content) > 65536:
+                raise BridgeError("No se pudo consultar el permiso de red", status_code=response.status_code)
+            data = response.json()
+            if not isinstance(data, dict) or data.get("modo_offline") is not False:
+                raise PermissionError("PubChem no disponible en modo sin red")
+            destinations = data.get("destinos")
+            if not isinstance(destinations, list):
+                raise PermissionError("Permiso de PubChem no disponible")
+            if not any(isinstance(item, dict) and item.get("servicio") == "pubchem"
+                       and item.get("host") == "pubchem.ncbi.nlm.nih.gov"
+                       and item.get("consentido") is True for item in destinations):
+                raise PermissionError("La cuenta no autorizó PubChem")
+        except (httpx.RequestError, ValueError) as exc:
+            raise BridgeError("No se pudo consultar el permiso de red") from exc
+
+    async def pubchem_consent(self, *, grant: bool = False, revoke: bool = False) -> dict[str, Any]:
+        """Read or explicitly change the account's PubChem permission."""
+        if not self._token:
+            raise BridgeError("Se necesita una sesión MolDesign")
+        headers = {"Authorization": f"Bearer {self._token}"}
+        try:
+            if revoke:
+                response = await self._client.delete("/ai/consent/red/pubchem", headers=headers)
+            elif grant:
+                response = await self._client.post("/ai/consent/red", headers=headers,
+                    json={"servicio": "pubchem", "host": "pubchem.ncbi.nlm.nih.gov"})
+            else:
+                response = await self._client.get("/ai/consent/red", headers=headers)
+            if response.status_code != 200 or len(response.content) > 65536:
+                raise BridgeError("No se pudo consultar el permiso", status_code=response.status_code)
+            data = response.json()
+            if not isinstance(data, dict):
+                raise BridgeError("Respuesta de permiso no válida")
+            return data
+        except (httpx.RequestError, ValueError) as exc:
+            raise BridgeError("No se pudo consultar el permiso") from exc
+
     async def transcribe_local(self, audio_bytes: bytes, *, lang: str = "es",
                              token: str | None = None) -> str:
         """Use MolDesign's authenticated local Whisper endpoint.

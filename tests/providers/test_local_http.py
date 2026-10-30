@@ -22,6 +22,20 @@ def test_non_loopback_base_is_rejected_at_construction():
 
 
 @pytest.mark.asyncio
+async def test_llama_server_passes_tools_and_returns_structured_call():
+    def handler(request):
+        data = json.loads(request.content)
+        assert data["tools"][0]["function"]["name"] == "demo"
+        return httpx.Response(200, json={"choices": [{"message": {"role": "assistant", "content": None,
+            "tool_calls": [{"id": "call-1", "type": "function", "function": {"name": "demo", "arguments": "{}"}}]}}]})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = LlamaServerProvider(model="m", client=client)
+        result = await provider.chat_with_tools([{"role": "user", "content": "hola"}],
+                                                [{"type": "function", "function": {"name": "demo"}}])
+    assert result["tool_calls"][0]["function"]["name"] == "demo"
+
+
+@pytest.mark.asyncio
 async def test_health_reports_models_or_connection_error():
     def healthy(request):
         assert request.url.path == "/v1/models"

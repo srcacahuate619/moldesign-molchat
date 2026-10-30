@@ -57,7 +57,7 @@ describe("VoiceButton", () => {
     const onTranscript = vi.fn();
     renderButton({ onTranscript, onError: () => {} });
     fireEvent.click(screen.getByRole("button"));
-    await waitFor(() => expect(mockStart).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByRole("button")).toHaveAttribute("aria-pressed", "true"));
     fireEvent.click(screen.getByRole("button"));
     await waitFor(() => expect(onTranscript).toHaveBeenCalledWith(
       "propiedades de la aspirina",
@@ -73,5 +73,34 @@ describe("VoiceButton", () => {
     renderButton({ onTranscript: () => {}, onError });
     fireEvent.click(screen.getByRole("button"));
     await waitFor(() => expect(onError).toHaveBeenCalled());
+  });
+
+  it("reports empty transcription instead of offering an empty message", async () => {
+    mockSupported.mockReturnValue(true);
+    mockStart.mockResolvedValue({ stop: vi.fn().mockResolvedValue(new Blob(["raw"])) });
+    mockToWav.mockResolvedValue(new Blob(["wav"]));
+    mockTranscribe.mockResolvedValue("");
+    const onError = vi.fn();
+    const onTranscript = vi.fn();
+    renderButton({ onTranscript, onError });
+    fireEvent.click(screen.getByRole("button"));
+    await waitFor(() => expect(screen.getByRole("button")).toHaveAttribute("aria-pressed", "true"));
+    fireEvent.click(screen.getByRole("button"));
+    await waitFor(() => expect(onError).toHaveBeenCalledWith(strings("es")["voice.noSpeech"]));
+    expect(onTranscript).not.toHaveBeenCalled();
+  });
+
+  it("stops a recording when the trusted host closes the panel", async () => {
+    mockSupported.mockReturnValue(true);
+    const stop = vi.fn().mockResolvedValue(new Blob(["raw"]));
+    mockStart.mockResolvedValue({ stop });
+    renderButton({ onTranscript: () => {}, onError: () => {} });
+    fireEvent.click(screen.getByRole("button"));
+    await waitFor(() => expect(screen.getByRole("button")).toHaveAttribute("aria-pressed", "true"));
+    fireEvent(window, new MessageEvent("message", {
+      source: window.parent, origin: "http://127.0.0.1:3000", data: { type: "molchat-host-hidden" },
+    }));
+    await waitFor(() => expect(stop).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("button")).toHaveAttribute("aria-pressed", "false");
   });
 });

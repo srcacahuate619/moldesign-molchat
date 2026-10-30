@@ -27,6 +27,8 @@ class MoleculeRecord:
     druglikeness: dict[str, Any] | None = None
     source: str = "fixtures RDKit grabados"
     verified_values: set[float] = field(default_factory=set)
+    methods: dict[str, str] = field(default_factory=dict)
+    warnings: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         for value in self.props.values():
@@ -95,8 +97,12 @@ class PlatformBackend:
                 raise ToolError("MolDesign no declaró la identidad o procedencia")
             if warnings:
                 source += ' | Avisos: ' + '; '.join(warnings)
+            methods = result.get('methods', {})
+            if not isinstance(methods, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in methods.items()):
+                methods = {}
             return MoleculeRecord(name=canonical, smiles=canonical,
-                                  props={k: props[k] for k in keys}, source=source)
+                                  props={k: props[k] for k in keys}, source=source,
+                                  methods=methods, warnings=warnings)
         except (httpx.RequestError, ValueError) as exc:
             raise ToolError("No se pudo verificar o consultar MolDesign") from exc
 

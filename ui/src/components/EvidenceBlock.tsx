@@ -17,7 +17,7 @@ export default function EvidenceBlock({ evidence }: { evidence: Evidence }) {
         <dl>
           {Object.entries(evidence.values).map(([key, value]) => (
             <div key={key} className="evidence-row">
-              <dt>{key}</dt>
+              <dt>{evidence.tool === "compute_properties" && key.toLowerCase() === "logp" ? "LogP (RDKit)" : key}</dt>
               <dd>{value}</dd>
             </div>
           ))}

@@ -80,7 +80,27 @@ def split_flow(text: str) -> tuple[str, str]:
 
 
 _NUMBER_RE = re.compile(r"-?\d+\.?\d*")
-_ORDINAL_RE = re.compile(r"(?:^|\n)\s*\d+(?:\.(?!\d)|[):])")
+_ORDINAL_RE = re.compile(r"(?:^|\n)\s*(?:#{1,6}\s+)?(?:\*\*)?\d+(?:\.(?!\d)|[):])")
+
+
+def context_literals(text: str) -> set[str]:
+    """Extract exact identifiers and quoted names, never bare scientific values."""
+    literals = set(re.findall(r"(?<![\w.])(?:[A-Za-z][A-Za-z0-9@+=()\[\]#\\/.-]*\d[A-Za-z0-9@+=()\[\]#\\/.-]*|\d[A-Za-z][A-Za-z0-9]*|\d+(?:\.\d+){2,})(?![\w.])", text))
+    for match in re.finditer(r'[`"“]([^`"”\n]{2,200})[`"”]', text):
+        value = match.group(1).strip()
+        if re.search(r"[A-Za-z]", value) and re.search(r"\d", value):
+            literals.add(value)
+    return literals
+
+
+def _protected_starts(text: str, literals: frozenset[str]) -> set[int]:
+    starts: set[int] = set()
+    for literal in literals:
+        if not literal:
+            continue
+        for match in re.finditer(r"(?<!\w)" + re.escape(literal) + r"(?!\w|\.\d)", text):
+            starts.update(match.start() + number.start() for number in _NUMBER_RE.finditer(literal))
+    return starts
 
 
 def numbers_in(text: str) -> list[str]:
@@ -99,12 +119,13 @@ def _ordinal_starts(text: str) -> set[int]:
 
 def redact_unverified(text: str, verified: set[float],
                       quotable: frozenset[str] = frozenset(),
-                      tolerance: float = 0.25) -> tuple[str, list[str]]:
+                      tolerance: float = 0.25,
+                      literals: frozenset[str] = frozenset()) -> tuple[str, list[str]]:
     """Replace unbacked numbers with a marker; quotable/ordinals survive."""
-    problems = verify_numbers(text, verified, tolerance, quotable)
+    problems = verify_numbers(text, verified, tolerance, quotable, literals)
     if not problems:
         return text, []
-    ordinal_starts = _ordinal_starts(text)
+    ordinal_starts = _ordinal_starts(text) | _protected_starts(text, literals)
 
     def _sub(match: re.Match) -> str:
         raw = match.group(0)
@@ -122,7 +143,8 @@ def redact_unverified(text: str, verified: set[float],
 
 
 def verify_numbers(text: str, verified: set[float], tolerance: float = 0.25,
-                   quotable: frozenset[str] = frozenset()) -> list[str]:
+                   quotable: frozenset[str] = frozenset(),
+                   literals: frozenset[str] = frozenset()) -> list[str]:
     """Every number in ``text`` must match a verified tool value.
 
     Two principled exemptions (both observed against Qwen 1.5B):
@@ -134,7 +156,7 @@ def verify_numbers(text: str, verified: set[float], tolerance: float = 0.25,
     never fail this: they are built FROM the verified values.
     """
     problems: list[str] = []
-    ordinal_starts = _ordinal_starts(text)
+    ordinal_starts = _ordinal_starts(text) | _protected_starts(text, literals)
     for match in _NUMBER_RE.finditer(text):
         raw = match.group(0)
         if raw in quotable:

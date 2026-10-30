@@ -162,6 +162,29 @@ class MemoryStore:
             """)
             conn.execute("CREATE INDEX IF NOT EXISTS idx_conv_user ON conversations(user_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_mol_conv ON session_molecules(conv_id)")
+            conn.execute("""CREATE TABLE IF NOT EXISTS harness_pending (
+                conv_id TEXT PRIMARY KEY, user_id TEXT NOT NULL, payload TEXT NOT NULL,
+                FOREIGN KEY (conv_id) REFERENCES conversations(id))""")
+            conn.execute("""CREATE TABLE IF NOT EXISTS harness_jobs (
+                id TEXT PRIMARY KEY, user_id TEXT NOT NULL, conv_id TEXT NOT NULL,
+                state TEXT NOT NULL, steps TEXT NOT NULL, created_at REAL NOT NULL, updated_at REAL NOT NULL)""")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_harness_jobs_user ON harness_jobs(user_id, created_at)")
+
+    def save_harness_job(self, job_id: str, user_id: str, conv_id: str, state: str,
+                         steps: list[dict[str, str]]) -> None:
+        now = time.time()
+        with self._connect() as conn:
+            conn.execute("""INSERT INTO harness_jobs (id, user_id, conv_id, state, steps, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET state=excluded.state,
+                steps=excluded.steps, updated_at=excluded.updated_at WHERE harness_jobs.user_id=excluded.user_id""",
+                (job_id, user_id, conv_id, state, json.dumps(steps, ensure_ascii=False), now, now))
+
+    def list_harness_jobs(self, user_id: str) -> list[dict[str, Any]]:
+        with self._connect() as conn:
+            rows = conn.execute("SELECT id, conv_id, state, steps, created_at, updated_at FROM harness_jobs "
+                                "WHERE user_id=? ORDER BY created_at DESC LIMIT 100", (user_id,)).fetchall()
+        return [{"id": row[0], "conversation_id": row[1], "state": row[2], "steps": json.loads(row[3]),
+                 "created_at": row[4], "updated_at": row[5]} for row in rows]
 
     @staticmethod
     def _row_to_conversation(row: Any) -> Conversation:
@@ -197,6 +220,8 @@ class MemoryStore:
 
     def delete_conversation(self, conv_id: str, user_id: str) -> bool:
         with self._connect() as conn:
+            conn.execute("DELETE FROM harness_pending WHERE conv_id = ? AND user_id = ?", (conv_id, user_id))
+            conn.execute("DELETE FROM harness_jobs WHERE conv_id = ? AND user_id = ?", (conv_id, user_id))
             cursor = conn.execute(
                 "DELETE FROM session_molecules WHERE conv_id IN "
                 "(SELECT id FROM conversations WHERE id = ? AND user_id = ?)",
@@ -209,11 +234,65 @@ class MemoryStore:
             _ = molecules
         return deleted
 
-    def add_message(self, conv_id: str, user_id: str, role: str, content: str) -> None:
+    def set_harness_pending(self, conv_id: str, user_id: str, payload: dict[str, Any]) -> None:
+        with self._connect() as conn:
+            exists = conn.execute("SELECT 1 FROM conversations WHERE id = ? AND user_id = ?",
+                                  (conv_id, user_id)).fetchone()
+            if not exists:
+                raise ConversationNotFound(conv_id)
+            conn.execute("INSERT OR REPLACE INTO harness_pending (conv_id, user_id, payload) VALUES (?, ?, ?)",
+                         (conv_id, user_id, json.dumps(payload, ensure_ascii=False)))
+
+    def get_harness_pending(self, conv_id: str, user_id: str) -> dict[str, Any] | None:
+        with self._connect() as conn:
+            row = conn.execute("SELECT payload FROM harness_pending WHERE conv_id = ? AND user_id = ?",
+                               (conv_id, user_id)).fetchone()
+        return json.loads(row[0]) if row else None
+
+    def clear_harness_pending(self, conv_id: str, user_id: str) -> None:
+        with self._connect() as conn:
+            conn.execute("DELETE FROM harness_pending WHERE conv_id = ? AND user_id = ?", (conv_id, user_id))
+
+    def claim_harness_reference(self, conv_id: str, user_id: str, cid: int) -> dict[str, Any] | None:
+        """Consume exactly one offered reference, atomically, scoped to its owner."""
+        with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute("SELECT payload FROM harness_pending WHERE conv_id = ? AND user_id = ?",
+                               (conv_id, user_id)).fetchone()
+            if not row:
+                return None
+            payload = json.loads(row[0])
+            selected = next((item for item in payload.get("references", [])
+                             if isinstance(item, dict) and item.get("cid") == cid), None)
+            if not selected:
+                return None
+            conv = conn.execute("SELECT messages FROM conversations WHERE id = ? AND user_id = ?",
+                                (conv_id, user_id)).fetchone()
+            if not conv:
+                return None
+            messages = json.loads(conv[0])
+            selected_text = f"Seleccionaste {selected['name']} (PubChem {cid})."
+            messages.append({"role": "assistant", "content": selected_text, "references": [selected]})
+            conn.execute("UPDATE conversations SET messages = ?, updated_at = ? WHERE id = ? AND user_id = ?",
+                         (json.dumps(messages, ensure_ascii=False), time.time(), conv_id, user_id))
+            conn.execute("DELETE FROM harness_pending WHERE conv_id = ? AND user_id = ?", (conv_id, user_id))
+            payload["selection_text"] = selected_text
+            return payload
+
+    def add_message(self, conv_id: str, user_id: str, role: str, content: str, *,
+                    references: list[dict[str, Any]] | None = None,
+                    evidence: list[dict[str, Any]] | None = None,
+                    comparison_cids: list[int] | None = None) -> None:
         conv = self.get_conversation(conv_id, user_id)
         if conv is None:
             raise ConversationNotFound(conv_id)
         conv.add_message(role, content)
+        if references:
+            conv.messages[-1]["references"] = references
+        if evidence:
+            conv.messages[-1]["evidence"] = evidence
+        if comparison_cids is not None:
+            conv.messages[-1]["comparison_cids"] = comparison_cids
         with self._connect() as conn:
             conn.execute(
                 "UPDATE conversations SET messages = ?, updated_at = ? "

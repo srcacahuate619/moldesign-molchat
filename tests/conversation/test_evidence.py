@@ -5,6 +5,7 @@ from molchat_agent.conversation.evidence import (
     EpistemicClass,
     Evidence,
     block_for_flow,
+    context_literals,
     format_evidence,
     numbers_in,
     redact_unverified,
@@ -71,6 +72,22 @@ def test_redact_keeps_quotable_and_verified():
                                            quotable=frozenset({"12345"}))
     assert problems != []
     assert "999.9" not in redacted and "12345" in redacted
+
+
+def test_context_identifiers_survive_without_whitelisting_their_digits_as_measurements():
+    prior = 'Caso "prueba 2". SMILES `CC(=O)OC1=CC=CC=C1C(=O)O`; MolDesign / RDKit 2025.09.6'
+    answer = ('**1.** Caso "prueba 2"; `CC(=O)OC1=CC=CC=C1C(=O)O`. '
+              'Fuente RDKit 2025.09.6. Peso inventado: 2025.09.')
+    redacted, issues = redact_unverified(answer, set(), literals=frozenset(context_literals(prior)))
+    assert '**1.**' in redacted and '"prueba 2"' in redacted
+    assert 'CC(=O)OC1=CC=CC=C1C(=O)O' in redacted and '2025.09.6' in redacted
+    assert 'Peso inventado: [dato no verificado]' in redacted and issues
+
+
+def test_a_modified_structure_is_not_protected_by_context():
+    prior = '`CC1=CC=CC=C1`'
+    redacted, issues = redact_unverified('`CC2=CC=CC=C2`', set(), literals=frozenset(context_literals(prior)))
+    assert issues and '[dato no verificado]' in redacted
 
 
 def test_prompts_are_versioned_and_static():

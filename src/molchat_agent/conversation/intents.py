@@ -217,6 +217,13 @@ def classify(msg: str) -> Intent:
     """Single entry point: classify the message intent."""
     lo = msg.lower()
 
+    # Case management is not exposed as a chat operation. Never send a request
+    # to mutate a case to the conceptual model as if it had acted on the host.
+    if re.search(r"\b(?:caso|case)s?\b", lo) and re.search(
+        r"\b(?:crea(?:r|me)?|crear|abre|abrir|elimina(?:r)?|borra(?:r)?|create|delete|open)\b", lo
+    ):
+        return Intent("case_action", tool=None)
+
     # Preparation check first: needs a PDB in the sentence.
     pdb_prep = _pdb_suelto(msg)
     if pdb_prep and _has(lo, _PREPARACION):

@@ -9,6 +9,8 @@ stateless per request, nothing lives in the observer connection.
 
 from __future__ import annotations
 
+import asyncio
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -36,6 +38,12 @@ class ServerState:
     stt: SpeechToText | None = None
     user_id: str | None = None
     revoked: set[str] = field(default_factory=set)
+    case_requests: dict[str, tuple[str, asyncio.Future[dict[str, str]]]] = field(default_factory=dict)
+    smiles_requests: dict[str, tuple[str, asyncio.Future[dict[str, str]]]] = field(default_factory=dict)
+    receptor_requests: dict[str, tuple[str, asyncio.Future[dict[str, str]]]] = field(default_factory=dict)
+    editor_requests: dict[str, tuple[str, asyncio.Future[dict[str, str]]]] = field(default_factory=dict)
+    structure_cache: OrderedDict[str, tuple[float, dict[str, str]]] = field(default_factory=OrderedDict)
+    pubchem_client: Any | None = None  # injected only for tests; production creates a restricted client
     # Hosted mode (MOLCHAT_HOST_SECRET set): platform calls forward the
     # request's Bearer instead of a fixed token. `bridge` is the shared
     # platform client the endpoints bind per request.
@@ -72,6 +80,7 @@ class ServerState:
 
     def revoke(self, jti: str) -> None:
         self.revoked.add(jti)
+        self.structure_cache.clear()
 
     def is_revoked(self, jti: str) -> bool:
         return jti in self.revoked

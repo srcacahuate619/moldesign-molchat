@@ -20,7 +20,13 @@ export interface Recording {
 /** Capture microphone audio until stop() resolves with the raw chunks. */
 export async function startRecording(): Promise<Recording> {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  const recorder = new MediaRecorder(stream);
+  let recorder: MediaRecorder;
+  try {
+    recorder = new MediaRecorder(stream);
+  } catch (error) {
+    stream.getTracks().forEach((track) => track.stop());
+    throw error;
+  }
   const chunks: Blob[] = [];
   const stopped = new Promise<Blob>((resolve) => {
     recorder.onstop = () => {
@@ -31,7 +37,12 @@ export async function startRecording(): Promise<Recording> {
   recorder.ondataavailable = (event: BlobEvent) => {
     if (event.data.size > 0) chunks.push(event.data);
   };
-  recorder.start();
+  try {
+    recorder.start();
+  } catch (error) {
+    stream.getTracks().forEach((track) => track.stop());
+    throw error;
+  }
   return {
     stop: async () => {
       const done = stopped;

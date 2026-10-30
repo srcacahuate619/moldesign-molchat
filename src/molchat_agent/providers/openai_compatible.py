@@ -233,3 +233,29 @@ class OpenAICompatibleProvider:
             raise ProviderError("El proveedor no entregó respuesta de chat.") from exc
         yield ChatEvent(type="token", text=content)
         yield ChatEvent(type="done", done=True)
+
+    async def chat_with_tools(self, messages: list[dict[str, Any]],
+                              tools: list[dict[str, Any]]) -> dict[str, Any]:
+        """One model step; the harness owns execution and continuation."""
+        if not self.config.base_url or not self.config.model:
+            raise ProviderError("Falta configurar el endpoint o el modelo.")
+        if self.locality == "remote" and not self.config.api_key:
+            raise ProviderError("Falta la clave del proveedor.")
+        payload: dict[str, Any] = {"model": self.config.model, "messages": messages,
+                                  "temperature": self.config.temperature,
+                                  "max_tokens": self.config.max_tokens}
+        if tools:
+            payload.update({"tools": tools, "tool_choice": "auto"})
+        if self.disable_thinking:
+            payload["chat_template_kwargs"] = {"enable_thinking": False}
+        try:
+            response = await self._http.post(f"{self.config.base_url}/chat/completions",
+                                             json=payload, headers=self._headers())
+            if response.status_code >= 400 or response.is_redirect:
+                raise ProviderError(f"El proveedor rechazó las herramientas (HTTP {response.status_code}).")
+            message = response.json()["choices"][0]["message"]
+            if not isinstance(message, dict):
+                raise ProviderError("Respuesta del proveedor no válida.")
+            return message
+        except (httpx.RequestError, KeyError, IndexError, TypeError, ValueError) as exc:
+            raise ProviderError("El proveedor no entregó una respuesta válida de herramientas.") from exc

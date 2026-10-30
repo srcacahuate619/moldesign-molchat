@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError, api, openEventStream } from "../lib/api";
+import { ApiError, api, openEventStream, type HarnessJob } from "../lib/api";
 import { linksForReport, postToHost } from "../lib/deeplinks";
 import type { StringKey } from "../lib/i18n";
 
@@ -19,6 +19,19 @@ const TERMINAL = new Set([
   "cancelled",
 ]);
 
+const STEP_LABELS: Record<string, StringKey> = {
+  ok: "jobs.stepOk", created: "jobs.stepCreated", applied: "jobs.stepApplied", exists: "jobs.stepExists",
+  not_found: "jobs.stepNotFound", unavailable: "jobs.stepUnavailable", permission_denied: "jobs.stepDenied",
+  invalid: "jobs.stepInvalid", invalid_smiles: "jobs.stepInvalid", ambiguous: "jobs.stepAmbiguous",
+  busy: "jobs.stepBusy", failed: "jobs.stepFailed", error: "jobs.stepFailed", unknown: "jobs.stepUnknown",
+  running: "jobs.stepRunning",
+  match: "jobs.structureMatch", match_stereo_unspecified: "jobs.structureUnspecified",
+  different_stereochemistry: "jobs.structureStereoDiffers", different_structure: "jobs.structureDiffers",
+  changed: "jobs.structureChanged", unverifiable: "jobs.structureUnverifiable", no_reference: "jobs.noReference",
+  not_ready: "jobs.editorNotReady", too_large: "jobs.editorTooLarge",
+  read_limit: "jobs.editorReadLimit",
+};
+
 export default function Jobs({
   token,
   t,
@@ -34,7 +47,27 @@ export default function Jobs({
   const [views, setViews] = useState<Record<string, ExecutionView>>({});
   const [error, setError] = useState<string | null>(null);
   const [hostNote, setHostNote] = useState(false);
+  const [harnessJobs, setHarnessJobs] = useState<HarnessJob[]>([]);
+  const [loadingHarness, setLoadingHarness] = useState(true);
   const aborters = useRef<Record<string, () => void>>({});
+
+  useEffect(() => {
+    let active = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const load = () => { void api.listHarnessJobs(token).then((jobs) => {
+      if (!active) return;
+      setHarnessJobs(jobs);
+      setLoadingHarness(false);
+      if (jobs.some((job) => job.state === "running")) timer = setTimeout(load, 3000);
+    }).catch((err: unknown) => {
+      if (!active) return;
+      setLoadingHarness(false);
+      if (err instanceof ApiError && err.status === 401) onSessionInvalid();
+      else setError(t("jobs.loadError"));
+    }); };
+    load();
+    return () => { active = false; if (timer) clearTimeout(timer); };
+  }, [token, t, onSessionInvalid]);
 
   useEffect(() => {
     if (focusId) setIds((prev) => (prev.includes(focusId) ? prev : [focusId, ...prev]));
@@ -93,7 +126,7 @@ export default function Jobs({
     }
   };
 
-  if (ids.length === 0) return <p className="muted">{t("jobs.empty")}</p>;
+  if (ids.length === 0 && harnessJobs.length === 0 && !error) return <p className="muted">{t(loadingHarness ? "jobs.loading" : "jobs.empty")}</p>;
 
   return (
     <section className="jobs">
@@ -104,6 +137,11 @@ export default function Jobs({
         </p>
       )}
       {hostNote && <p className="muted">{t("jobs.unhosted")}</p>}
+      {harnessJobs.map((job) => <article className="job-card" key={job.id}>
+        <p><strong>{t("jobs.agentFlow")}</strong> · {t("jobs.state")}: <strong>{t(({ completed: "jobs.completed", partial: "jobs.partial", failed: "jobs.failed", interrupted: "jobs.interrupted", running: "jobs.running" } as Record<string, StringKey>)[job.state] ?? "jobs.unknown")}</strong></p>
+        <p className="muted">{new Date(job.created_at * 1000).toLocaleString()}</p>
+        <ol>{job.steps.map((step) => <li key={step.id}><strong>{step.tool}</strong> · {STEP_LABELS[step.status] ? t(STEP_LABELS[step.status]) : step.status}{step.detail && <div className="muted">{step.detail}</div>}</li>)}</ol>
+      </article>)}
       {ids.map((id) => {
         const view = views[id];
         if (!view) return null;

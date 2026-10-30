@@ -26,6 +26,16 @@ def engine(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_crear_caso_no_inventa_una_accion(engine):
+    eng, backend, _, conv_id = engine
+    result = await eng.turn(conv_id, 'crea un caso que se llame "holamundo"')
+    assert result.intent_name == "case_action"
+    assert result.used_llm is False
+    assert "No se ha realizado ninguna acción" in result.text
+    assert backend.calls == []
+
+
+@pytest.mark.asyncio
 async def test_chemical_turn_reports_tool_values(engine):
     eng, backend, memory, conv_id = engine
     result = await eng.turn(conv_id, "calcula propiedades de la aspirina")

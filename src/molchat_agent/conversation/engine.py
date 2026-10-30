@@ -138,6 +138,9 @@ class ConversationEngine:
             return await self._recall(conv_id, text)
         if name == "recall_molecular":
             return await self._recall_search(text), [], False
+        if name == "case_action":
+            return ("No puedo crear ni modificar casos desde esta conversación. "
+                    "No se ha realizado ninguna acción; usa el menú Casos de MolDesign."), [], False
         if name in ("conceptual", "unknown"):
             return await self._conceptual(conv_id, text, intent)
         if name == "invalid_smiles":

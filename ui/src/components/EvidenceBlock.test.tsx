@@ -23,7 +23,7 @@ describe("EvidenceBlock", () => {
     expect(screen.getByText("demo dataset")).toBeInTheDocument();
     expect(screen.getByText("mw")).toBeInTheDocument();
     expect(screen.getByText("180.2")).toBeInTheDocument();
-    expect(screen.getByText("logp")).toBeInTheDocument();
+    expect(screen.getByText("LogP (RDKit)")).toBeInTheDocument();
   });
 
   it("renders the error variant without values", () => {

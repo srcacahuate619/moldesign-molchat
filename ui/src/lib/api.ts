@@ -15,6 +15,24 @@ export interface Evidence {
   source: string;
   values: Record<string, string>;
   error: string | null;
+  methods?: Record<string, string>;
+  structure?: {
+    input_smiles: string;
+    canonical_smiles: string;
+    identity: "same" | "changed" | "unverified";
+    verifier?: string | null;
+    warnings?: string[];
+    pubchem_cid?: number;
+    pubchem_source?: string;
+  };
+}
+
+export interface PubChemReference {
+  cid: number;
+  name: string;
+  source: string;
+  properties?: Record<string, string | number>;
+  properties_available?: boolean;
 }
 
 export interface TurnResult {
@@ -24,6 +42,8 @@ export interface TurnResult {
   latency_ms: number;
   used_llm: boolean;
   verified_values: number[];
+  references?: PubChemReference[];
+  comparison_cids?: number[];
 }
 
 export interface ConversationSummary {
@@ -31,6 +51,15 @@ export interface ConversationSummary {
   summary: string;
   updated_at: number;
   message_count: number;
+}
+
+export interface HarnessJob {
+  id: string;
+  conversation_id: string;
+  state: string;
+  steps: { id: string; tool: string; status: string; detail?: string }[];
+  created_at: number;
+  updated_at: number;
 }
 
 export interface PlanStep {
@@ -95,13 +124,27 @@ export const api = {
     return (await response.json()) as { stt?: string };
   },
   catalog: (t: string) => request(t, "/v1/catalog") as Promise<CatalogEntry[]>,
+  pubchemPermission: (t: string) => request(t, "/v1/pubchem/permission") as Promise<{ authorized: boolean; offline: boolean }>,
+  setPubchemPermission: (t: string, grant: boolean) => request(t, "/v1/pubchem/permission", { method: grant ? "POST" : "DELETE" }) as Promise<{ authorized: boolean; offline: boolean }>,
+  selectPubchem: (t: string, conversation: string, cid: number) =>
+    postJson(t, `/v1/conversations/${encodeURIComponent(conversation)}/pubchem-selection`, { cid }) as Promise<{ text: string }>,
+  reportCaseResult: (t: string, id: string, status: "created" | "exists" | "failed" | "unknown") =>
+    postJson(t, `/v1/case-requests/${encodeURIComponent(id)}/result`, { status }),
+  reportSmilesResult: (t: string, id: string, status: "applied" | "not_found" | "ambiguous" | "busy" | "failed" | "unknown") =>
+    postJson(t, `/v1/smiles-requests/${encodeURIComponent(id)}/result`, { status }),
+  reportReceptorResult: (t: string, id: string, status: import("./receptorHost").ReceptorStatus) =>
+    postJson(t, `/v1/receptor-requests/${encodeURIComponent(id)}/result`, { status }),
+  reportEditorResult: (t: string, id: string, result: { status: string; molfile?: string; revision?: string }) =>
+    postJson(t, `/v1/editor-requests/${encodeURIComponent(id)}/result`, result),
   createConversation: (t: string) =>
     postJson(t, "/v1/conversations", {}) as Promise<{ id: string }>,
   listConversations: (t: string) =>
     request(t, "/v1/conversations") as Promise<ConversationSummary[]>,
+  listHarnessJobs: (t: string) => request(t, "/v1/harness-jobs") as Promise<HarnessJob[]>,
   getConversation: (t: string, id: string) =>
     request(t, `/v1/conversations/${id}`) as Promise<{
-      messages: { role: string; content: string }[];
+      messages: { role: string; content: string; references?: PubChemReference[]; evidence?: Evidence[]; comparison_cids?: number[] }[];
+      pending_references?: PubChemReference[];
     }>,
   deleteConversation: (t: string, id: string) =>
     request(t, `/v1/conversations/${id}`, { method: "DELETE" }),

@@ -1,20 +1,32 @@
 import type { Locale, StringKey } from "../lib/i18n";
 
 export default function Settings({
+  token,
   t,
   locale,
   stt,
   onLocale,
   onRevoke,
 }: {
+  token: string;
   t: (key: StringKey) => string;
   locale: Locale;
   stt: string;
   onLocale: (locale: Locale) => void;
   onRevoke: () => void;
 }) {
+  const [pubchem, setPubchem] = useState<{ authorized: boolean; offline: boolean } | null>(null);
+  const [permissionError, setPermissionError] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void api.pubchemPermission(token).then((value) => { if (active) setPubchem(value); })
+      .catch(() => { if (active) setPermissionError(true); });
+    return () => { active = false; };
+  }, [token]);
   const sttNote =
-    stt === "cloud"
+    stt === "platform"
+      ? t("settings.sttPlatform")
+      : stt === "cloud"
       ? t("settings.sttCloud")
       : stt === "local"
         ? t("settings.sttLocal")
@@ -36,6 +48,17 @@ export default function Settings({
       <p className="muted">{t("settings.dataNote")}</p>
       <h3>{t("settings.consents")}</h3>
       <p className="muted">{t("settings.consentsNote")}</p>
+      <h3>PubChem</h3>
+      <p className="muted">{t("settings.pubchemNote")}</p>
+      {pubchem && <>
+        <p className="muted">{t(pubchem.offline ? "settings.pubchemOffline" : pubchem.authorized ? "settings.pubchemAllowed" : "settings.pubchemDenied")}</p>
+        <button type="button" onClick={() => {
+          void api.setPubchemPermission(token, !pubchem.authorized)
+            .then((value) => { setPubchem(value); setPermissionError(false); })
+            .catch(() => setPermissionError(true));
+        }}>{t(pubchem.authorized ? "settings.pubchemRevoke" : "settings.pubchemAllow")}</button>
+      </>}
+      {permissionError && <p role="alert" className="error">{t("settings.pubchemError")}</p>}
       <h3>{t("settings.stt")}</h3>
       {stt === "cloud" ? (
         <p role="alert" className="error">
@@ -49,3 +72,5 @@ export default function Settings({
     </section>
   );
 }
+import { useEffect, useState } from "react";
+import { api } from "../lib/api";

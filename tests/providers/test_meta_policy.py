@@ -87,7 +87,7 @@ def test_factory_registers_meta_and_survives_bad_config():
     from molchat_agent.config import load_config
 
     registry = build_registry(load_config({}))
-    assert registry.ids() == ["anthropic", "deepseek", "fake", "gemini", "llama-server",
+    assert registry.ids() == ["anthropic", "baseten-hackathon", "deepseek", "fake", "gemini", "llama-server",
                               "meta", "nvidia", "ollama", "openai"]
     assert registry.active_id is None  # sin proveedor por defecto
 
