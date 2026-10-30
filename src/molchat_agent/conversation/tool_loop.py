@@ -35,32 +35,40 @@ def _arguments(raw: Any, schema: dict[str, Any]) -> dict[str, Any]:
         data = json.loads(raw)
     except (ValueError, TypeError):
         raise ValueError("Los argumentos deben ser un objeto JSON válido.") from None
-    if not isinstance(data, dict):
-        raise ValueError("argumentos no válidos")
-    properties = schema.get("properties", {})
-    required = schema.get("required", [])
-    if (schema.get("type") != "object" or schema.get("additionalProperties") is not False
-            or not isinstance(properties, dict) or not isinstance(required, list)):
-        raise ValueError("argumentos no válidos")
-    if not set(required).issubset(data) or not set(data).issubset(properties):
-        raise ValueError(f"Usa solo los campos {', '.join(properties)}; son obligatorios: {', '.join(required)}.")
-    for key, value in data.items():
-        spec = properties[key]
+    def validate(value: Any, spec: Any, key: str) -> Any:
         if not isinstance(spec, dict):
             raise ValueError("Esquema de herramienta no válido.")
-        if spec.get("type") == "integer":
+        kind = spec.get("type")
+        if kind == "object":
+            properties, required = spec.get("properties", {}), spec.get("required", [])
+            if (not isinstance(value, dict) or spec.get("additionalProperties") is not False
+                    or not isinstance(properties, dict) or not isinstance(required, list)):
+                raise ValueError("argumentos no válidos")
+            if not set(required).issubset(value) or not set(value).issubset(properties):
+                raise ValueError(f"Usa solo los campos {', '.join(properties)}; son obligatorios: {', '.join(required)}.")
+            return {name: validate(item, properties[name], name) for name, item in value.items()}
+        if kind == "array":
+            if not isinstance(value, list) or not spec.get("minItems", 0) <= len(value) <= spec.get("maxItems", 3):
+                raise ValueError(f"El campo {key} debe ser una lista dentro del límite indicado.")
+            return [validate(item, spec.get("items"), key) for item in value]
+        if kind == "integer":
             if isinstance(value, str) and value.isascii() and value.isdigit() and len(value) <= 12:
                 value = int(value)
             if type(value) is not int or not spec.get("minimum", 0) <= value <= spec.get("maximum", 999999999999):
                 raise ValueError(f"El campo {key} debe ser un entero válido dentro del rango indicado.")
-            data[key] = value
-        elif spec.get("type") == "string":
+            return value
+        if kind == "string":
             if (not isinstance(value, str) or not value.strip() or len(value) > spec.get("maxLength", 120)
                     or any(ord(char) < 32 for char in value)):
                 raise ValueError(f"El campo {key} debe ser un texto válido y no vacío.")
-        else:
-            raise ValueError("Esquema de herramienta no válido.")
-    return data
+            if "enum" in spec and value not in spec["enum"]:
+                raise ValueError(f"El campo {key} debe usar una de las opciones indicadas.")
+            return value
+        raise ValueError("Esquema de herramienta no válido.")
+    result = validate(data, schema, "argumentos")
+    if not isinstance(result, dict):
+        raise ValueError("argumentos no válidos")
+    return result
 
 
 async def run_tool_loop(provider: Any, messages: list[dict[str, Any]],

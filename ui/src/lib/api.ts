@@ -48,8 +48,9 @@ export interface TurnResult {
 }
 
 export interface SuggestedAction {
-  kind: "compare_with_moldesign" | "verify_drawing";
-  cid: number;
+  kind: "general" | "compare_with_moldesign" | "verify_drawing";
+  text: string;
+  cid?: number;
 }
 
 export interface ConversationSummary {

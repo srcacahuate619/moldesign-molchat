@@ -82,7 +82,8 @@ input, textarea { max-width: 100%; }
 .comparison dl div { margin: 6px 0; }
 .comparison dt { font-weight: 600; }
 .comparison dd { margin: 0; }
-.context-actions button { margin: 5px 5px 0 0; }
+.context-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+.context-actions button { max-width: 100%; text-align: left; overflow-wrap: anywhere; }
 .pubchem-properties { margin: 8px 0; }
 .pubchem-properties div { margin: 4px 0; }
 .pubchem-properties dt { font-weight: 600; }

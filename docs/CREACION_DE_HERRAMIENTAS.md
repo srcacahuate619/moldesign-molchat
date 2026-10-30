@@ -37,6 +37,16 @@ carpeta. La verificación final de colisiones sigue en MolDesign.
 
 ## Para añadir otra capacidad
 
+### Sugerencias contextuales
+
+`suggest_next_actions` permite al modelo proponer de cero a tres peticiones
+breves como botones, sin ejecutarlas. El texto visible es exactamente el que
+se envía al chat si el usuario pulsa el botón. Las sugerencias se guardan con
+la respuesta y solo se muestran las de la respuesta más reciente. La referencia
+y el tipo de comparación o verificación permiten descartar esas acciones si
+ya se completaron en el turno; las demás peticiones se ofrecen como sugerencias
+generales y siguen pasando por las herramientas y validaciones disponibles.
+
 1. Definir en MolDesign la operación y sus resultados verificables, reutilizando
    sus validaciones y permisos existentes.
 2. Versionar el contrato entre programas y describir explícitamente los datos,

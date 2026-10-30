@@ -273,6 +273,12 @@ export default function Chat({
               const reference = message.references?.find((ref) => ref.cid === item.structure?.pubchem_cid);
               return reference && (message.comparisonCids === undefined || message.comparisonCids.includes(reference.cid)) ? [{ item, reference }] : [];
             });
+            const actions = (message.suggestedActions ?? []).filter((action) =>
+              typeof action.text === "string" && action.text.trim().length > 0 && action.text.length <= 120 &&
+              !/[\x00-\x1f]/.test(action.text) && ["general", "compare_with_moldesign", "verify_drawing"].includes(action.kind) &&
+              (action.kind === "general" || message.references?.some((reference) => reference.cid === action.cid &&
+                typeof reference.properties?.SMILES === "string" && reference.properties.SMILES.length > 0))
+            ).slice(0, 3);
             return (
             <li key={index} className={`message ${message.role}`}>
               <p className="message-who">
@@ -334,19 +340,10 @@ export default function Chat({
                   ))}
                 </ul>
               )}
-              {message.role === "assistant" && index === messages.length - 1 && !message.selectable &&
-                message.suggestedActions?.some((action) => message.references?.some((reference) =>
-                  reference.cid === action.cid && typeof reference.properties?.SMILES === "string" && reference.properties.SMILES.length > 0 &&
-                  (action.kind === "compare_with_moldesign" || action.kind === "verify_drawing"))) && (
+              {message.role === "assistant" && index === messages.length - 1 && !message.selectable && actions.length > 0 && (
                 <div className="context-actions" role="group" aria-label={t("chat.actions")}>
-                  {message.suggestedActions?.map((action, actionIndex) => {
-                    const reference = message.references?.find((item) => item.cid === action.cid && typeof item.properties?.SMILES === "string" && item.properties.SMILES.length > 0);
-                    if (!reference || (action.kind !== "compare_with_moldesign" && action.kind !== "verify_drawing")) return null;
-                    return <button key={`${action.kind}-${action.cid}-${actionIndex}`} type="button" disabled={streaming} onClick={() => {
-                      if (action.kind === "compare_with_moldesign") send(`${t("chat.compareRequest")} ${reference.name} (PubChem CID ${reference.cid}).`);
-                      else send(`${t("chat.verifyRequest")} PubChem CID ${reference.cid}.`);
-                    }}>{t(action.kind === "compare_with_moldesign" ? "chat.compareWithMolDesign" : "chat.verifyDrawing")}</button>;
-                  })}
+                  {actions.map((action, actionIndex) => <button key={`${actionIndex}-${action.text}`} type="button" disabled={streaming}
+                    onClick={() => send(action.text)}>{action.text}</button>)}
                 </div>
               )}
             </li>
