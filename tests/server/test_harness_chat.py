@@ -38,7 +38,7 @@ async def test_chat_uses_direct_pubchem_and_resumes_selection(tmp_path, monkeypa
     async def model(messages, tools):
         seen.append(list(messages))
         if len(seen) == 1:
-            assert {t["function"]["name"] for t in tools} == {"pubchem_lookup", "create_case", "compute_properties", "load_case_smiles", "search_receptors", "verify_editor_structure", "show_property_comparison"}
+            assert {t["function"]["name"] for t in tools} == {"pubchem_lookup", "create_case", "compute_properties", "load_case_smiles", "search_receptors", "assign_case_receptor", "verify_editor_structure", "show_property_comparison"}
             return {"role": "assistant", "content": None, "tool_calls": [{"id": "c1", "type": "function",
                     "function": {"name": "pubchem_lookup", "arguments": '{"name":"ibuprofeno"}'}}]}
         if len(seen) == 2:
@@ -566,6 +566,82 @@ async def test_smiles_tool_waits_for_owner_scoped_host_result(tmp_path, monkeypa
         assert jobs[0]["state"] == ("completed" if status == "applied" else "partial")
         assert state.memory.list_harness_jobs("otra-cuenta") == []
         assert (await client.post(f"/v1/smiles-requests/{request_id}/result", headers=headers, json={"status": status})).status_code == 404
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", ["applied", "already_selected", "case_not_found", "case_ambiguous", "receptor_not_found", "receptor_ambiguous", "unavailable", "locked", "busy", "save_failed", "failed", "unknown"])
+async def test_receptor_assignment_waits_for_host_and_records_status(tmp_path, monkeypatch, status):
+    state, registry, headers = state_for(tmp_path)
+    provider = registry.get("fake")
+    async def model(messages, tools):
+        if messages[-1]["role"] == "user":
+            return {"role": "assistant", "content": None, "tool_calls": [{"id": "assign", "type": "function", "function": {"name": "assign_case_receptor", "arguments": '{"case_name":"prueba","pdb_id":"7E2Y"}'}}]}
+        assert json.loads(messages[-1]["content"])["status"] == status
+        return {"role": "assistant", "content": "Resultado recibido."}
+    monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+        turn = asyncio.create_task(client.post("/v1/chat", headers=headers, json={"text": "asigna el receptor 7E2Y al caso prueba"}))
+        for _ in range(200):
+            if state.receptor_requests: break
+            await asyncio.sleep(0.01)
+        request_id = next(iter(state.receptor_requests))
+        assert not turn.done()
+        assert (await client.post(f"/v1/receptor-requests/{request_id}/result", headers=headers, json={"status": "inventado"})).status_code == 400
+        assert (await client.post(f"/v1/receptor-requests/{request_id}/result", headers=headers, json={"status": status})).status_code == 200
+        entries = events(await turn)
+        assert any(e.get("type") == "case_receptor" and e["pdb_id"] == "7E2Y" and e["case_name"] == "prueba" for e in entries)
+        answer = next(e["result"]["text"] for e in entries if e["type"] == "result")
+        assert ("asignado y guardado" in answer) == (status == "applied")
+        job = (await client.get("/v1/harness-jobs", headers=headers)).json()[0]
+        assert job["steps"][0]["tool"] == "assign_case_receptor"
+        assert job["steps"][0]["status"] == status
+        assert (await client.post(f"/v1/receptor-requests/{request_id}/result", headers=headers, json={"status": status})).status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_receptor_assignment_requires_identified_receptor(tmp_path, monkeypatch):
+    state, registry, headers = state_for(tmp_path)
+    async def model(messages, tools):
+        if messages[-1]["role"] == "user":
+            return {"role": "assistant", "content": None, "tool_calls": [{"id": "assign", "type": "function", "function": {"name": "assign_case_receptor", "arguments": '{"case_name":"prueba","pdb_id":"7E2Y"}'}}]}
+        assert json.loads(messages[-1]["content"])["status"] == "needs_selection"
+        return {"role": "assistant", "content": "Elige un receptor."}
+    monkeypatch.setattr(registry.get("fake"), "chat_with_tools", model, raising=False)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+        response = await client.post("/v1/chat", headers=headers, json={"text": "asigna un receptor al caso prueba"})
+        assert not any(e.get("type") == "case_receptor" for e in events(response))
+        assert not state.receptor_requests
+
+
+@pytest.mark.asyncio
+async def test_unique_catalog_search_can_be_assigned_without_pdb_in_user_text(tmp_path, monkeypatch):
+    state, registry, headers = state_for(tmp_path)
+    async def model(messages, tools):
+        if messages[-1]["role"] == "user":
+            name, args = "search_receptors", '{"query":"*","section":"verificado"}'
+        elif json.loads(messages[-1]["content"]).get("receptors"):
+            name, args = "assign_case_receptor", '{"case_name":"prueba","pdb_id":"7E2Y"}'
+        else:
+            assert json.loads(messages[-1]["content"])["status"] == "applied"
+            return {"role": "assistant", "content": "Solicitud completada."}
+        return {"role": "assistant", "content": None, "tool_calls": [{"id": name, "type": "function", "function": {"name": name, "arguments": args}}]}
+    monkeypatch.setattr(registry.get("fake"), "chat_with_tools", model, raising=False)
+    async def registry_for_turn(_token): return registry
+    monkeypatch.setattr(state, "registro_de_turno", registry_for_turn)
+    async def host(request):
+        return httpx.Response(200, json=[{"pdb_id": "7E2Y", "name": "Receptor", "disponible": True, "seccion_catalogo": "verificado"}])
+    async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", transport=httpx.MockTransport(host)) as host_client:
+        state.bridge = MolDesignBridge(client=host_client)
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+            turn = asyncio.create_task(client.post("/v1/chat", headers=headers, json={"text": "asigna el único receptor verificado al caso prueba"}))
+            for _ in range(200):
+                if state.receptor_requests: break
+                await asyncio.sleep(0.01)
+            request_id = next(iter(state.receptor_requests))
+            await client.post(f"/v1/receptor-requests/{request_id}/result", headers=headers, json={"status": "applied"})
+            entries = events(await turn)
+            assert any(e.get("type") == "case_receptor" and e["pdb_id"] == "7E2Y" for e in entries)
+            assert "asignado y guardado" in next(e["result"]["text"] for e in entries if e["type"] == "result")
 
 
 @pytest.mark.asyncio

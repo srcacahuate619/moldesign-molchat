@@ -132,6 +132,8 @@ export const api = {
     postJson(t, `/v1/case-requests/${encodeURIComponent(id)}/result`, { status }),
   reportSmilesResult: (t: string, id: string, status: "applied" | "not_found" | "ambiguous" | "busy" | "failed" | "unknown") =>
     postJson(t, `/v1/smiles-requests/${encodeURIComponent(id)}/result`, { status }),
+  reportReceptorResult: (t: string, id: string, status: import("./receptorHost").ReceptorStatus) =>
+    postJson(t, `/v1/receptor-requests/${encodeURIComponent(id)}/result`, { status }),
   reportEditorResult: (t: string, id: string, result: { status: string; molfile?: string; revision?: string }) =>
     postJson(t, `/v1/editor-requests/${encodeURIComponent(id)}/result`, result),
   createConversation: (t: string) =>

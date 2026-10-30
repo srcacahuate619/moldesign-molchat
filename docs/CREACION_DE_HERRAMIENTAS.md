@@ -4,7 +4,18 @@ MolChat interpreta la petición y solicita una capacidad; MolDesign conserva la
 operación real, los datos y la identidad. La guía completa de ambos lados vive
 en `docs/CREACION_DE_HERRAMIENTAS_MOLCHAT.md` del repositorio MolDesign.
 
-## Primera herramienta: crear un caso
+## Asignar un receptor a un caso
+
+El ciclo de herramientas nativas actual ofrece `search_receptors` y
+`assign_case_receptor`. MolChat selecciona la herramienta a partir de la
+petición; para asignar requiere un identificador explícito o una búsqueda
+inequívoca en el catálogo de la cuenta. El host valida la sesión, el caso,
+la disponibilidad y el sistema estructural, aplica la selección mediante la
+misma lógica del selector y confirma únicamente tras el guardado del caso.
+La asignación no inicia una evaluación. Un error o una respuesta perdida no
+demuestra que el caso se haya guardado: se debe revisar antes de reintentar.
+
+## Primera herramienta: crear un caso (integración histórica)
 
 En modo alojado, el servidor identifica una petición de caso y pide al proveedor
 activo una selección JSON con `tool` y `name`. `case_selection.py` acepta solo

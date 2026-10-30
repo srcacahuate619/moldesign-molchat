@@ -15,6 +15,7 @@ import PropertyComparison from "./PropertyComparison";
 import VoiceButton from "./VoiceButton";
 import { createCaseInHost } from "../lib/caseHost";
 import { loadSmilesInHost } from "../lib/smilesHost";
+import { assignReceptorInHost } from "../lib/receptorHost";
 import { readEditorInHost } from "../lib/editorHost";
 import { BotIcon, HistoryIcon, PlusIcon, SendIcon } from "./Icons";
 
@@ -156,6 +157,12 @@ export default function Chat({
             const id = event["request_id"], name = event["case_name"], smiles = event["smiles"];
             if (typeof id === "string" && typeof name === "string" && typeof smiles === "string") {
               void loadSmilesInHost(id, name, smiles).then((result) => api.reportSmilesResult(token, id, result))
+                .catch(() => setError(t("error.generic")));
+            }
+          } else if (kind === "case_receptor") {
+            const id = event["request_id"], name = event["case_name"], pdbId = event["pdb_id"];
+            if (typeof id === "string" && typeof name === "string" && typeof pdbId === "string") {
+              void assignReceptorInHost(id, name, pdbId).then((result) => api.reportReceptorResult(token, id, result))
                 .catch(() => setError(t("error.generic")));
             }
           } else if (kind === "editor_read") {

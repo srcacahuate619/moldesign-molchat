@@ -40,6 +40,7 @@ class ServerState:
     revoked: set[str] = field(default_factory=set)
     case_requests: dict[str, tuple[str, asyncio.Future[dict[str, str]]]] = field(default_factory=dict)
     smiles_requests: dict[str, tuple[str, asyncio.Future[dict[str, str]]]] = field(default_factory=dict)
+    receptor_requests: dict[str, tuple[str, asyncio.Future[dict[str, str]]]] = field(default_factory=dict)
     editor_requests: dict[str, tuple[str, asyncio.Future[dict[str, str]]]] = field(default_factory=dict)
     structure_cache: OrderedDict[str, tuple[float, dict[str, str]]] = field(default_factory=OrderedDict)
     pubchem_client: Any | None = None  # injected only for tests; production creates a restricted client

@@ -135,6 +135,27 @@ def load_case_smiles_tool(request_load: Callable[[str, str], Awaitable[dict[str,
                 "dibujó o que se guardó en disco sin confirmación adicional.", schema, load)
 
 
+def assign_case_receptor_tool(request_assign: Callable[[str, str], Awaitable[dict[str, Any]]]) -> Tool:
+    async def assign(args: dict[str, Any]) -> dict[str, Any]:
+        case_name, pdb_id = args["case_name"].strip(), args["pdb_id"].strip().upper()
+        import re
+        if not re.fullmatch(r"[A-Z0-9_-]{1,64}", pdb_id):
+            return {"status": "invalid", "message": "Identificador de receptor no válido."}
+        result = await request_assign(case_name, pdb_id)
+        statuses = {"applied", "already_selected", "case_not_found", "case_ambiguous", "receptor_not_found",
+                    "receptor_ambiguous", "unavailable", "locked", "busy", "save_failed", "failed", "unknown", "needs_selection"}
+        status = result.get("status") if isinstance(result, dict) else "unknown"
+        if status not in statuses:
+            status = "unknown"
+        return {"status": status, "case_name": case_name, "pdb_id": pdb_id}
+    schema = {"type": "object", "properties": {"case_name": {"type": "string", "maxLength": 100},
+              "pdb_id": {"type": "string", "maxLength": 64}}, "required": ["case_name", "pdb_id"],
+              "additionalProperties": False}
+    return Tool("assign_case_receptor", "Asigna al caso indicado un receptor del catálogo por su PDB ID exacto. "
+                "Úsala solo si el usuario pidió asignarlo y la identidad es inequívoca. Para 'único receptor verificado' "
+                "consulta primero search_receptors y comprueba total=1. No ejecuta docking. Solo confirma si el host responde applied o already_selected.", schema, assign)
+
+
 def properties_tool(backend: ToolBackend) -> Tool:
     """Use MolDesign's existing calculation, with no invented property values."""
     async def calculate(args: dict[str, Any]) -> dict[str, Any]:

@@ -33,7 +33,7 @@ from ..conversation.case_selection import select_case
 from ..conversation.intents import classify
 from ..conversation.tool_loop import Tool, run_tool_loop
 from ..conversation.structure_check import compare_editor_structure
-from ..conversation.harness_tools import create_case_tool, load_case_smiles_tool, properties_tool, pubchem_tool, receptor_catalog_tool
+from ..conversation.harness_tools import assign_case_receptor_tool, create_case_tool, load_case_smiles_tool, properties_tool, pubchem_tool, receptor_catalog_tool
 from ..conversation.evidence import context_literals, numbers_in, redact_unverified, split_flow, VERIFICATION_NOTE
 from ..conversation.tools import PlatformBackend
 from ..plan import Plan
@@ -307,6 +307,19 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
         pending[1].set_result({"status": payload["status"]})
         return JSONResponse({"accepted": True})
 
+    async def receptor_result(request: Request) -> JSONResponse:
+        session = await need_chat(request)
+        pending = state.receptor_requests.get(request.path_params["request_id"])
+        if pending is None or pending[0] != session.sub or pending[1].done():
+            return _error(404, "solicitud no encontrada")
+        payload = await read_json(request)
+        allowed = {"applied", "already_selected", "case_not_found", "case_ambiguous", "receptor_not_found",
+                   "receptor_ambiguous", "unavailable", "locked", "busy", "save_failed", "failed", "unknown"}
+        if not isinstance(payload, dict) or set(payload) != {"status"} or not isinstance(payload["status"], str) or payload["status"] not in allowed:
+            return _error(400, "resultado no válido")
+        pending[1].set_result(payload)
+        return JSONResponse({"accepted": True})
+
     async def editor_result(request: Request) -> JSONResponse:
         session = await need_chat(request)
         pending = state.editor_requests.get(request.path_params["request_id"])
@@ -575,6 +588,7 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
             Route("/v1/conversations", create_conversation, methods=["POST"]),
             Route("/v1/case-requests/{request_id}/result", case_result, methods=["POST"]),
             Route("/v1/smiles-requests/{request_id}/result", smiles_result, methods=["POST"]),
+            Route("/v1/receptor-requests/{request_id}/result", receptor_result, methods=["POST"]),
             Route("/v1/editor-requests/{request_id}/result", editor_result, methods=["POST"]),
             Route("/v1/harness-jobs", list_harness_jobs, methods=["GET"]),
             Route("/v1/pubchem/permission", pubchem_permission, methods=["GET", "POST", "DELETE"]),
@@ -678,6 +692,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
     case_started = False
     smiles_started = False
     smiles_result_data: dict[str, Any] | None = None
+    receptor_result_data: dict[str, Any] | None = None
+    receptor_started = False
     editor_check_result: dict[str, Any] | None = None
     trace_id = uuid.uuid4().hex
     trace: list[dict[str, str]] = []
@@ -700,7 +716,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         elif phase == "arguments" and args:
             for step in reversed(trace):
                 if step["id"] == call_id:
-                    details = [f"{key}: {args[key][:120]}" for key in ("case_name", "cid", "name", "query", "page", "section", "availability")
+                    details = [f"{key}: {args[key][:120]}" for key in ("case_name", "pdb_id", "cid", "name", "query", "page", "section", "availability")
                                if isinstance(args.get(key), str)]
                     if details:
                         step["detail"] = " · ".join(details)
@@ -743,6 +759,29 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         finally:
             state.editor_requests.pop(request_id, None)
 
+    async def request_receptor(case_name: str, pdb_id: str) -> dict[str, Any]:
+        nonlocal receptor_started
+        if receptor_started:
+            return {"status": "unknown"}
+        explicit_id = re.search(r"(?<![\w-])" + re.escape(pdb_id) + r"(?![\w-])", text, re.I) is not None
+        unique_search = any(result.get("total") == 1 and len(result.get("receptors", [])) == 1
+                            and str(result["receptors"][0].get("pdb_id", "")).upper() == pdb_id
+                            for result in receptor_results)
+        if not (explicit_id or unique_search):
+            return {"status": "needs_selection"}
+        receptor_started = True
+        request_id = uuid.uuid4().hex
+        future = asyncio.get_running_loop().create_future()
+        state.receptor_requests[request_id] = (owner, future)
+        try:
+            await events.put({"type": "case_receptor", "request_id": request_id, "case_name": case_name, "pdb_id": pdb_id})
+            try:
+                return await asyncio.wait_for(future, timeout=60)
+            except asyncio.TimeoutError:
+                return {"status": "unknown"}
+        finally:
+            state.receptor_requests.pop(request_id, None)
+
     async def request_case(name: str) -> dict[str, Any]:
         nonlocal case_started, case_status
         if case_started:
@@ -774,7 +813,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
     messages: list[dict[str, Any]] = [{"role": "system", "content": (
         "Eres MolChat. Interpreta la solicitud y usa las herramientas disponibles cuando las necesites. "
         "Cumple solo las acciones que el usuario solicitó. No crees un caso para cargar algo en un caso ya nombrado; "
-        "crea casos solo cuando el usuario pida crearlos. No asignes ni afirmes asignar un receptor si no hay una herramienta que lo confirme. "
+        "crea casos solo cuando el usuario pida crearlos. Para asignar un receptor usa assign_case_receptor y solo afirma éxito al recibir applied o already_selected. "
+        "Si el usuario no indicó un PDB ID exacto busca en el catálogo y asigna únicamente si el resultado es inequívoco; si hay varias opciones pregunta. "
         "Si el usuario pide propiedades sin pedir cálculos de MolDesign ni una comparación, consulta PubChem cuando esté disponible; "
         "no ejecutes cálculos de MolDesign ni compares fuentes por iniciativa propia. "
         "Usa compute_properties cuando solicite un cálculo de MolDesign o una comparación explícita. "
@@ -854,6 +894,11 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         nonlocal smiles_result_data
         smiles_result_data = await load_tool.execute(args)
         return smiles_result_data
+    assign_tool = assign_case_receptor_tool(request_receptor)
+    async def capture_assign(args: dict[str, Any]) -> dict[str, Any]:
+        nonlocal receptor_result_data
+        receptor_result_data = await assign_tool.execute(args)
+        return receptor_result_data
 
     async def verify_editor(args: dict[str, Any]) -> dict[str, Any]:
         nonlocal editor_check_result
@@ -927,6 +972,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
                          "required": ["cid"], "additionalProperties": False}
     tools: list[Tool] = [create_case_tool(request_case),
                          Tool(load_tool.name, load_tool.description, load_tool.parameters, capture_load),
+                         Tool(assign_tool.name, assign_tool.description, assign_tool.parameters, capture_assign),
                          Tool(properties.name, properties.description, properties.parameters, capture_properties),
                          Tool("show_property_comparison", "Muestra una tabla comparativa PubChem y MolDesign solo si el usuario solicitó comparar; requiere resultados de ambas fuentes para la misma referencia.", comparison_schema, request_comparison),
                          Tool("verify_editor_structure", "Compara el dibujo actual de Ketcher con el SMILES de una referencia PubChem inequívoca ya consultada en esta conversación. No descarga imágenes ni modifica el editor. Requiere nombre del caso y CID; solo informa coincidencia si se confirmó la revisión del dibujo.", editor_schema, verify_editor)]
@@ -1032,6 +1078,30 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
                 "unknown": "No se pudo confirmar el resultado; revisa el caso antes de reintentar.",
             }.get(status, "No se pudo confirmar el resultado; revisa el caso antes de reintentar.")
             answer += "\n\n" + result_message
+        if receptor_result_data:
+            status = receptor_result_data.get("status")
+            if receptor_started and status not in {"applied", "already_selected"}:
+                # A host failure is authoritative even if the model claims success
+                # in an unexpected wording; keep structured evidence separately.
+                answer = "No se confirmó la asignación del receptor."
+            case_name, pdb_id = receptor_result_data.get("case_name", ""), receptor_result_data.get("pdb_id", "")
+            message = {
+                "applied": f'Receptor {pdb_id} asignado y guardado en el caso «{case_name}».',
+                "already_selected": f'El receptor {pdb_id} ya estaba asignado en el caso «{case_name}».',
+                "case_not_found": "No se encontró el caso indicado.",
+                "case_ambiguous": "Hay varios casos con ese nombre; indica cuál deseas usar.",
+                "receptor_not_found": "No encontré ese receptor en el catálogo accesible para tu cuenta.",
+                "receptor_ambiguous": "El identificador coincide con varios receptores; elige uno.",
+                "needs_selection": "Necesito una selección inequívoca del receptor: indica su PDB ID o elige una coincidencia del catálogo.",
+                "unavailable": "Ese receptor no está disponible en el catálogo.",
+                "locked": "El sistema estructural del caso impide cambiar de receptor.",
+                "busy": "No se pudo abrir o modificar el caso porque hay trabajo en curso.",
+                "save_failed": "El receptor se mostró en el caso, pero no se pudo confirmar su guardado. Revisa el estado de guardado antes de reintentar.",
+                "failed": "MolDesign no pudo asignar el receptor.",
+                "invalid": "El identificador del receptor no es válido.",
+                "unknown": "No se pudo confirmar la asignación; revisa el caso antes de reintentar.",
+            }.get(status, "No se pudo confirmar la asignación del receptor.")
+            answer += "\n\n" + message
         if editor_check_result:
             status = editor_check_result.get("status")
             explanation = {
@@ -1049,7 +1119,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             }.get(status, "No pude comprobar el dibujo; revisa el editor y vuelve a intentarlo.")
             answer += f'\n\nComprobación del editor · caso «{editor_check_result["case_name"]}» · PubChem {editor_check_result["cid"]}: {explanation}'
         if trace:
-            incomplete = result.exhausted or any(step["status"] not in {"ok", "created", "applied", "exists", "match", "match_stereo_unspecified", "different_stereochemistry", "different_structure"}
+            incomplete = result.exhausted or any(step["status"] not in {"ok", "created", "applied", "already_selected", "exists", "match", "match_stereo_unspecified", "different_stereochemistry", "different_structure"}
                 and not (step["tool"] in {"pubchem_lookup", "search_receptors"} and step["status"] == "not_found")
                 for step in trace)
             save_trace("partial" if incomplete else "completed")
@@ -1073,6 +1143,10 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             answer += f' MolDesign confirmó el SMILES en el campo del caso «{smiles_result_data.get("case_name", "")}»; no se confirmó el guardado ni el dibujo.'
         elif smiles_started:
             answer += " No pude confirmar la carga del SMILES; revisa el caso antes de reintentar."
+        if receptor_result_data and receptor_result_data.get("status") in {"applied", "already_selected"}:
+            answer += f' MolDesign confirmó el receptor {receptor_result_data.get("pdb_id", "")} en el caso «{receptor_result_data.get("case_name", "")}».'
+        elif receptor_started:
+            answer += " No pude confirmar la asignación del receptor; revisa el caso antes de reintentar."
         if trace_error:
             answer += " No se pudo guardar la trazabilidad en Trabajos."
         try:
