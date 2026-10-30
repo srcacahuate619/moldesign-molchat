@@ -203,6 +203,27 @@ def assign_case_receptor_tool(request_assign: Callable[[str, str], Awaitable[dic
                 "consulta primero search_receptors y comprueba total=1. No ejecuta docking. Solo confirma si el host responde applied o already_selected.", schema, assign)
 
 
+def evaluate_case_tool(request_evaluation: Callable[[str], Awaitable[dict[str, Any]]]) -> Tool:
+    async def evaluate(args: dict[str, Any]) -> dict[str, Any]:
+        name = args["case_name"].strip()
+        result = await request_evaluation(name)
+        statuses = {"started", "started_unregistered", "case_not_found", "case_ambiguous", "busy", "blocked", "needs_review", "failed", "unknown"}
+        if not isinstance(result, dict) or result.get("status") not in statuses:
+            return {"status": "unknown", "case_name": name}
+        safe = {"status": result["status"], "case_name": name}
+        if isinstance(result.get("task_id"), str):
+            safe["task_id"] = result["task_id"]
+        if isinstance(result.get("reason"), str):
+            safe["reason"] = result["reason"]
+        return safe
+    schema = {"type": "object", "properties": {"case_name": {"type": "string", "maxLength": 100}},
+              "required": ["case_name"], "additionalProperties": False}
+    return Tool("evaluate_case", "Solicita iniciar la evaluación del caso nombrado solo si el usuario pidió ejecutarla. "
+                "Usa los inputs y comprobaciones de MolDesign. No modifica parámetros ni inicia tareas por iniciativa propia. "
+                "'started' confirma aceptación y registro, no resultados; 'started_unregistered' confirma aceptación sin registro. "
+                "Si el resultado es desconocido no reintentes sin revisar el caso.", schema, evaluate)
+
+
 def properties_tool(backend: ToolBackend) -> Tool:
     """Use MolDesign's existing calculation, with no invented property values."""
     async def calculate(args: dict[str, Any]) -> dict[str, Any]:

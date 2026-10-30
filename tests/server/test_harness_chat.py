@@ -38,7 +38,7 @@ async def test_chat_uses_direct_pubchem_and_resumes_selection(tmp_path, monkeypa
     async def model(messages, tools):
         seen.append(list(messages))
         if len(seen) == 1:
-            assert {t["function"]["name"] for t in tools} == {"pubchem_lookup", "create_case", "compute_properties", "load_case_smiles", "search_receptors", "pick_random_receptor", "assign_case_receptor", "verify_editor_structure", "show_property_comparison", "suggest_next_actions"}
+            assert {t["function"]["name"] for t in tools} == {"pubchem_lookup", "create_case", "compute_properties", "load_case_smiles", "search_receptors", "pick_random_receptor", "assign_case_receptor", "evaluate_case", "verify_editor_structure", "show_property_comparison", "suggest_next_actions"}
             return {"role": "assistant", "content": None, "tool_calls": [{"id": "c1", "type": "function",
                     "function": {"name": "pubchem_lookup", "arguments": '{"name":"ibuprofeno"}'}}]}
         if len(seen) == 2:
@@ -728,6 +728,64 @@ async def test_receptor_assignment_waits_for_host_and_records_status(tmp_path, m
         assert job["steps"][0]["tool"] == "assign_case_receptor"
         assert job["steps"][0]["status"] == status
         assert (await client.post(f"/v1/receptor-requests/{request_id}/result", headers=headers, json={"status": status})).status_code == 404
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", ["started", "started_unregistered", "case_not_found", "case_ambiguous", "busy", "blocked", "needs_review", "failed", "unknown"])
+async def test_evaluation_requires_host_confirmation_and_never_claims_results(tmp_path, monkeypatch, status):
+    state, registry, headers = state_for(tmp_path)
+    async def model(messages, tools):
+        if messages[-1]["role"] == "user":
+            assert "evaluate_case" in {item["function"]["name"] for item in tools}
+            return {"role": "assistant", "content": None, "tool_calls": [{"id": "run", "type": "function",
+                "function": {"name": "evaluate_case", "arguments": '{"case_name":"prueba2"}'}}]}
+        assert json.loads(messages[-1]["content"])["status"] == status
+        return {"role": "assistant", "content": "La evaluación terminó y hay resultados."}
+    monkeypatch.setattr(registry.get("fake"), "chat_with_tools", model, raising=False)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+        turn = asyncio.create_task(client.post("/v1/chat", headers=headers, json={"text": "ejecuta la evaluación del caso prueba2"}))
+        for _ in range(200):
+            if state.evaluation_requests: break
+            await asyncio.sleep(0.01)
+        request_id = next(iter(state.evaluation_requests))
+        assert not turn.done()
+        assert (await client.post(f"/v1/evaluation-requests/{request_id}/result", headers=headers, json={"status": "started"})).status_code == 400
+        result = {"status": status}
+        if status in {"started", "started_unregistered"}: result["task_id"] = "task-123"
+        assert (await client.post(f"/v1/evaluation-requests/{request_id}/result", headers=headers, json=result)).status_code == 200
+        entries = events(await turn)
+        assert any(e.get("type") == "case_evaluation" and e["case_name"] == "prueba2" for e in entries)
+        answer = next(e["result"]["text"] for e in entries if e["type"] == "result")
+        assert "evaluación terminó" not in answer
+        assert ("iniciada y registrada" in answer) == (status == "started")
+        assert ("task-123" in answer) == (status in {"started", "started_unregistered"})
+        if status == "started": assert "No se han consultado resultados" in answer
+        job = (await client.get("/v1/harness-jobs", headers=headers)).json()[0]
+        assert job["steps"][0]["tool"] == "evaluate_case" and job["steps"][0]["status"] == status
+        assert (await client.post(f"/v1/evaluation-requests/{request_id}/result", headers=headers, json=result)).status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_duplicate_evaluation_call_does_not_start_a_second_task(tmp_path, monkeypatch):
+    state, registry, headers = state_for(tmp_path)
+    async def model(messages, _tools):
+        if messages[-1]["role"] == "user":
+            calls = [{"id": call_id, "type": "function", "function": {"name": "evaluate_case", "arguments": '{"case_name":"prueba2"}'}} for call_id in ("first", "second")]
+            return {"role": "assistant", "content": None, "tool_calls": calls}
+        assert json.loads(messages[-1]["content"])["status"] == "unknown"
+        return {"role": "assistant", "content": "Resultado."}
+    monkeypatch.setattr(registry.get("fake"), "chat_with_tools", model, raising=False)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+        turn = asyncio.create_task(client.post("/v1/chat", headers=headers, json={"text": "evalúa prueba2"}))
+        for _ in range(200):
+            if state.evaluation_requests: break
+            await asyncio.sleep(0.01)
+        request_id = next(iter(state.evaluation_requests))
+        await client.post(f"/v1/evaluation-requests/{request_id}/result", headers=headers, json={"status": "started", "task_id": "task-123"})
+        entries = events(await turn)
+        assert sum(e.get("type") == "case_evaluation" for e in entries) == 1
+        answer = next(e["result"]["text"] for e in entries if e["type"] == "result")
+        assert "task-123" in answer and "iniciada y registrada" in answer
 
 
 @pytest.mark.asyncio

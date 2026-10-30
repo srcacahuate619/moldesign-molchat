@@ -21,6 +21,7 @@ const TERMINAL = new Set([
 
 const STEP_LABELS: Record<string, StringKey> = {
   ok: "jobs.stepOk", created: "jobs.stepCreated", applied: "jobs.stepApplied", exists: "jobs.stepExists",
+  started: "jobs.stepEvaluationStarted", started_unregistered: "jobs.stepEvaluationUnregistered",
   not_found: "jobs.stepNotFound", unavailable: "jobs.stepUnavailable", permission_denied: "jobs.stepDenied",
   invalid: "jobs.stepInvalid", invalid_smiles: "jobs.stepInvalid", ambiguous: "jobs.stepAmbiguous",
   busy: "jobs.stepBusy", failed: "jobs.stepFailed", error: "jobs.stepFailed", unknown: "jobs.stepUnknown",

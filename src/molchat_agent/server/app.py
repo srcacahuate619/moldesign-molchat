@@ -33,7 +33,7 @@ from ..conversation.case_selection import select_case
 from ..conversation.intents import classify
 from ..conversation.tool_loop import Tool, run_tool_loop
 from ..conversation.structure_check import compare_editor_structure
-from ..conversation.harness_tools import assign_case_receptor_tool, create_case_tool, load_case_smiles_tool, properties_tool, pubchem_tool, receptor_catalog_tool, random_receptor_tool
+from ..conversation.harness_tools import assign_case_receptor_tool, create_case_tool, evaluate_case_tool, load_case_smiles_tool, properties_tool, pubchem_tool, receptor_catalog_tool, random_receptor_tool
 from ..conversation.evidence import context_literals, numbers_in, redact_unverified, split_flow, VERIFICATION_NOTE
 from ..conversation.tools import PlatformBackend
 from ..plan import Plan
@@ -320,6 +320,29 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
         pending[1].set_result(payload)
         return JSONResponse({"accepted": True})
 
+    async def evaluation_result(request: Request) -> JSONResponse:
+        session = await need_chat(request)
+        pending = state.evaluation_requests.get(request.path_params["request_id"])
+        if pending is None or pending[0] != session.sub or pending[1].done():
+            return _error(404, "solicitud no encontrada")
+        payload = await read_json(request)
+        allowed = {"started", "started_unregistered", "case_not_found", "case_ambiguous", "busy", "blocked", "needs_review", "failed", "unknown"}
+        if (not isinstance(payload, dict) or set(payload) - {"status", "task_id", "reason"}
+                or not isinstance(payload.get("status"), str) or payload["status"] not in allowed):
+            return _error(400, "resultado no válido")
+        task_id = payload.get("task_id")
+        if task_id is not None and (not isinstance(task_id, str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", task_id)):
+            return _error(400, "identificador no válido")
+        if payload["status"] in {"started", "started_unregistered"} and not task_id:
+            return _error(400, "falta el identificador de la tarea")
+        if payload["status"] not in {"started", "started_unregistered"} and task_id:
+            return _error(400, "resultado incompatible")
+        reason = payload.get("reason")
+        if reason is not None and (not isinstance(reason, str) or len(reason) > 500 or any(ord(ch) < 32 for ch in reason)):
+            return _error(400, "motivo no válido")
+        pending[1].set_result(payload)
+        return JSONResponse({"accepted": True})
+
     async def editor_result(request: Request) -> JSONResponse:
         session = await need_chat(request)
         pending = state.editor_requests.get(request.path_params["request_id"])
@@ -589,6 +612,7 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
             Route("/v1/case-requests/{request_id}/result", case_result, methods=["POST"]),
             Route("/v1/smiles-requests/{request_id}/result", smiles_result, methods=["POST"]),
             Route("/v1/receptor-requests/{request_id}/result", receptor_result, methods=["POST"]),
+            Route("/v1/evaluation-requests/{request_id}/result", evaluation_result, methods=["POST"]),
             Route("/v1/editor-requests/{request_id}/result", editor_result, methods=["POST"]),
             Route("/v1/harness-jobs", list_harness_jobs, methods=["GET"]),
             Route("/v1/pubchem/permission", pubchem_permission, methods=["GET", "POST", "DELETE"]),
@@ -696,6 +720,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
     smiles_result_data: dict[str, Any] | None = None
     receptor_result_data: dict[str, Any] | None = None
     receptor_started = False
+    evaluation_started = False
+    evaluation_result_data: dict[str, Any] | None = None
     editor_check_result: dict[str, Any] | None = None
     trace_id = uuid.uuid4().hex
     trace: list[dict[str, str]] = []
@@ -763,6 +789,23 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         finally:
             state.editor_requests.pop(request_id, None)
 
+    async def request_evaluation(case_name: str) -> dict[str, Any]:
+        nonlocal evaluation_started
+        if evaluation_started:
+            return {"status": "unknown"}
+        evaluation_started = True
+        request_id = uuid.uuid4().hex
+        future = asyncio.get_running_loop().create_future()
+        state.evaluation_requests[request_id] = (owner, future)
+        try:
+            await events.put({"type": "case_evaluation", "request_id": request_id, "case_name": case_name})
+            try:
+                return await asyncio.wait_for(future, timeout=150)
+            except asyncio.TimeoutError:
+                return {"status": "unknown"}
+        finally:
+            state.evaluation_requests.pop(request_id, None)
+
     async def request_receptor(case_name: str, pdb_id: str) -> dict[str, Any]:
         nonlocal receptor_started
         if receptor_started:
@@ -822,6 +865,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         "Eres MolChat. Interpreta la solicitud y usa las herramientas disponibles cuando las necesites. "
         "Cumple solo las acciones que el usuario solicitó. No crees un caso para cargar algo en un caso ya nombrado; "
         "crea casos solo cuando el usuario pida crearlos. Para asignar un receptor usa assign_case_receptor y solo afirma éxito al recibir applied o already_selected. "
+        "Ejecuta evaluaciones solo cuando el usuario lo haya pedido; usa evaluate_case para el caso indicado. "
+        "La aceptación de una tarea no es un resultado ni indica que el cálculo haya terminado. No reintentes un resultado desconocido. "
         "Si el usuario no indicó un PDB ID exacto busca en el catálogo y asigna únicamente si el resultado es inequívoco; si hay varias opciones pregunta. "
         "Si el usuario pidió expresamente un receptor aleatorio o al azar, usa pick_random_receptor y asigna el receptor devuelto; "
         "conserva su sección y disponibilidad, sin sustituirlo por uno verificado salvo que el usuario haya pedido ese filtro. "
@@ -914,6 +959,19 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         nonlocal receptor_result_data
         receptor_result_data = await assign_tool.execute(args)
         return receptor_result_data
+
+    evaluation_tool = evaluate_case_tool(request_evaluation)
+    async def capture_evaluation(args: dict[str, Any]) -> dict[str, Any]:
+        nonlocal evaluation_result_data
+        outcome = await evaluation_tool.execute(args)
+        if evaluation_result_data is None:
+            evaluation_result_data = outcome
+        if outcome.get("task_id"):
+            for step in reversed(trace):
+                if step.get("tool") == "evaluate_case" and step.get("status") == "running":
+                    step["detail"] = (step.get("detail", "") + " · tarea: " + outcome["task_id"]).strip(" ·")
+                    break
+        return outcome
 
     async def verify_editor(args: dict[str, Any]) -> dict[str, Any]:
         nonlocal editor_check_result
@@ -1009,6 +1067,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
     tools: list[Tool] = [create_case_tool(request_case),
                          Tool(load_tool.name, load_tool.description, load_tool.parameters, capture_load),
                          Tool(assign_tool.name, assign_tool.description, assign_tool.parameters, capture_assign),
+                         Tool(evaluation_tool.name, evaluation_tool.description, evaluation_tool.parameters, capture_evaluation),
                          Tool(properties.name, properties.description, properties.parameters, capture_properties),
                          Tool("show_property_comparison", "Muestra una tabla comparativa PubChem y MolDesign solo si el usuario solicitó comparar; requiere resultados de ambas fuentes para la misma referencia.", comparison_schema, request_comparison),
                          Tool("verify_editor_structure", "Compara el dibujo actual de Ketcher con el SMILES de una referencia PubChem inequívoca ya consultada en esta conversación. No descarga imágenes ni modifica el editor. Requiere nombre del caso y CID; solo informa coincidencia si se confirmó la revisión del dibujo.", editor_schema, verify_editor),
@@ -1070,6 +1129,9 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
                 break
         result = task.result()
         answer = result.text
+        if evaluation_result_data:
+            # A model may otherwise report an accepted task as a finished calculation.
+            answer = "MolDesign respondió a la solicitud de evaluación."
         if editor_check_result is None and any(step["tool"] == "verify_editor_structure" and step["status"] == "error" for step in trace):
             answer = "No se pudo iniciar la comprobación del dibujo; la llamada a la herramienta no fue válida o falló. No se ha confirmado si las estructuras coinciden."
         if editor_check_result and editor_check_result.get("status") != "match":
@@ -1159,6 +1221,24 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
                 "unknown": "No se pudo confirmar la asignación; revisa el caso antes de reintentar.",
             }.get(status, "No se pudo confirmar la asignación del receptor.")
             answer += "\n\n" + message
+        if evaluation_result_data:
+            status = evaluation_result_data.get("status")
+            task_id = evaluation_result_data.get("task_id", "")
+            case_name = evaluation_result_data.get("case_name", "")
+            message = {
+                "started": f'Evaluación del caso «{case_name}» iniciada y registrada en MolDesign (tarea {task_id}). No se han consultado resultados; revisa su estado en MolDesign.',
+                "started_unregistered": f'MolDesign aceptó la tarea {task_id}, pero no se pudo guardar su registro en el caso. Revisa el aviso de MolDesign antes de reintentar.',
+                "case_not_found": "No se encontró el caso indicado.",
+                "case_ambiguous": "Hay varios casos con ese nombre; indica cuál deseas evaluar.",
+                "busy": "El caso está ocupado o ya hay una evaluación en curso.",
+                "blocked": "MolDesign bloqueó la evaluación durante sus comprobaciones; revisa Preparación.",
+                "needs_review": "MolDesign requiere revisar la configuración antes de ejecutar.",
+                "failed": "No se pudo preparar la evaluación; no se confirmó ninguna tarea.",
+                "unknown": "No se pudo confirmar si comenzó una tarea. Revisa el caso antes de reintentar.",
+            }.get(status, "No se pudo confirmar el resultado; revisa el caso antes de reintentar.")
+            if evaluation_result_data.get("reason"):
+                message += " " + evaluation_result_data["reason"]
+            answer += "\n\n" + message
         if editor_check_result:
             status = editor_check_result.get("status")
             explanation = {
@@ -1176,7 +1256,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             }.get(status, "No pude comprobar el dibujo; revisa el editor y vuelve a intentarlo.")
             answer += f'\n\nComprobación del editor · caso «{editor_check_result["case_name"]}» · PubChem {editor_check_result["cid"]}: {explanation}'
         if trace:
-            incomplete = result.exhausted or any(step["status"] not in {"ok", "created", "applied", "already_selected", "exists", "match", "match_stereo_unspecified", "different_stereochemistry", "different_structure"}
+            incomplete = result.exhausted or any(step["status"] not in {"ok", "created", "applied", "started", "already_selected", "exists", "match", "match_stereo_unspecified", "different_stereochemistry", "different_structure"}
                 and not (step["tool"] in {"pubchem_lookup", "search_receptors", "pick_random_receptor"} and step["status"] == "not_found")
                 for step in trace)
             save_trace("partial" if incomplete else "completed")
@@ -1204,6 +1284,12 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             answer += f' MolDesign confirmó el receptor {receptor_result_data.get("pdb_id", "")} en el caso «{receptor_result_data.get("case_name", "")}».'
         elif receptor_started:
             answer += " No pude confirmar la asignación del receptor; revisa el caso antes de reintentar."
+        if evaluation_result_data and evaluation_result_data.get("status") in {"started", "started_unregistered"}:
+            answer += f' MolDesign aceptó la tarea {evaluation_result_data.get("task_id", "")}; aún no hay resultados confirmados.'
+            if evaluation_result_data.get("status") == "started_unregistered":
+                answer += " El registro de la tarea en el caso no se confirmó."
+        elif evaluation_started:
+            answer += " No pude confirmar el inicio de la evaluación; revisa el caso antes de reintentar."
         if trace_error:
             answer += " No se pudo guardar la trazabilidad en Trabajos."
         try:

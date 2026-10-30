@@ -17,6 +17,7 @@ import VoiceButton from "./VoiceButton";
 import { createCaseInHost } from "../lib/caseHost";
 import { loadSmilesInHost } from "../lib/smilesHost";
 import { assignReceptorInHost } from "../lib/receptorHost";
+import { evaluateCaseInHost } from "../lib/evaluationHost";
 import { readEditorInHost } from "../lib/editorHost";
 import { BotIcon, HistoryIcon, PlusIcon, SendIcon } from "./Icons";
 
@@ -166,6 +167,12 @@ export default function Chat({
             const id = event["request_id"], name = event["case_name"], pdbId = event["pdb_id"];
             if (typeof id === "string" && typeof name === "string" && typeof pdbId === "string") {
               void assignReceptorInHost(id, name, pdbId).then((result) => api.reportReceptorResult(token, id, result))
+                .catch(() => setError(t("error.generic")));
+            }
+          } else if (kind === "case_evaluation") {
+            const id = event["request_id"], name = event["case_name"];
+            if (typeof id === "string" && typeof name === "string") {
+              void evaluateCaseInHost(id, name).then((result) => api.reportEvaluationResult(token, id, result))
                 .catch(() => setError(t("error.generic")));
             }
           } else if (kind === "editor_read") {

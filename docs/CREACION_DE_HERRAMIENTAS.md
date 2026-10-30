@@ -44,6 +44,14 @@ carpeta. La verificación final de colisiones sigue en MolDesign.
 
 ## Para añadir otra capacidad
 
+### Iniciar una evaluación
+
+`evaluate_case` solicita al host iniciar la evaluación del caso indicado solo
+cuando el usuario lo pide. MolDesign conserva las validaciones del botón, el
+preflight y el registro del trabajo. `started` significa que el backend aceptó
+la tarea y que se registró en el caso; no significa que haya terminado. Si el
+resultado es incierto, no se reintenta automáticamente.
+
 ### Sugerencias contextuales
 
 `suggest_next_actions` permite al modelo proponer de cero a tres peticiones

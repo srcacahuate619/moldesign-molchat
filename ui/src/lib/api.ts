@@ -141,6 +141,8 @@ export const api = {
     postJson(t, `/v1/smiles-requests/${encodeURIComponent(id)}/result`, { status }),
   reportReceptorResult: (t: string, id: string, status: import("./receptorHost").ReceptorStatus) =>
     postJson(t, `/v1/receptor-requests/${encodeURIComponent(id)}/result`, { status }),
+  reportEvaluationResult: (t: string, id: string, result: import("./evaluationHost").EvaluationResult) =>
+    postJson(t, `/v1/evaluation-requests/${encodeURIComponent(id)}/result`, result),
   reportEditorResult: (t: string, id: string, result: { status: string; molfile?: string; revision?: string }) =>
     postJson(t, `/v1/editor-requests/${encodeURIComponent(id)}/result`, result),
   createConversation: (t: string) =>

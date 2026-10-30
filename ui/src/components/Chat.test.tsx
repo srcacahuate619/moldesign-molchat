@@ -6,7 +6,7 @@ import { strings } from "../lib/i18n";
 
 afterEach(() => { cleanup(); sessionStorage.clear(); });
 
-const { mockList, mockGet, mockStream, mockCreateCase, mockReportCase, mockLoadSmiles, mockReportSmiles, mockAssignReceptor, mockReportReceptor, mockReadEditor, mockReportEditor, mockStartVoice, mockTranscribeVoice, mockSelectPubchem } = vi.hoisted(() => ({
+const { mockList, mockGet, mockStream, mockCreateCase, mockReportCase, mockLoadSmiles, mockReportSmiles, mockAssignReceptor, mockReportReceptor, mockEvaluate, mockReportEvaluation, mockReadEditor, mockReportEditor, mockStartVoice, mockTranscribeVoice, mockSelectPubchem } = vi.hoisted(() => ({
   mockList: vi.fn(),
   mockGet: vi.fn(),
   mockStream: vi.fn(),
@@ -16,6 +16,8 @@ const { mockList, mockGet, mockStream, mockCreateCase, mockReportCase, mockLoadS
   mockReportSmiles: vi.fn(),
   mockAssignReceptor: vi.fn(),
   mockReportReceptor: vi.fn(),
+  mockEvaluate: vi.fn(),
+  mockReportEvaluation: vi.fn(),
   mockReadEditor: vi.fn(),
   mockReportEditor: vi.fn(),
   mockStartVoice: vi.fn(),
@@ -26,6 +28,7 @@ const { mockList, mockGet, mockStream, mockCreateCase, mockReportCase, mockLoadS
 vi.mock("../lib/caseHost", () => ({ createCaseInHost: mockCreateCase }));
 vi.mock("../lib/smilesHost", () => ({ loadSmilesInHost: mockLoadSmiles }));
 vi.mock("../lib/receptorHost", () => ({ assignReceptorInHost: mockAssignReceptor }));
+vi.mock("../lib/evaluationHost", () => ({ evaluateCaseInHost: mockEvaluate }));
 vi.mock("../lib/editorHost", () => ({ readEditorInHost: mockReadEditor }));
 vi.mock("../lib/voice", () => ({ isVoiceSupported: () => true, startRecording: mockStartVoice, toWavMono16: vi.fn().mockResolvedValue(new Blob(["wav"])) }));
 
@@ -33,7 +36,7 @@ vi.mock("../lib/api", async (importOriginal) => {
   const original = await importOriginal<typeof import("../lib/api")>();
   return {
     ...original,
-    api: { ...original.api, listConversations: mockList, getConversation: mockGet, reportCaseResult: mockReportCase, reportSmilesResult: mockReportSmiles, reportReceptorResult: mockReportReceptor, reportEditorResult: mockReportEditor, transcribe: mockTranscribeVoice, selectPubchem: mockSelectPubchem },
+    api: { ...original.api, listConversations: mockList, getConversation: mockGet, reportCaseResult: mockReportCase, reportSmilesResult: mockReportSmiles, reportReceptorResult: mockReportReceptor, reportEvaluationResult: mockReportEvaluation, reportEditorResult: mockReportEditor, transcribe: mockTranscribeVoice, selectPubchem: mockSelectPubchem },
     openChatStream: mockStream,
   };
 });
@@ -311,6 +314,20 @@ describe("Chat error turn with idempotent retry", () => {
     fireEvent.click(screen.getByText("Enviar"));
     await waitFor(() => expect(mockAssignReceptor).toHaveBeenCalledWith("receptor-id", "prueba", "7E2Y"));
     await waitFor(() => expect(mockReportReceptor).toHaveBeenCalledWith("test-token", "receptor-id", "locked"));
+  });
+  it("relays evaluation requests and the task accepted by the host", async () => {
+    mockList.mockResolvedValue([]);
+    mockEvaluate.mockResolvedValue({ status: "started", task_id: "task-123" });
+    mockReportEvaluation.mockResolvedValue({ accepted: true });
+    mockStream.mockImplementation((_token: string, _body: unknown, onEvent: (event: Record<string, unknown>) => void) => {
+      queueMicrotask(() => onEvent({ type: "case_evaluation", request_id: "run-id", case_name: "prueba2" }));
+      return () => {};
+    });
+    renderChat();
+    fireEvent.change(screen.getByPlaceholderText(/pregunta/i), { target: { value: "evalúa prueba2" } });
+    fireEvent.click(screen.getByText("Enviar"));
+    await waitFor(() => expect(mockEvaluate).toHaveBeenCalledWith("run-id", "prueba2"));
+    await waitFor(() => expect(mockReportEvaluation).toHaveBeenCalledWith("test-token", "run-id", { status: "started", task_id: "task-123" }));
   });
   it("keeps history closed until requested in the compact panel", async () => {
     mockList.mockResolvedValue([{ id: "test-conversation", summary: "Mi conversación", message_count: 2 }]);
