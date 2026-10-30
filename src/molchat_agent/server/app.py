@@ -716,8 +716,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         elif phase == "arguments" and args:
             for step in reversed(trace):
                 if step["id"] == call_id:
-                    details = [f"{key}: {args[key][:120]}" for key in ("case_name", "pdb_id", "cid", "name", "query", "page", "section", "availability")
-                               if isinstance(args.get(key), str)]
+                    details = [f"{key}: {str(args[key])[:120]}" for key in ("case_name", "pdb_id", "cid", "name", "query", "page", "section", "availability")
+                               if isinstance(args.get(key), str) or (key == "cid" and type(args.get(key)) is int)]
                     if details:
                         step["detail"] = " · ".join(details)
                     break
@@ -902,10 +902,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
 
     async def verify_editor(args: dict[str, Any]) -> dict[str, Any]:
         nonlocal editor_check_result
-        cid_text = args["cid"]
-        if not cid_text.isascii() or not cid_text.isdigit() or int(cid_text) < 1:
-            return {"status": "invalid", "message": "Indica un CID de PubChem válido."}
-        cid = int(cid_text)
+        cid = args["cid"]
         eligible = historical_refs + refs if len(refs) <= 1 else []
         matching = {ref["cid"]: ref for ref in eligible if ref.get("cid") == cid}
         reference = matching.get(cid)
@@ -951,13 +948,10 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         return editor_check_result
 
     editor_schema = {"type": "object", "properties": {"case_name": {"type": "string", "maxLength": 100},
-                     "cid": {"type": "string", "maxLength": 12}}, "required": ["case_name", "cid"],
+                     "cid": {"type": "integer", "minimum": 1, "maximum": 999999999999}}, "required": ["case_name", "cid"],
                      "additionalProperties": False}
     async def request_comparison(args: dict[str, Any]) -> dict[str, Any]:
-        raw = args["cid"]
-        if not raw.isascii() or not raw.isdigit() or int(raw) < 1:
-            return {"status": "invalid", "message": "Se necesita un CID válido."}
-        cid = int(raw)
+        cid = args["cid"]
         eligible = historical_refs + refs if len(refs) <= 1 else []
         reference = next((item for item in eligible if item.get("cid") == cid), None)
         calculation = next((item for item in evidence if item.get("tool") == "compute_properties"
@@ -968,7 +962,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             comparison_cids.append(cid)
         return {"status": "ok", "cid": cid, "message": "La interfaz mostrará la comparación de las dos fuentes."}
 
-    comparison_schema = {"type": "object", "properties": {"cid": {"type": "string", "maxLength": 12}},
+    comparison_schema = {"type": "object", "properties": {"cid": {"type": "integer", "minimum": 1, "maximum": 999999999999}},
                          "required": ["cid"], "additionalProperties": False}
     tools: list[Tool] = [create_case_tool(request_case),
                          Tool(load_tool.name, load_tool.description, load_tool.parameters, capture_load),
@@ -1021,6 +1015,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
                 break
         result = task.result()
         answer = result.text
+        if editor_check_result is None and any(step["tool"] == "verify_editor_structure" and step["status"] == "error" for step in trace):
+            answer = "No se pudo iniciar la comprobación del dibujo; la llamada a la herramienta no fue válida o falló. No se ha confirmado si las estructuras coinciden."
         if editor_check_result and editor_check_result.get("status") != "match":
             # Do not let a model's free text turn an incomplete check, stereo
             # uncertainty or a mismatch into an asserted match.

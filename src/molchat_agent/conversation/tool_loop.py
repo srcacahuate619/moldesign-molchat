@@ -28,25 +28,38 @@ class LoopResult:
 
 
 def _arguments(raw: Any, schema: dict[str, Any]) -> dict[str, Any]:
-    """Validate the closed, string-only schemas used by this experiment."""
+    """Validate closed schemas; normalize decimal strings for integer fields."""
     if not isinstance(raw, str) or len(raw) > 4096:
         raise ValueError("argumentos no válidos")
-    data = json.loads(raw)
+    try:
+        data = json.loads(raw)
+    except (ValueError, TypeError):
+        raise ValueError("Los argumentos deben ser un objeto JSON válido.") from None
     if not isinstance(data, dict):
         raise ValueError("argumentos no válidos")
     properties = schema.get("properties", {})
     required = schema.get("required", [])
     if (schema.get("type") != "object" or schema.get("additionalProperties") is not False
-            or not isinstance(properties, dict) or not isinstance(required, list)
-            or not set(required).issubset(data) or not set(data).issubset(properties)):
+            or not isinstance(properties, dict) or not isinstance(required, list)):
         raise ValueError("argumentos no válidos")
+    if not set(required).issubset(data) or not set(data).issubset(properties):
+        raise ValueError(f"Usa solo los campos {', '.join(properties)}; son obligatorios: {', '.join(required)}.")
     for key, value in data.items():
         spec = properties[key]
-        if (not isinstance(spec, dict) or spec.get("type") != "string"
-                or not isinstance(value, str) or not value.strip()
-                or len(value) > spec.get("maxLength", 120)
-                or any(ord(char) < 32 for char in value)):
-            raise ValueError("argumentos no válidos")
+        if not isinstance(spec, dict):
+            raise ValueError("Esquema de herramienta no válido.")
+        if spec.get("type") == "integer":
+            if isinstance(value, str) and value.isascii() and value.isdigit() and len(value) <= 12:
+                value = int(value)
+            if type(value) is not int or not spec.get("minimum", 0) <= value <= spec.get("maximum", 999999999999):
+                raise ValueError(f"El campo {key} debe ser un entero válido dentro del rango indicado.")
+            data[key] = value
+        elif spec.get("type") == "string":
+            if (not isinstance(value, str) or not value.strip() or len(value) > spec.get("maxLength", 120)
+                    or any(ord(char) < 32 for char in value)):
+                raise ValueError(f"El campo {key} debe ser un texto válido y no vacío.")
+        else:
+            raise ValueError("Esquema de herramienta no válido.")
     return data
 
 
@@ -110,8 +123,9 @@ async def run_tool_loop(provider: Any, messages: list[dict[str, Any]],
                 if tool is None:
                     raise ValueError("herramienta no disponible")
                 args = _arguments(function["arguments"], tool.parameters)
-            except (ValueError, TypeError):
-                result = {"error": "Herramienta o argumentos no válidos; no se ejecutó la solicitud."}
+            except (ValueError, TypeError) as exc:
+                detail = str(exc) if tool is not None else "Herramienta no disponible."
+                result = {"error": f"{detail} La solicitud no se ejecutó; puedes corregir los argumentos y volver a intentar."}
             else:
                 if observe:
                     observe("arguments", "", call["id"], args)

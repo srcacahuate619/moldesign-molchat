@@ -674,7 +674,9 @@ async def test_chat_can_search_catalog_and_retain_receptor_identifier(tmp_path, 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("changed", [False, True])
-async def test_editor_verification_checks_revision_and_does_not_persist_molfile(tmp_path, monkeypatch, changed):
+@pytest.mark.parametrize("cid_arg", [702, "702"])
+@pytest.mark.parametrize("bad_first", [False, True])
+async def test_editor_verification_checks_revision_and_does_not_persist_molfile(tmp_path, monkeypatch, changed, cid_arg, bad_first):
     Chem = pytest.importorskip("rdkit.Chem")
     state, registry, headers = state_for(tmp_path)
     provider = registry.get("fake")
@@ -684,9 +686,15 @@ async def test_editor_verification_checks_revision_and_does_not_persist_molfile(
         "source": "https://pubchem.ncbi.nlm.nih.gov/compound/702", "properties": {"SMILES": "CCO"}}])
     async def model(messages, tools):
         if messages[-1]["role"] == "user":
+            args = {"case_name": "prueba", "cid": cid_arg}
+            if bad_first: args["smiles"] = "CCO"
             return {"role": "assistant", "content": None, "tool_calls": [{"id": "verify", "type": "function",
-                "function": {"name": "verify_editor_structure", "arguments": '{"case_name":"prueba","cid":"702"}'}}]}
+                "function": {"name": "verify_editor_structure", "arguments": json.dumps(args)}}]}
         result = json.loads(messages[-1]["content"])
+        if "error" in result:
+            assert "case_name, cid" in result["error"] and "no se ejecutó" in result["error"]
+            return {"role": "assistant", "content": None, "tool_calls": [{"id": "verify-retry", "type": "function",
+                "function": {"name": "verify_editor_structure", "arguments": json.dumps({"case_name": "prueba", "cid": cid_arg})}}]}
         assert result["status"] == ("changed" if changed else "match")
         assert "molfile" not in result
         return {"role": "assistant", "content": "El dibujo coincide exactamente."}
@@ -719,6 +727,23 @@ async def test_editor_verification_checks_revision_and_does_not_persist_molfile(
         assert not contains_molfile(state.memory.get_conversation(conv, "owner").messages)
         assert not contains_molfile(state.memory.list_harness_jobs("owner"))
         assert not contains_molfile(list(state.structure_cache.values()))
+
+
+@pytest.mark.asyncio
+async def test_invalid_editor_call_cannot_be_presented_as_a_match(tmp_path, monkeypatch):
+    state, registry, headers = state_for(tmp_path)
+    async def model(messages, _tools):
+        if messages[-1]["role"] == "user":
+            return {"role": "assistant", "content": None, "tool_calls": [{"id": "verify", "type": "function",
+                "function": {"name": "verify_editor_structure", "arguments": '{"case_name":"prueba2","cid":9887712,"extra":"valor"}'}}]}
+        assert "no se ejecutó" in json.loads(messages[-1]["content"])["error"]
+        return {"role": "assistant", "content": "El dibujo coincide exactamente con PubChem."}
+    monkeypatch.setattr(registry.get("fake"), "chat_with_tools", model, raising=False)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))), base_url="http://testserver") as client:
+        response = await client.post("/v1/chat", headers=headers, json={"text": "verifica el dibujo del caso prueba2 con CID 9887712"})
+        result = next(e["result"]["text"] for e in events(response) if e["type"] == "result")
+        assert "No se pudo iniciar" in result and "coincide exactamente" not in result
+        assert not state.editor_requests
 
 
 @pytest.mark.asyncio

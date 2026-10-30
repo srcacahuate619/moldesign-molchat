@@ -3,7 +3,7 @@ import json
 import httpx
 import pytest
 
-from molchat_agent.conversation.tool_loop import Tool, run_tool_loop
+from molchat_agent.conversation.tool_loop import Tool, _arguments, run_tool_loop
 from molchat_agent.providers.base import ProviderError
 from molchat_agent.providers.openai_compatible import OpenAICompatibleProvider
 
@@ -11,6 +11,41 @@ from molchat_agent.providers.openai_compatible import OpenAICompatibleProvider
 SCHEMA = {"type": "object", "additionalProperties": False,
           "properties": {"name": {"type": "string", "maxLength": 120}},
           "required": ["name"]}
+
+CID_SCHEMA = {"type": "object", "additionalProperties": False, "properties": {
+    "case_name": {"type": "string", "maxLength": 100},
+    "cid": {"type": "integer", "minimum": 1, "maximum": 999999999999}}, "required": ["case_name", "cid"]}
+
+
+@pytest.mark.parametrize("cid", [9887712, "9887712"])
+def test_cid_accepts_integer_and_decimal_string(cid):
+    assert _arguments(json.dumps({"case_name": "prueba2", "cid": cid}), CID_SCHEMA) == {"case_name": "prueba2", "cid": 9887712}
+
+
+@pytest.mark.parametrize("cid", [True, 0, -1, 2.5, "1.5", "abc", "9" * 13])
+def test_invalid_cid_is_rejected(cid):
+    with pytest.raises(ValueError, match="cid"):
+        _arguments(json.dumps({"case_name": "prueba2", "cid": cid}), CID_SCHEMA)
+
+
+@pytest.mark.asyncio
+async def test_schema_error_gives_model_actionable_feedback_before_safe_retry():
+    executed = []
+    class Provider:
+        async def chat_with_tools(self, messages, tools):
+            count = sum(entry.get("role") == "tool" for entry in messages)
+            if count == 0:
+                return call("verify_editor_structure", '{"case_name":"prueba2","cid":9887712,"smiles":"CCO"}', "bad")
+            if count == 1:
+                message = json.loads(messages[-1]["content"])["error"]
+                assert "no se ejecutó" in message and "case_name, cid" in message
+                return call("verify_editor_structure", '{"case_name":"prueba2","cid":9887712}', "good")
+            return {"role": "assistant", "content": "Verificación terminada."}
+    async def execute(args):
+        executed.append(args)
+        return {"status": "match"}
+    await run_tool_loop(Provider(), [{"role": "user", "content": "verifica"}], [Tool("verify_editor_structure", "Verifica", CID_SCHEMA, execute)])
+    assert executed == [{"case_name": "prueba2", "cid": 9887712}]
 
 
 def call(name="pubchem_lookup", args='{"name":"ibuprofeno"}', call_id="call_1"):
