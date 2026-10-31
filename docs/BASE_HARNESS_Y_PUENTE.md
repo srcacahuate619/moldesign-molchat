@@ -15,8 +15,10 @@ de MolDesign consultada es `e89e2939`. Ninguno de los nueve commits locales de
 MolChat posteriores a `b88a72d` estaba publicado cuando se consultó. La marca
 `oficial: true` de una fijación local no demuestra que ese commit sea público.
 
-Se preserva por separado la línea posterior que añadió PubChem, el selector de
-rutas y el experimento de herramientas. Esta rama no reinicia ni borra esa línea.
+La línea posterior que añadió PubChem por el host, el selector de rutas y el
+experimento de herramientas se conserva en la rama local
+`archivo/linea-experimental` (`94605d7`). No se publica: el harness la sustituye,
+y su PubChem por el host queda reemplazado por la consulta propia de MolChat.
 
 ## Propiedad de las herramientas
 
@@ -31,20 +33,24 @@ rutas y el experimento de herramientas. Esta rama no reinicia ni borra esa líne
 El permiso se consulta con la sesión autenticada antes de cada solicitud de
 PubChem. El adaptador de red de MolChat debe usar un cliente HTTP sin proxies
 del entorno y con redirecciones desactivadas. Revocar el permiso o activar el
-modo sin red bloquea las peticiones posteriores. Evitar cambios en el host
-hasta verificar la transición: retirar el endpoint anterior también requiere
-ajustar su contrato y sus pruebas, sin eliminar el control de permisos.
+modo sin red bloquea las peticiones posteriores. La capacidad
+`pubchem-lookup/1` del host no forma parte de esta base.
 
-## Estado de esta rama
+## Estado
 
 MolChat dispone de consulta PubChem autorizada, un ciclo de llamadas
 estructuradas, creación de casos, consulta de propiedades, exploración de
-receptores, carga de SMILES, comparación de estructuras y solicitud de asignación
-de receptor. Las operaciones sobre casos requieren un host de MolDesign con
-los receptores correspondientes. La selección de referencias se persiste por
-conversación y cuenta. Hay pruebas automatizadas con proveedores y transportes
-simulados y pruebas manuales de varias funciones con Baseten; la asignación
-del receptor necesita aún una prueba manual completa en Tauri.
+receptores, carga de SMILES, comparación de estructuras, solicitud de asignación
+de receptor y solicitud de evaluación. Las operaciones sobre casos requieren un
+host de MolDesign con los receptores correspondientes. La selección de
+referencias se persiste por conversación y cuenta. Hay pruebas automatizadas con
+proveedores y transportes simulados y pruebas manuales de varias funciones con
+Baseten.
+
+Estas acciones viajan por mensajes entre el iframe y la ventana del host: todavía
+no están en el contrato `moldesign.molchat/1` ni en el kit de conformidad, y sólo
+el ciclo con host las ofrece. Una cerradura distinta no tiene hoy forma de
+declararlas.
 
 Para probarlo con el backend de desarrollo existente, generar primero el
 paquete de prueba con `stage_molchat.py --destino` y lanzar Tauri con
