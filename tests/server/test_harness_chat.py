@@ -274,6 +274,7 @@ async def test_model_can_retry_pubchem_with_english_name_after_not_found(tmp_pat
 
 @pytest.mark.asyncio
 async def test_comparison_links_only_exact_pubchem_smiles_and_survives_reload(tmp_path, monkeypatch):
+    pytest.importorskip("rdkit")
     state, registry, headers = state_for(tmp_path)
     provider = registry.get("fake")
     class Backend:

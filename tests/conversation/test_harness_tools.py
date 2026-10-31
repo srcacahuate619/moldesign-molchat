@@ -1,3 +1,4 @@
+import builtins
 import json
 import httpx
 import pytest
@@ -6,6 +7,7 @@ from molchat_agent.bridge import MolDesignBridge
 from molchat_agent.conversation.harness_tools import create_case_tool, load_case_smiles_tool, properties_tool, pubchem_tool, receptor_catalog_tool, random_receptor_tool
 from molchat_agent.conversation.tool_loop import run_tool_loop
 from molchat_agent.conversation.tools import MoleculeRecord
+from molchat_agent.conversation.structure_check import compare_editor_structure
 
 
 @pytest.mark.asyncio
@@ -34,7 +36,7 @@ async def test_harness_reads_pubchem_directly_and_returns_result_to_model():
             return {"role": "assistant", "content": "Encontré una referencia en PubChem."}
     async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", transport=httpx.MockTransport(host)) as host_client, \
                httpx.AsyncClient(transport=httpx.MockTransport(public), trust_env=False) as public_client:
-        bridge = MolDesignBridge(token="account-token", client=host_client)
+        bridge = MolDesignBridge(token="test-account-token", client=host_client)
         result = await run_tool_loop(Provider(), [{"role": "user", "content": "Busca aspirina"}],
                                      [pubchem_tool(bridge, public_client)])
     assert "PubChem" in result.text
@@ -72,6 +74,30 @@ async def test_structure_check_detects_transformation(canonical, identity):
 
 
 @pytest.mark.asyncio
+async def test_absent_rdkit_does_not_confirm_structure_or_send_smiles(monkeypatch):
+    original_import = builtins.__import__
+    def without_rdkit(name, *args, **kwargs):
+        if name == "rdkit" or name.startswith("rdkit."):
+            raise ImportError("RDKit no está disponible")
+        return original_import(name, *args, **kwargs)
+    monkeypatch.setattr(builtins, "__import__", without_rdkit)
+    class Backend:
+        async def properties(self, _smiles):
+            return MoleculeRecord(name="example", smiles="CCO", props={"mw": 46})
+    result = await properties_tool(Backend()).execute({"name": "OCC"})
+    assert result["structure"]["identity"] == "unverified"
+    assert result["structure"]["verifier"] is None
+    calls = []
+    async def request(name, smiles):
+        calls.append((name, smiles))
+        return {"status": "applied"}
+    result = await load_case_smiles_tool(request).execute({"case_name": "ejemplo", "smiles": "CCO"})
+    assert result["status"] == "unavailable"
+    assert not calls
+    assert compare_editor_structure("CCO", "un dibujo")['status'] == "unverifiable"
+
+
+@pytest.mark.asyncio
 async def test_load_smiles_requires_valid_chemical_structure_and_host_ack():
     pytest.importorskip("rdkit")
     calls = []
@@ -91,11 +117,11 @@ async def test_receptor_catalog_is_account_scoped_paginated_and_preserves_uncert
     async def host(request):
         requests.append(request)
         assert request.url.path == "/targets/"
-        assert request.headers["authorization"] == "Bearer account-token"
+        assert request.headers["authorization"] == "Bearer test-account-token"
         return httpx.Response(200, json=[{"pdb_id": f"{i:04d}", "name": f"Receptor cardíaco {i}",
             "organism": "human", "disponible": i != 1, "seccion_catalogo": "demostracion", "calibracion": None} for i in range(12)])
     async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", transport=httpx.MockTransport(host)) as client:
-        tool = receptor_catalog_tool(MolDesignBridge(client=client, token="account-token"))
+        tool = receptor_catalog_tool(MolDesignBridge(client=client, token="test-account-token"))
         first = await tool.execute({"query": "cardiaco", "page": "1"})
         second = await tool.execute({"query": "cardiaco", "page": "2"})
         assert first["total"] == 12 and first["has_next"] and len(first["receptors"]) == 10
@@ -114,7 +140,7 @@ async def test_receptor_catalog_is_account_scoped_paginated_and_preserves_uncert
 async def test_receptor_catalog_fails_closed_when_host_unavailable():
     async def host(_request): return httpx.Response(503)
     async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", transport=httpx.MockTransport(host)) as client:
-        result = await receptor_catalog_tool(MolDesignBridge(client=client, token="owner")).execute({"query": "*"})
+        result = await receptor_catalog_tool(MolDesignBridge(client=client, token="test-owner")).execute({"query": "*"})
     assert result["status"] == "unavailable" and "receptors" not in result
 
 

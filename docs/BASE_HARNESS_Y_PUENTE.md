@@ -6,11 +6,11 @@ La validación manual de creación de casos corresponde al flujo incorporado en
 MolChat `5401be2` y al receptor local de MolDesign. Esta copia parte de
 `f3ae12f`: conserva ese flujo y añade las correcciones posteriores para casos
 existentes y errores de voz. El receptor de MolDesign estaba sin commit en
-`D:\moldesign-build`; el commit de MolChat por sí solo no reconstruye el
+su repositorio de desarrollo; el commit de MolChat por sí solo no reconstruye el
 recorrido completo. No debe sustituirse el receptor probado sin comparar y
 probar sus cambios locales.
 
-El último `master` público de MolChat consultado es `b88a72d`; la `main` pública
+En el momento de preparar esta base, el último `master` público de MolChat era `b88a72d`; la `main` pública
 de MolDesign consultada es `e89e2939`. Ninguno de los nueve commits locales de
 MolChat posteriores a `b88a72d` estaba publicado cuando se consultó. La marca
 `oficial: true` de una fijación local no demuestra que ese commit sea público.
@@ -37,28 +37,19 @@ ajustar su contrato y sus pruebas, sin eliminar el control de permisos.
 
 ## Estado de esta rama
 
-Se han preparado el cliente PubChem de MolChat, el control de permiso por
-cuenta, un ciclo de llamadas estructuradas y herramientas con ejecutores
-inyectados. La copia aislada conecta al chat PubChem, casos y propiedades para
-proveedores que implementen el protocolo de herramientas compatible con OpenAI;
-los demás conservan el flujo previo. La selección de referencias se persiste
-por conversación y cuenta. Se han probado con transportes y modelo simulados;
-no se han probado con Baseten real y esta rama no está instalada en MolDesign.
-El paquete aislado pasó una prueba con dos procesos reales y un modelo local
-simulado. El receptor de casos de MolDesign también pasó sus pruebas propias;
-eso no sustituye la prueba completa del usuario en Tauri.
+MolChat dispone de consulta PubChem autorizada, un ciclo de llamadas
+estructuradas, creación de casos, consulta de propiedades, exploración de
+receptores, carga de SMILES, comparación de estructuras y solicitud de asignación
+de receptor. Las operaciones sobre casos requieren un host de MolDesign con
+los receptores correspondientes. La selección de referencias se persiste por
+conversación y cuenta. Hay pruebas automatizadas con proveedores y transportes
+simulados y pruebas manuales de varias funciones con Baseten; la asignación
+del receptor necesita aún una prueba manual completa en Tauri.
 
 Para probarlo con el backend de desarrollo existente, generar primero el
 paquete de prueba con `stage_molchat.py --destino` y lanzar Tauri con
 `MOLDESIGN_MOLCHAT_DIR` apuntando al paquete y `MOLCHAT_PERMITIR_EXTERNO=1`.
-El backend actual aún contiene el endpoint antiguo de PubChem, pero la
-herramienta de esta rama no lo llama. Al incorporar la rama, retirar ese
-endpoint antiguo junto a su implementación y pruebas, conservando permisos,
-receptor de casos y cambios locales del host.
-
-Antes de integrar en el host: probar el recorrido real en Tauri con el receptor
-de casos y validar el contrato de Baseten, incluyendo fallos del proveedor. La
-consulta sigue siendo informativa: puede mostrar propiedades y SMILES devueltos
-por PubChem, pero no modifica el editor ni el campo SMILES de MolDesign.
-Las demás herramientas no están conectadas al nuevo ciclo y deben añadirse sin
-regresar a una clasificación determinista anterior al modelo.
+La consulta de PubChem es informativa; cargar un SMILES o asignar un receptor
+son operaciones separadas que solicitan una acción al host y necesitan su
+confirmación. La publicación de MolChat no incluye ni actualiza los receptores
+de MolDesign, que deben probarse y publicarse en su propio repositorio.

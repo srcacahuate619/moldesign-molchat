@@ -83,11 +83,11 @@ async def test_not_found_is_different_from_source_failure():
 async def test_permission_is_scoped_to_host_session(offline, consented, allowed):
     async def handler(request):
         assert request.url.path == "/ai/consent/red"
-        assert request.headers["Authorization"] == "Bearer account-token"
+        assert request.headers["Authorization"] == "Bearer test-account-token"
         return httpx.Response(200, json={"modo_offline": offline, "destinos": [{
             "servicio": "pubchem", "host": "pubchem.ncbi.nlm.nih.gov", "consentido": consented}]})
     async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", transport=httpx.MockTransport(handler)) as client:
-        bridge = MolDesignBridge(client=client, token="account-token")
+        bridge = MolDesignBridge(client=client, token="test-account-token")
         if allowed:
             await bridge.authorize_pubchem()
         else:

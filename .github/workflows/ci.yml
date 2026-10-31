@@ -27,6 +27,9 @@ jobs:
           cache: npm
           cache-dependency-path: ui/package-lock.json
       - run: python -m pip install -e '.[dev]' build
+      # CI runs in a clean machine, without MolDesign's shared Python runtime.
+      # Match the RDKit version currently bundled by the host for chemistry tests.
+      - run: python -m pip install 'rdkit==2025.9.6'
       - run: python -m pytest -q
         env:
           PYTHONPATH: src:.
