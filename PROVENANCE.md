@@ -912,3 +912,12 @@ MolDesign es por API HTTP, no por copia de código.
 - Transformación: comparación de estructura y estereoquímica representada sin desalinización; pruebas de diferencias, fragmentos y abstención.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/conversation/test_structure_check.py y tests/server/test_harness_chat.py
+
+### tests/conversation/test_evaluation_status.py
+
+- Origen: código nuevo en MolChat para la herramienta de solo lectura `get_evaluation_status`.
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua, con colaboración de un agente de código.
+- Transformación: pruebas de resultado exitoso con su advertencia, tarea en curso, tarea ajena o inexistente, identificador no válido, sesión ausente y respuesta incompatible.
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/conversation/test_evaluation_status.py

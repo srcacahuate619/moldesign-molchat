@@ -79,3 +79,13 @@ generales y siguen pasando por las herramientas y validaciones disponibles.
 Los identificadores de solicitud actuales se deduplican en memoria del host;
 no constituyen idempotencia durable entre reinicios. Las futuras operaciones
 con efectos necesitan su propia política de recuperación y autorización.
+
+## Seguir una evaluación aceptada
+
+`get_evaluation_status` es de solo lectura: consulta `GET /evaluation/status/{task_id}`
+con la sesión de la cuenta, para un `task_id` que `evaluate_case` devolvió. Informa
+`task_status` y el progreso tal como llegan. Solo con `SUCCESS` devuelve la afinidad de
+Vina (energía de la mejor pose, no una energía libre ni un Ki), la versión de Vina, el
+receptor y la calibración que MolDesign declara, y cuántos avisos científicos hay. Una
+tarea ajena o inexistente se informa como `not_found`; un estado incompatible o una
+caída, como `unavailable`. No inicia, cancela ni reintenta nada.

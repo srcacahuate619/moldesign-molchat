@@ -203,6 +203,51 @@ def assign_case_receptor_tool(request_assign: Callable[[str, str], Awaitable[dic
                 "consulta primero search_receptors y comprueba total=1. No ejecuta docking. Solo confirma si el host responde applied o already_selected.", schema, assign)
 
 
+def evaluation_status_tool(bridge: MolDesignBridge) -> Tool:
+    """Read-only: report what MolDesign says about a task it already accepted."""
+    async def status(args: dict[str, Any]) -> dict[str, Any]:
+        task_id = args["task_id"].strip()
+        if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", task_id):
+            return {"status": "invalid", "message": "Identificador de tarea no válido."}
+        if not getattr(bridge, "token", None):
+            return {"status": "unavailable", "message": "Se necesita una sesión de MolDesign."}
+        try:
+            response = await bridge.client.get(f"/evaluation/status/{task_id}", timeout=30, follow_redirects=False,
+                                               headers={"Authorization": f"Bearer {bridge.token}"})
+            if response.status_code in (403, 404):
+                return {"status": "not_found", "task_id": task_id}
+            if response.status_code != 200 or len(response.content) > 5_000_000:
+                return {"status": "unavailable", "message": "No se pudo consultar el estado en MolDesign."}
+            data = response.json()
+        except (httpx.RequestError, ValueError):
+            return {"status": "unavailable", "message": "No se pudo consultar el estado en MolDesign."}
+        if not isinstance(data, dict) or data.get("task_id") != task_id or not isinstance(data.get("status"), str):
+            return {"status": "unavailable", "message": "MolDesign devolvió un estado incompatible."}
+        safe: dict[str, Any] = {"status": "ok", "task_id": task_id, "task_status": data["status"],
+                                "progress": data.get("progress") if type(data.get("progress")) is int else None,
+                                "source": "MolDesign GET /evaluation/status"}
+        if isinstance(data.get("error"), str):
+            safe["error"] = data["error"][:300]
+        result = data.get("result")
+        if data["status"] == "SUCCESS" and isinstance(result, dict):
+            keep = ("molecule_id", "affinity_kcal", "target_name", "vina_version", "vina_random_seed")
+            safe["result"] = {key: result.get(key) for key in keep if result.get(key) is not None}
+            calibration = result.get("target_calibracion")
+            if isinstance(calibration, dict):
+                safe["result"]["target_calibracion"] = calibration
+            warnings = result.get("scientific_warnings")
+            safe["result"]["scientific_warnings"] = len(warnings) if isinstance(warnings, list) else None
+            safe["note"] = ("affinity_kcal es la energía de Vina de la mejor pose, no una energía libre ni un Ki. "
+                            "Conserva la calibración del receptor tal como llega; ausente no significa calibrado.")
+        return safe
+    schema = {"type": "object", "properties": {"task_id": {"type": "string", "maxLength": 128}},
+              "required": ["task_id"], "additionalProperties": False}
+    return Tool("get_evaluation_status", "Consulta en MolDesign el estado de una tarea de evaluación que el host ya aceptó "
+                "(task_id de evaluate_case). Solo lectura: no inicia, cancela ni reintenta. Informa task_status y progreso; "
+                "si es SUCCESS, la afinidad de Vina y la calibración del receptor. No interpretes la afinidad como actividad.",
+                schema, status)
+
+
 def evaluate_case_tool(request_evaluation: Callable[[str], Awaitable[dict[str, Any]]]) -> Tool:
     async def evaluate(args: dict[str, Any]) -> dict[str, Any]:
         name = args["case_name"].strip()

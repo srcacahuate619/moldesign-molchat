@@ -33,7 +33,7 @@ from ..conversation.case_selection import select_case
 from ..conversation.intents import classify
 from ..conversation.tool_loop import Tool, run_tool_loop
 from ..conversation.structure_check import compare_editor_structure
-from ..conversation.harness_tools import assign_case_receptor_tool, create_case_tool, evaluate_case_tool, load_case_smiles_tool, properties_tool, pubchem_tool, receptor_catalog_tool, random_receptor_tool
+from ..conversation.harness_tools import assign_case_receptor_tool, create_case_tool, evaluate_case_tool, evaluation_status_tool, load_case_smiles_tool, properties_tool, pubchem_tool, receptor_catalog_tool, random_receptor_tool
 from ..conversation.evidence import context_literals, numbers_in, redact_unverified, split_flow, VERIFICATION_NOTE
 from ..conversation.tools import PlatformBackend
 from ..plan import Plan
@@ -746,7 +746,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         elif phase == "arguments" and args:
             for step in reversed(trace):
                 if step["id"] == call_id:
-                    details = [f"{key}: {str(args[key])[:120]}" for key in ("case_name", "pdb_id", "cid", "name", "query", "page", "section", "availability")
+                    details = [f"{key}: {str(args[key])[:120]}" for key in ("case_name", "pdb_id", "cid", "name", "query", "page", "section", "availability", "task_id")
                                if isinstance(args.get(key), str) or (key == "cid" and type(args.get(key)) is int)]
                     if details:
                         step["detail"] = " · ".join(details)
@@ -867,6 +867,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         "crea casos solo cuando el usuario pida crearlos. Para asignar un receptor usa assign_case_receptor y solo afirma éxito al recibir applied o already_selected. "
         "Ejecuta evaluaciones solo cuando el usuario lo haya pedido; usa evaluate_case para el caso indicado. "
         "La aceptación de una tarea no es un resultado ni indica que el cálculo haya terminado. No reintentes un resultado desconocido. "
+        "Si el usuario pregunta por el estado o el resultado de una tarea aceptada, usa get_evaluation_status con su task_id; "
+        "informa task_status tal cual y, solo si es SUCCESS, la afinidad de Vina como energía de la mejor pose, nunca como actividad ni Ki. "
         "Si el usuario no indicó un PDB ID exacto busca en el catálogo y asigna únicamente si el resultado es inequívoco; si hay varias opciones pregunta. "
         "Si el usuario pidió expresamente un receptor aleatorio o al azar, usa pick_random_receptor y asigna el receptor devuelto; "
         "conserva su sección y disponibilidad, sin sustituirlo por uno verificado salvo que el usuario haya pedido ese filtro. "
@@ -1115,6 +1117,22 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
                     "sección": str(row.get("seccion_catalogo") or "no indicada")}, "error": None})
             return result
         tools.append(Tool(random_tool.name, random_tool.description, random_tool.parameters, capture_random_receptor))
+        status_tool = evaluation_status_tool(state.bridge.with_token(token))
+        async def capture_status(args: dict[str, Any]) -> dict[str, Any]:
+            result = await status_tool.execute(args)
+            if result.get("status") == "ok":
+                values = {"estado": str(result["task_status"])}
+                if result.get("progress") is not None:
+                    values["progreso"] = str(result["progress"])
+                    verified.add(float(result["progress"]))
+                found = result.get("result") or {}
+                if isinstance(found.get("affinity_kcal"), (int, float)) and not isinstance(found["affinity_kcal"], bool):
+                    values["afinidad Vina (kcal/mol)"] = str(found["affinity_kcal"])
+                    verified.add(float(found["affinity_kcal"]))
+                evidence.append({"tool": status_tool.name, "label": str(result["task_id"]), "epistemic_class": "dato persistido",
+                                 "source": result["source"], "values": values, "error": None})
+            return result
+        tools.append(Tool(status_tool.name, status_tool.description, status_tool.parameters, capture_status))
     if not registro.content_granted(provider.id):
         tools = []
     task = asyncio.create_task(run_tool_loop(provider, messages, tools, max_steps=10, observe=observe_tool))
