@@ -28,6 +28,18 @@
   cruzan de una conversación a otra.
 - Las frases que escribe el host al final de una respuesta (controles físicos, RMSD, cero contactos) se añaden una sola vez, aunque
   se lea el mismo par dos veces en el turno.
+- `compare_poses` distingue dos cuentas que una respuesta mezcló («tres contactos compartidos» y «cuatro residuos en común»): el
+  contacto compartido es el mismo tipo en el mismo residuo, y un residuo puede estar en las dos poses con otro tipo en cada una.
+  El resultado trae `residues_in_both_count` y `residues_with_different_types` (con los tipos de cada pose) y el host escribe las
+  dos cifras y los residuos que difieren, solo cuando hay algo que reconciliar.
+- Cada contacto lleva, cuando MolDesign los reporta, los átomos que usó el detector (`atoms`, con sus índices) y sus ángulos
+  (`angles_degrees`: `DHA_angle`, `AXD_angle`, `XAR_angle`...), para que una persona pueda comprobarlo a mano. Dos tipos de
+  contacto que se apoyan en los mismos átomos (`overlapping_criteria`) se cuentan como un solo contacto con dos criterios; para un
+  puente salino y un enlace de hidrógeno, el host lo dice en la respuesta. Sin índices atómicos (un MolDesign anterior) no se
+  afirma ningún átomo ni solapamiento.
+- Un contacto iónico (puente salino, catión–π) se declara válido solo para la especie que se acopló: MolDesign entrega
+  `ligand_species` (si la protonación cambió la entrada, con qué motor, a qué pH y cuántas alternativas quedaron sin evaluar) y,
+  cuando cambió, el host lo añade a la respuesta. No dice cuál especie predomina.
 - Una diferencia con PubChem en TPSA o aceptores de hidrógeno se explica automáticamente, pero solo si un cálculo de MolDesign la
   reproduce: `POST /molchat-host/properties` devuelve ahora `variants` (los mismos descriptores con la definición alternativa y
   su método), y el host escribe la nota cuando la variante redondeada a lo que imprime PubChem da su cifra. Si ninguna la

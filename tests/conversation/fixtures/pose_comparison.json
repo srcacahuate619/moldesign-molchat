@@ -103,6 +103,10 @@
         "next_step": "proceed_within_protocol"
       },
       "legacy_run": false,
+      "ligand_species": {
+        "available": false,
+        "reason_code": "LIGAND_STATE_NOT_STORED"
+      },
       "stage": {
         "status": "passed",
         "poses_evaluated": 3,
@@ -218,6 +222,10 @@
         "next_step": "review"
       },
       "legacy_run": false,
+      "ligand_species": {
+        "available": false,
+        "reason_code": "LIGAND_STATE_NOT_STORED"
+      },
       "stage": {
         "status": "review",
         "poses_evaluated": 3,
@@ -328,6 +336,10 @@
         "next_step": "review"
       },
       "legacy_run": false,
+      "ligand_species": {
+        "available": false,
+        "reason_code": "LIGAND_STATE_NOT_STORED"
+      },
       "stage": {
         "status": "review",
         "poses_evaluated": 2,
@@ -417,6 +429,10 @@
         "next_step": "review"
       },
       "legacy_run": true,
+      "ligand_species": {
+        "available": false,
+        "reason_code": "LIGAND_STATE_NOT_STORED"
+      },
       "stage": {
         "status": "not_evaluated",
         "poses_evaluated": 0,
@@ -502,6 +518,10 @@
         "next_step": "proceed_within_protocol"
       },
       "legacy_run": false,
+      "ligand_species": {
+        "available": false,
+        "reason_code": "LIGAND_STATE_NOT_STORED"
+      },
       "stage": {
         "status": "passed",
         "poses_evaluated": 3,
@@ -611,6 +631,14 @@
         "next_step": "proceed_within_protocol"
       },
       "legacy_run": false,
+      "ligand_species": {
+        "available": true,
+        "changed_from_input": true,
+        "protonation_applied": true,
+        "protonation_engine": "dimorphite-dl",
+        "protonation_ph": 7.4,
+        "alternatives_not_evaluated": 2
+      },
       "stage": {
         "status": "passed",
         "poses_evaluated": 3,
@@ -720,6 +748,14 @@
         "next_step": "proceed_within_protocol"
       },
       "legacy_run": false,
+      "ligand_species": {
+        "available": true,
+        "changed_from_input": true,
+        "protonation_applied": true,
+        "protonation_engine": "dimorphite-dl",
+        "protonation_ph": 7.4,
+        "alternatives_not_evaluated": 2
+      },
       "stage": {
         "status": "passed",
         "poses_evaluated": 3,
@@ -837,6 +873,14 @@
         "next_step": "proceed_within_protocol"
       },
       "legacy_run": false,
+      "ligand_species": {
+        "available": true,
+        "changed_from_input": true,
+        "protonation_applied": true,
+        "protonation_engine": "dimorphite-dl",
+        "protonation_ph": 7.4,
+        "alternatives_not_evaluated": 2
+      },
       "stage": {
         "status": "passed",
         "poses_evaluated": 3,
@@ -954,6 +998,14 @@
         "next_step": "proceed_within_protocol"
       },
       "legacy_run": false,
+      "ligand_species": {
+        "available": true,
+        "changed_from_input": true,
+        "protonation_applied": true,
+        "protonation_engine": "dimorphite-dl",
+        "protonation_ph": 7.4,
+        "alternatives_not_evaluated": 2
+      },
       "stage": {
         "status": "passed",
         "poses_evaluated": 3,

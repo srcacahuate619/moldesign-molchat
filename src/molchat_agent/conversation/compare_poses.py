@@ -42,7 +42,13 @@ COMPARE_GUIDANCE = (
     "resultado; si viene vacío, di que la corrida solo guardó el recuento y no el detalle. Si el análisis de contactos "
     "de una pose devuelve cero, no lo presentes como ausencia de interacción: di que no es concluyente y por qué. Si "
     "el usuario pide repetir o desarrollar cifras de una comparación anterior, vuelve a llamar a compare_poses con los "
-    "mismos argumentos (solo lee) en lugar de citarlas de memoria. Si piden algo que los datos no pueden dar (un "
+    "mismos argumentos (solo lee) en lugar de citarlas de memoria. Distingue los contactos compartidos (mismo tipo y mismo "
+    "residuo) de los residuos en común (el residuo está en las dos poses, aunque con otro tipo): da las dos cifras y nombra "
+    "los residuos de residues_with_different_types. Si dos tipos de contacto se apoyan en los mismos átomos "
+    "(overlapping_criteria), cuéntalos como un solo contacto con dos criterios. Al citar un contacto di sus átomos y "
+    "ángulos (atoms, angles_degrees) si vienen; si el átomo de la proteína de un contacto halógeno es un carbono, dilo: "
+    "no es un aceptor con par solitario (O, N, S). Un contacto iónico vale para la especie que se acopló (ligand_species), "
+    "no para la molécula en general. Si piden algo que los datos no pueden dar (un "
     "intervalo de confianza, cuál es la pose experimentalmente correcta), di que no se puede y conserva las cifras que "
     "sí están verificadas. ")
 
@@ -71,6 +77,9 @@ _READING_RULES = (
     "La energía de Vina compara poses de la misma molécula en el mismo receptor; no es energía libre ni afinidad medida.",
     "Físicamente válida significa que superó los controles que se evaluaron; no significa que la pose sea la correcta.",
     "Los contactos describen geometría; una diferencia de contactos no dice cuál pose es la real.",
+    "Un contacto compartido es el mismo tipo en el mismo residuo; un residuo puede estar en las dos poses con otro tipo "
+    "en cada una, y entonces cuenta como residuo en común y no como contacto compartido.",
+    "Un contacto iónico (puente salino, catión–π) vale para la especie que se acopló, no para otras formas de la molécula.",
     "No se declara ganadora: ausente o no evaluado nunca se lee como bueno.",
 )
 
@@ -140,6 +149,18 @@ def _pose_rmsd(raw: Any, left: int | None, right: int | None) -> dict[str, Any] 
     code = _text(raw.get("reason_code"), 40)
     why = _POSE_RMSD_UNAVAILABLE.get(code or "", "MolDesign no declaró el motivo")
     return {"available": False, "reason_code": code, "meaning": f"No se midió la distancia entre estas dos poses: {why}."}
+
+
+def _species(raw: Any) -> dict[str, Any]:
+    """Which chemical species the run docked, as the lock declares it (no SMILES): an ionic contact only holds for that
+    species. An older MolDesign does not report it, and then nothing is assumed."""
+    if not isinstance(raw, dict) or raw.get("available") is not True:
+        return {"available": False}
+    return {"available": True, "changed_from_input": _flag(raw.get("changed_from_input")),
+            "protonation_applied": _flag(raw.get("protonation_applied")),
+            "protonation_engine": _text(raw.get("protonation_engine"), 40),
+            "protonation_ph": _number(raw.get("protonation_ph")),
+            "alternatives_not_evaluated": _count(raw.get("alternatives_not_evaluated"))}
 
 
 def _number(value: Any) -> float | int | None:
@@ -232,6 +253,7 @@ def build_comparison_facts(task_id: str, data: dict[str, Any]) -> dict[str, Any]
         "alternatives": [rank for rank in (alternatives[:10] if isinstance(alternatives, list) else []) if type(rank) is int],
         "uncertainties": [{"code": code, "meaning": UNCERTAINTY_TEXT.get(code)} for code in codes],
         "legacy_run": _flag(data.get("legacy_run")),
+        "ligand_species": _species(data.get("ligand_species")),
         "reading_rules": [*_READING_RULES, *([measured["meaning"]] if measured is not None else []), rmsd["meaning"]],
     }
 
@@ -250,9 +272,61 @@ def _contacts_of(report: Any) -> dict[tuple[str, str], dict[str, Any]] | None:
         if kind is None or residue is None:
             continue
         distance = _number(item.get("distance"))
-        entry = found.setdefault((kind, residue), {"distance": distance})
-        if distance is not None and (entry["distance"] is None or distance < entry["distance"]):
-            entry["distance"] = distance
+        entry = found.get((kind, residue))
+        if entry is None or (distance is not None and (entry["distance"] is None or distance < entry["distance"])):
+            found[(kind, residue)] = {"distance": distance, **_atoms_of(item)}
+    return found
+
+
+#: The angles ProLIF reports for a contact (``DHA_angle``, ``AXD_angle``, ``XAR_angle``...), nothing else of its geometry.
+_ANGLE_KEY = re.compile(r"[A-Za-z_]{1,30}_angle")
+
+
+def _indices(value: Any) -> tuple[int, ...]:
+    return tuple(i for i in (value[:8] if isinstance(value, list) else []) if type(i) is int and i >= 0)
+
+
+def _atoms_of(item: dict[str, Any]) -> dict[str, Any]:
+    """The atoms and angles the detector used for a contact, when MolDesign reports them: the evidence a person needs
+    to check a contact by hand. Without atom indices (a distance-only fallback) no atom is claimed."""
+    ligand, protein = _indices(item.get("ligand_atom_indices")), _indices(item.get("protein_atom_indices"))
+    if not ligand or not protein:
+        return {}
+    geometry = item.get("geometry")
+    angles = {key: round(number, 1) for key, value in (geometry.items() if isinstance(geometry, dict) else [])
+              if isinstance(key, str) and _ANGLE_KEY.fullmatch(key) and (number := _number(value)) is not None}
+    return {"ligand_atom": _text(item.get("ligand_atom"), 12), "protein_atom": _text(item.get("protein_atom"), 12),
+            "ligand_atom_indices": ligand, "protein_atom_indices": protein, "angles": dict(sorted(angles.items())[:6])}
+
+
+def _described(entry: dict[str, Any]) -> dict[str, Any]:
+    """The atoms and angles of a contact in the shape the answer cites; empty when MolDesign gave no atom indices."""
+    if not entry.get("ligand_atom_indices"):
+        return {}
+    described: dict[str, Any] = {
+        "atoms": f"{entry.get('ligand_atom') or '?'}–{entry.get('protein_atom') or '?'}",
+        "ligand_atom_indices": list(entry["ligand_atom_indices"]), "protein_atom_indices": list(entry["protein_atom_indices"])}
+    if entry.get("angles"):
+        described["angles_degrees"] = dict(entry["angles"])
+    return described
+
+
+def _overlapping(side: str, contacts: dict[tuple[str, str], dict[str, Any]]) -> list[dict[str, Any]]:
+    """Two contact types of one residue that rest on common atoms of the ligand and of the protein: an N–H⁺ and a
+    carboxylate pass the ionic and the hydrogen-bond criteria with the same pair, which is one contact seen twice."""
+    by_residue: dict[str, list[tuple[str, dict[str, Any]]]] = {}
+    for (kind, residue), entry in contacts.items():
+        if entry.get("ligand_atom_indices"):
+            by_residue.setdefault(residue, []).append((kind, entry))
+    found: list[dict[str, Any]] = []
+    for residue, items in sorted(by_residue.items()):
+        items.sort(key=lambda item: item[0])
+        for position, (first_kind, first) in enumerate(items):
+            for second_kind, second in items[position + 1:]:
+                if (set(first["ligand_atom_indices"]) & set(second["ligand_atom_indices"])
+                        and set(first["protein_atom_indices"]) & set(second["protein_atom_indices"])):
+                    found.append({"side": side, "residue": residue, "types": [first_kind, second_kind],
+                                  "ligand_atom": first.get("ligand_atom"), "protein_atom": first.get("protein_atom")})
     return found
 
 
@@ -294,8 +368,11 @@ def build_contact_diff(left: dict[str, Any], right: dict[str, Any]) -> dict[str,
         return dict(sorted(counts.items()))
 
     def one(keys: list[tuple[str, str]], contacts: dict[tuple[str, str], dict[str, Any]]) -> list[dict[str, Any]]:
-        return [{"type": kind, "residue": residue, "distance_angstrom": _rounded(contacts[(kind, residue)]["distance"])}
-                for kind, residue in keys[:_LIST_CAP]]
+        return [{"type": kind, "residue": residue, "distance_angstrom": _rounded(contacts[(kind, residue)]["distance"]),
+                 **_described(contacts[(kind, residue)])} for kind, residue in keys[:_LIST_CAP]]
+
+    def types_of(contacts: dict[tuple[str, str], dict[str, Any]], residue: str) -> list[str]:
+        return sorted(kind for kind, other in contacts if other == residue)
 
     def by_residue(key: tuple[str, str]) -> tuple[str, str]:
         return key[1], key[0]  # by residue, then type
@@ -303,6 +380,11 @@ def build_contact_diff(left: dict[str, Any], right: dict[str, Any]) -> dict[str,
     shared = sorted(a.keys() & b.keys(), key=by_residue)
     only_left, only_right = sorted(a.keys() - b.keys(), key=by_residue), sorted(b.keys() - a.keys(), key=by_residue)
     residues_left, residues_right = {residue for _kind, residue in a}, {residue for _kind, residue in b}
+    # The same residue can be in both poses with another contact type in each; it is then a residue in common but not a
+    # shared contact. Said apart so that the two counts are never mistaken for each other.
+    different = [{"residue": residue, "left_types": types_of(a, residue), "right_types": types_of(b, residue),
+                  "shared_types": sorted(set(types_of(a, residue)) & set(types_of(b, residue)))}
+                 for residue in sorted(residues_left & residues_right) if types_of(a, residue) != types_of(b, residue)]
     conditions = {key: _text(left.get(key), 80) for key in
                   ("engine", "hydrogen_model", "contact_coverage", "receptor_chemistry", "pose_identity_verification")}
     silent = [(side, report) for side, contacts, report in (("left", a, left), ("right", b, right)) if not contacts]
@@ -318,14 +400,23 @@ def build_contact_diff(left: dict[str, Any], right: dict[str, Any]) -> dict[str,
         "left": {"total": len(a), "by_type": by_type(a)},
         "right": {"total": len(b), "by_type": by_type(b)},
         "shared": [{"type": kind, "residue": residue, "left_distance_angstrom": _rounded(a[(kind, residue)]["distance"]),
-                    "right_distance_angstrom": _rounded(b[(kind, residue)]["distance"])} for kind, residue in shared[:_LIST_CAP]],
+                    "right_distance_angstrom": _rounded(b[(kind, residue)]["distance"]),
+                    **{f"{side}_{key}": value for side, contacts in (("left", a), ("right", b))
+                       for key, value in _described(contacts[(kind, residue)]).items()}}
+                   for kind, residue in shared[:_LIST_CAP]],
         "only_left": one(only_left, a), "only_right": one(only_right, b),
         "shared_count": len(shared), "only_left_count": len(only_left), "only_right_count": len(only_right),
         "residues_in_both": sorted(residues_left & residues_right)[:_LIST_CAP],
+        "residues_in_both_count": len(residues_left & residues_right),
+        "residues_with_different_types": different[:_LIST_CAP],
+        "overlapping_criteria": [*_overlapping("left", a), *_overlapping("right", b)][:_LIST_CAP],
         "residues_only_left": sorted(residues_left - residues_right)[:_LIST_CAP],
         "residues_only_right": sorted(residues_right - residues_left)[:_LIST_CAP],
         "truncated": any(len(items) > _LIST_CAP for items in (shared, only_left, only_right)),
-        "note": "Un contacto cuenta una vez por tipo y residuo. Describe geometría de cada pose; no dice cuál es la real.",
+        "note": ("Un contacto cuenta una vez por tipo y residuo: compartido es el mismo tipo en el mismo residuo, y un residuo "
+                 "en común puede traer otro tipo en cada pose. Dos tipos que se apoyan en los mismos átomos "
+                 "(overlapping_criteria) son dos criterios sobre un mismo contacto. Describe geometría de cada pose; no dice "
+                 "cuál es la real."),
     }
 
 
@@ -364,6 +455,44 @@ async def _contacts(bridge: MolDesignBridge, task_id: str, molecule_id: str, lef
     return build_contact_diff(a, b)
 
 
+_IONIC = ("salt_bridge", "cation_pi")
+
+
+def contact_reading(facts: dict[str, Any]) -> str:
+    """How the contact counts were taken and what an ionic contact assumes, in the host's words.
+
+    A model can say "three contacts in common" and "four residues in common" in one answer and leave the reader to guess
+    why, count an N–H⁺···O⁻ pair twice (as a salt bridge and as a hydrogen bond), or present a salt bridge as a property of
+    the molecule when it only holds for the species that was docked. No number check sees any of those."""
+    contacts = facts.get("contacts")
+    if not isinstance(contacts, dict) or contacts.get("status") != "ok" or contacts.get("conclusive") is False:
+        return ""
+    left, right = (facts["poses"][side].get("rank") for side in ("left", "right"))
+    sentences: list[str] = []
+    different = contacts.get("residues_with_different_types") or []
+    if different:
+        shown = "; ".join(f"{item['residue']} (pose {left}: {', '.join(item['left_types'])}; pose {right}: {', '.join(item['right_types'])})"
+                          for item in different[:6])
+        sentences.append(f"Contactos compartidos (mismo tipo y mismo residuo): {contacts['shared_count']}. Residuos presentes en las dos "
+                         f"poses: {contacts['residues_in_both_count']}; con otro tipo de contacto en cada una: {shown}.")
+    for item in [i for i in contacts.get("overlapping_criteria") or [] if set(i["types"]) == {"hbond", "salt_bridge"}][:4]:
+        pose = left if item["side"] == "left" else right
+        sentences.append(f"En la pose {pose}, con {item['residue']}, el puente salino y el enlace de hidrógeno se apoyan en los mismos "
+                         f"átomos (ligando {item['ligand_atom']}, proteína {item['protein_atom']}): son dos criterios sobre un mismo "
+                         "contacto, no dos contactos independientes.")
+    species = facts.get("ligand_species") or {}
+    ionic = sorted({kind for side in ("left", "right") for kind in (contacts.get(side) or {}).get("by_type", {}) if kind in _IONIC})
+    if ionic and species.get("changed_from_input") is True:
+        how = []
+        if species.get("protonation_engine") and species.get("protonation_ph") is not None:
+            how.append(f"protonación asignada con {species['protonation_engine']} a pH {str(species['protonation_ph']).replace('.', ',')}")
+        if species.get("alternatives_not_evaluated"):
+            how.append(f"{species['alternatives_not_evaluated']} alternativas sin evaluar")
+        sentences.append(f"Los contactos iónicos ({', '.join(ionic)}) valen para la especie que se acopló, que MolDesign declara distinta "
+                         f"de la entrada{' (' + '; '.join(how) + ')' if how else ''}; no prueban que esa especie predomine en el medio.")
+    return " ".join(sentences)
+
+
 def comparison_limits(facts: dict[str, Any]) -> str:
     """The physical status of each pose as MolDesign declares it, for the host to append to the answer.
 
@@ -391,6 +520,8 @@ def comparison_limits(facts: dict[str, Any]) -> str:
     contacts = facts.get("contacts")
     if isinstance(contacts, dict) and contacts.get("caution"):
         text += " " + contacts["caution"]
+    if reading := contact_reading(facts):
+        text += " " + reading
     return text + " La energía de Vina no es afinidad medida y no se declara ganadora."
 
 
@@ -426,6 +557,8 @@ def evidence_values(facts: dict[str, Any]) -> dict[str, str]:
         if contacts.get("conclusive") is False:
             values["contactos tipificados"] = "0 en alguna pose: no concluyente"
         values["contactos compartidos"] = str(contacts["shared_count"])
+        if contacts.get("residues_in_both_count") is not None:
+            values["residuos presentes en las dos poses"] = str(contacts["residues_in_both_count"])
         values["solo en la izquierda"] = str(contacts["only_left_count"])
         values["solo en la derecha"] = str(contacts["only_right_count"])
     return values

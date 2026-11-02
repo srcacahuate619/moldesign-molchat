@@ -1,7 +1,7 @@
 """Comparing two poses through the hosted chat: the evidence is MolDesign's, and the answer carries its verdict."""
 import pytest
 
-from tests.conversation.fake_moldesign import TASK, FakeMolDesign
+from tests.conversation.fake_moldesign import REAL_8T69_POSE_2, REAL_8T69_POSE_3, TASK, FakeMolDesign
 from tests.server.test_product_actions_chat import Chat, call
 
 CONTACTS = {1: [("hbond", "ASP34A", 2.91), ("hydrophobic", "LEU12A", 3.8)],
@@ -194,6 +194,53 @@ async def test_a_pose_with_zero_typed_contacts_beside_one_with_five_is_not_concl
     assert "No lo leas como ausencia de interacción" in result["text"]
     assert any(row.get("values", {}).get("contactos tipificados") == "0 en alguna pose: no concluyente"
                for row in result["evidence"])
+
+
+ASK_2_3 = "compara la pose 2 y la pose 3 de la tarea t-8t69"
+
+
+async def _say_2_vs_3(tmp_path, monkeypatch, final):
+    fake = FakeMolDesign(comparison_case="rmsd_medido_entre_dos_que_no_son_la_mejor",
+                         contacts={2: REAL_8T69_POSE_2, 3: REAL_8T69_POSE_3})
+    async with Chat(tmp_path, monkeypatch, fake) as chat:
+        return await chat.say(ASK_2_3, [call("compare_poses", {"task_id": TASK, "left": 2, "right": 3})], final=final)
+
+
+@pytest.mark.asyncio
+async def test_the_answer_for_poses_2_and_3_states_both_counts_the_shared_atoms_and_the_docked_species_once(tmp_path, monkeypatch):
+    """The reviewed answer said three shared contacts and four shared residues and then dropped PHE429A from the summary."""
+    result = await _say_2_vs_3(tmp_path, monkeypatch,
+                               "Comparten 3 contactos del mismo tipo y residuo; la pose 3 hace un enlace de hidrógeno con GLU312A "
+                               "a 3,24 Å (ángulo 139,3°) y un contacto halógeno con PHE429A (ángulo 159,7°).")
+    text = result["text"]
+    assert "[dato no verificado]" not in text
+    assert text.count("Contactos compartidos (mismo tipo y mismo residuo): 3.") == 1
+    assert "PHE429A (pose 2: hydrophobic; pose 3: halogen)" in text
+    assert text.count("se apoyan en los mismos átomos (ligando N12, proteína O768)") == 1
+    assert text.count("a pH 7,4") == 1 and text.count("no se declara ganadora.") == 1
+    assert any(row.get("values", {}).get("residuos presentes en las dos poses") == "4" for row in result["evidence"])
+
+
+@pytest.mark.asyncio
+async def test_a_wrong_count_in_the_model_text_is_followed_by_the_hosts_criterion(tmp_path, monkeypatch):
+    """4 is a number the tool returned (the shared residues), so no number check can say it is not the shared contacts."""
+    result = await _say_2_vs_3(tmp_path, monkeypatch, "Las dos poses comparten 4 contactos.")
+    assert "Contactos compartidos (mismo tipo y mismo residuo): 3." in result["text"]
+
+
+@pytest.mark.asyncio
+async def test_an_angle_the_tool_did_not_return_is_not_kept(tmp_path, monkeypatch):
+    result = await _say_2_vs_3(tmp_path, monkeypatch, "El enlace de hidrógeno con GLU312A tiene un ángulo de 150°.")
+    assert "150" not in result["text"]
+
+
+@pytest.mark.asyncio
+async def test_a_comparison_with_matching_types_gets_no_counting_sentence(tmp_path, monkeypatch):
+    """No noise: when the shared contacts and the shared residues agree there is nothing to reconcile."""
+    async with Chat(tmp_path, monkeypatch, FakeMolDesign(contacts=CONTACTS)) as chat:
+        result = await chat.say(ASK, [call("compare_poses", {"task_id": TASK, "left": 1, "right": 2})],
+                                final="Comparten Asp34A.")
+    assert "Contactos compartidos (mismo tipo" not in result["text"] and "valen para la especie" not in result["text"]
 
 
 @pytest.mark.asyncio

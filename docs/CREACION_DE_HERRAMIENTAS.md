@@ -131,7 +131,15 @@ no pide tarjeta, y la respuesta lo declara). Devuelve:
 - **Lo que dijo el selector** (sugerida, abstención, divergencia con el top-1) y las incertidumbres de la corrida, cada una con su
   frase.
 - **Los contactos compartidos y exclusivos**, con tipo, residuo y distancia en Å. La diferencia entre las dos listas la calcula el
-  código; el modelo no resta conjuntos.
+  código; el modelo no resta conjuntos. Compartido es el mismo tipo en el mismo residuo; un residuo puede estar en las dos poses
+  con otro tipo en cada una (`residues_with_different_types`), y entonces cuenta como residuo en común y no como contacto
+  compartido: el host escribe las dos cifras para que una respuesta no mezcle «tres contactos» con «cuatro residuos».
+- **Los átomos y los ángulos de cada contacto** (`atoms`, `ligand_atom_indices`, `protein_atom_indices`, `angles_degrees`), tal como
+  los reporta MolDesign desde ProLIF. Dos tipos que se apoyan en los mismos átomos (`overlapping_criteria`) son dos criterios sobre
+  un mismo contacto: un N–H⁺ y un carboxilato cumplen a la vez el criterio iónico y el de enlace de hidrógeno. Sin índices
+  atómicos no se afirma ningún átomo.
+- **La especie que se acopló** (`ligand_species`): si la protonación cambió la entrada, con qué motor y a qué pH, y cuántas
+  alternativas no se evaluaron. Un contacto iónico vale para esa especie; el host lo añade cuando hay uno y la especie cambió.
 - **Cuánto se separan, medido** (`difference.pose_rmsd_between_poses`). MolDesign calcula el RMSD entre las dos poses desde las
   coordenadas que guardó la corrida, con la correspondencia atómica declarada: átomos pesados, sin superponer, y dos valores (el
   simétrico, que elige el mapeo de menor RMSD, y el de orden de átomo, que coincide con la cota `u.b.` de Vina). Sirve para cualquier

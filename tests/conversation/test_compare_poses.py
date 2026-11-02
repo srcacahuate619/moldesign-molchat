@@ -8,7 +8,9 @@ import pytest
 from molchat_agent.bridge import MolDesignBridge
 from molchat_agent.conversation import compare_poses as cp
 
-from tests.conversation.fake_moldesign import MOLECULE, TASK, FakeMolDesign, comparison_fixture
+from tests.conversation.fake_moldesign import (
+    MOLECULE, REAL_8T69_POSE_2, REAL_8T69_POSE_3, TASK, FakeMolDesign, comparison_fixture,
+)
 
 TOKEN = "test-account-token"
 
@@ -333,6 +335,135 @@ def test_a_contact_list_with_nothing_usable_is_an_empty_list_not_a_failure():
     junk = {"interactions": [None, 3, {"type": 1}, {"type": "hbond"}]}
     diff = cp.build_contact_diff(junk, junk)
     assert diff["status"] == "ok" and diff["left"]["total"] == 0 and diff["shared_count"] == 0
+
+
+# ── Two counts, one criterion each: shared contacts and shared residues are never confused ──────────
+
+async def _real_2_vs_3(**fake_args):
+    fake = FakeMolDesign(comparison_case="rmsd_medido_entre_dos_que_no_son_la_mejor",
+                         contacts={2: REAL_8T69_POSE_2, 3: REAL_8T69_POSE_3}, **fake_args)
+    result, _ = await compare(fake, left=2, right=3)
+    return result
+
+
+@pytest.mark.asyncio
+async def test_three_shared_contacts_and_four_shared_residues_are_both_counted_and_the_difference_is_named():
+    """The 8T69 poses 2 and 3: three contacts of the same type and residue, four residues in both, PHE429A with another type."""
+    contacts = (await _real_2_vs_3())["contacts"]
+    assert contacts["shared_count"] == 3 and contacts["residues_in_both_count"] == 4
+    assert [(c["type"], c["residue"]) for c in contacts["shared"]] == [
+        ("salt_bridge", "GLU312A"), ("hydrophobic", "PHE135A"), ("hydrophobic", "TYR341A")]
+    assert contacts["residues_in_both"] == ["GLU312A", "PHE135A", "PHE429A", "TYR341A"]
+    assert contacts["residues_with_different_types"] == [
+        {"residue": "GLU312A", "left_types": ["salt_bridge"], "right_types": ["hbond", "salt_bridge"], "shared_types": ["salt_bridge"]},
+        {"residue": "PHE429A", "left_types": ["hydrophobic"], "right_types": ["halogen"], "shared_types": []}]
+
+
+@pytest.mark.asyncio
+async def test_the_host_states_both_counts_and_why_they_differ():
+    result = await _real_2_vs_3()
+    text = cp.comparison_limits(result)
+    assert ("Contactos compartidos (mismo tipo y mismo residuo): 3. Residuos presentes en las dos poses: 4; con otro tipo de "
+            "contacto en cada una: GLU312A (pose 2: salt_bridge; pose 3: hbond, salt_bridge); "
+            "PHE429A (pose 2: hydrophobic; pose 3: halogen).") in text
+    assert text.rstrip().endswith("no se declara ganadora.")
+
+
+@pytest.mark.asyncio
+async def test_the_contacts_carry_the_atoms_and_angles_a_person_needs_to_check_them_by_hand():
+    contacts = (await _real_2_vs_3())["contacts"]
+    hbond = next(c for c in contacts["only_right"] if c["type"] == "hbond")
+    assert hbond == {"type": "hbond", "residue": "GLU312A", "distance_angstrom": 3.24, "atoms": "N12–O768",
+                     "ligand_atom_indices": [12, 29], "protein_atom_indices": [768], "angles_degrees": {"DHA_angle": 139.3}}
+    halogen = next(c for c in contacts["only_right"] if c["type"] == "halogen")
+    assert halogen["atoms"] == "C10–C1259" and halogen["angles_degrees"] == {"AXD_angle": 159.7, "XAR_angle": 109.0}
+    salt = next(c for c in contacts["shared"] if c["type"] == "salt_bridge")
+    assert (salt["left_atoms"], salt["right_atoms"]) == ("N12–O769", "N12–O768")
+    # Only the angles of the detector reach the model, not the rest of its geometry.
+    stacking = next(c for c in contacts["only_right"] if c["type"] == "pi_stacking")
+    assert stacking["angles_degrees"] == {"normal_to_centroid_angle": 28.0, "plane_angle": 173.6}
+    assert "distance" not in json.dumps(hbond["angles_degrees"])
+
+
+@pytest.mark.asyncio
+async def test_a_hydrogen_bond_and_a_salt_bridge_on_the_same_atoms_are_one_contact_seen_twice():
+    result = await _real_2_vs_3()
+    overlaps = result["contacts"]["overlapping_criteria"]
+    assert {"side": "right", "residue": "GLU312A", "types": ["hbond", "salt_bridge"], "ligand_atom": "N12",
+            "protein_atom": "O768"} in overlaps
+    assert not [o for o in overlaps if o["side"] == "left" and o["residue"] == "GLU312A"]  # pose 2: no H-bond, only the ion pair
+    text = cp.comparison_limits(result)
+    assert ("En la pose 3, con GLU312A, el puente salino y el enlace de hidrógeno se apoyan en los mismos átomos "
+            "(ligando N12, proteína O768): son dos criterios sobre un mismo contacto, no dos contactos independientes.") in text
+    assert "En la pose 2" not in text  # the stacking/hydrophobic overlap of PHE334A is listed, not sentenced
+
+
+def test_two_types_on_different_atoms_are_not_called_the_same_contact():
+    left = {"interactions": [
+        {"type": "hbond", "residue": "ASP34A", "distance": 2.9, "ligand_atom": "N1", "protein_atom": "O5",
+         "ligand_atom_indices": [1, 2], "protein_atom_indices": [5]},
+        {"type": "salt_bridge", "residue": "ASP34A", "distance": 4.0, "ligand_atom": "N9", "protein_atom": "O6",
+         "ligand_atom_indices": [9], "protein_atom_indices": [6]}]}
+    assert cp.build_contact_diff(left, {"interactions": []})["overlapping_criteria"] == []
+
+
+@pytest.mark.asyncio
+async def test_an_older_moldesign_without_atom_indices_claims_no_atoms_and_no_overlap():
+    result, _ = await compare(FakeMolDesign(contacts={1: LEFT, 2: RIGHT}))
+    contacts = result["contacts"]
+    assert contacts["overlapping_criteria"] == [] and contacts["residues_with_different_types"] == []
+    assert all("atoms" not in c and "angles_degrees" not in c for c in contacts["only_left"] + contacts["only_right"])
+    assert cp.contact_reading(result) == ""
+    assert "Contactos compartidos (mismo tipo" not in cp.comparison_limits(result)
+
+
+@pytest.mark.asyncio
+async def test_a_silent_pose_gets_the_caution_and_no_counting_sentence():
+    fake = FakeMolDesign(comparison_case="rmsd_medido_entre_dos_que_no_son_la_mejor", contacts={2: REAL_8T69_POSE_2, 3: []})
+    result, _ = await compare(fake, left=2, right=3)
+    assert result["contacts"]["conclusive"] is False and cp.contact_reading(result) == ""
+    assert "Cero contactos tipificados en la pose 3" in cp.comparison_limits(result)
+
+
+# ── A salt bridge only holds for the species that was docked ──────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_an_ionic_contact_is_tied_to_the_docked_species_when_the_lock_says_it_is_not_the_input():
+    result = await _real_2_vs_3()
+    assert result["ligand_species"] == {"available": True, "changed_from_input": True, "protonation_applied": True,
+                                        "protonation_engine": "dimorphite-dl", "protonation_ph": 7.4, "alternatives_not_evaluated": 2}
+    assert ("Los contactos iónicos (salt_bridge) valen para la especie que se acopló, que MolDesign declara distinta de la entrada "
+            "(protonación asignada con dimorphite-dl a pH 7,4; 2 alternativas sin evaluar); no prueban que esa especie "
+            "predomine en el medio.") in cp.comparison_limits(result)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("species", [
+    {"available": False, "reason_code": "LIGAND_STATE_NOT_STORED"},          # the run kept no ligand state
+    {"available": True, "changed_from_input": False},                         # the docked species is the one written
+    {"available": True, "changed_from_input": None},                          # the lock did not say
+    None, "protonada", [], {"available": "yes", "changed_from_input": True},  # not a usable claim
+])
+async def test_without_a_declared_change_of_species_nothing_is_said_about_it(species):
+    result = await _real_2_vs_3()
+    result["ligand_species"] = cp._species(species)
+    assert "valen para la especie que se acopló" not in cp.comparison_limits(result)
+
+
+@pytest.mark.asyncio
+async def test_a_change_of_species_says_nothing_when_there_is_no_ionic_contact():
+    fake = FakeMolDesign(comparison_case="rmsd_medido_entre_dos_que_no_son_la_mejor",
+                         contacts={2: [c for c in REAL_8T69_POSE_2 if c[0] != "salt_bridge"],
+                                   3: [c for c in REAL_8T69_POSE_3 if c[0] != "salt_bridge"]})
+    result, _ = await compare(fake, left=2, right=3)
+    assert result["ligand_species"]["changed_from_input"] is True
+    assert "valen para la especie que se acopló" not in cp.comparison_limits(result)
+
+
+def test_an_older_moldesign_without_ligand_species_reports_it_as_unavailable():
+    assert cp._species(None) == {"available": False}
+    facts = cp.build_comparison_facts(TASK, comparison_fixture("todas_pasan"))
+    assert facts["ligand_species"] == {"available": False}
 
 
 # ── A list with zero typed contacts is not a finding about the pose ───────────────────────────────

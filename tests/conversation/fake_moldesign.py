@@ -23,14 +23,18 @@ def comparison_fixture(name: str) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))["responses"][name]
 
 
-def interactions_report(rank: int, contacts: list[tuple[str, str, float]]) -> dict[str, Any]:
-    """The shape of MolDesign's ``InteractionResponse`` (``routers/interactions.py``), with the fields the key reads."""
+def interactions_report(rank: int, contacts: list[tuple]) -> dict[str, Any]:
+    """The shape of MolDesign's ``InteractionResponse`` (``routers/interactions.py``), with the fields the key reads.
+
+    A contact is ``(type, residue, distance)`` or ``(type, residue, distance, extra)``; ``extra`` replaces fields of the
+    interaction: the atoms, their indices and the ProLIF geometry that MolDesign reports for a real contact."""
     interactions = [{"type": kind, "residue": residue, "residue_name": residue[:3], "residue_chain": residue[-1],
                      "ligand_atom": "C1", "protein_atom": "CA", "distance": distance, "angle": None, "strength": "weak",
-                     "ligand_coords": {"x": 0.0, "y": 0.0, "z": 0.0}, "protein_coords": {"x": 1.0, "y": 1.0, "z": 1.0}}
-                    for kind, residue, distance in contacts]
+                     "ligand_coords": {"x": 0.0, "y": 0.0, "z": 0.0}, "protein_coords": {"x": 1.0, "y": 1.0, "z": 1.0},
+                     **(extra[0] if extra else {})}
+                    for kind, residue, distance, *extra in contacts]
     summary: dict[str, int] = {}
-    for kind, _residue, _distance in contacts:
+    for kind, *_rest in contacts:
         summary[kind] = summary.get(kind, 0) + 1
     return {"molecule_id": MOLECULE, "task_id": TASK, "target_pdb_id": "8T69", "pose_rank": rank,
             "pose_source_path": "run/poses.sdf", "pose_source_kind": "stored", "pose_source_sha256": "a" * 64,
@@ -40,6 +44,32 @@ def interactions_report(rank: int, contacts: list[tuple[str, str, float]]) -> di
             "pose_identity_verification": "stored_run_path_and_current_file_hash",
             "total_interactions": len(contacts), "summary": summary, "interactions_by_type": {}, "pharmacophore_features": {},
             "interactions": interactions}
+
+
+#: The contacts MolDesign measured for poses 2 and 3 of the stored 8T69 run (clopidogrel; ProLIF 2.1.0 with the receptor's
+#: residue chemistry), with the atom indices and angles it reports. Pose 3's hydrogen bond and salt bridge with GLU312A rest on
+#: the same N12···O768 pair, and its "halogen" contact points at a ring carbon of PHE429A: both were re-measured by hand in
+#: MolDesign's ``backend/tests/test_contactos_reales_8t69.py``.
+REAL_8T69_POSE_2 = [
+    ("salt_bridge", "GLU312A", 4.34, {"ligand_atom": "N12", "protein_atom": "O769", "ligand_atom_indices": [12], "protein_atom_indices": [769], "geometry": {"distance": 4.34}}),
+    ("hydrophobic", "ILE395A", 4.39, {"ligand_atom": "S16", "protein_atom": "C1132", "ligand_atom_indices": [16], "protein_atom_indices": [1132], "geometry": {}}),
+    ("hydrophobic", "PHE135A", 4.37, {"ligand_atom": "C8", "protein_atom": "C238", "ligand_atom_indices": [8], "protein_atom_indices": [238], "geometry": {}}),
+    ("hydrophobic", "PHE334A", 4.48, {"ligand_atom": "C6", "protein_atom": "C879", "ligand_atom_indices": [6], "protein_atom_indices": [879], "geometry": {}}),
+    ("pi_stacking", "PHE334A", 4.73, {"ligand_atom": "C5", "protein_atom": "C879", "ligand_atom_indices": [5, 6, 7, 8, 9, 10], "protein_atom_indices": [879, 880, 882, 884, 883, 881], "geometry": {"plane_angle": 148.8, "normal_to_centroid_angle": 29.9}}),
+    ("hydrophobic", "PHE429A", 4.09, {"ligand_atom": "C17", "protein_atom": "C1260", "ligand_atom_indices": [17], "protein_atom_indices": [1260], "geometry": {}}),
+    ("hydrophobic", "TYR341A", 4.47, {"ligand_atom": "S16", "protein_atom": "C940", "ligand_atom_indices": [16], "protein_atom_indices": [940], "geometry": {}}),
+]
+REAL_8T69_POSE_3 = [
+    ("hbond", "GLU312A", 3.24, {"ligand_atom": "N12", "protein_atom": "O768", "ligand_atom_indices": [12, 29], "protein_atom_indices": [768], "geometry": {"distance": 3.2423328021657496, "DHA_angle": 139.29022857667943}}),
+    ("salt_bridge", "GLU312A", 3.24, {"ligand_atom": "N12", "protein_atom": "O768", "ligand_atom_indices": [12], "protein_atom_indices": [768], "geometry": {"distance": 3.24}}),
+    ("hydrophobic", "LEU37A", 4.43, {"ligand_atom": "C8", "protein_atom": "C96", "ligand_atom_indices": [8], "protein_atom_indices": [96], "geometry": {}}),
+    ("hydrophobic", "PHE135A", 4.15, {"ligand_atom": "C6", "protein_atom": "C238", "ligand_atom_indices": [6], "protein_atom_indices": [238], "geometry": {}}),
+    ("halogen", "PHE429A", 3.38, {"ligand_atom": "C10", "protein_atom": "C1259", "ligand_atom_indices": [10, 11], "protein_atom_indices": [1259, 1261], "geometry": {"distance": 3.382702174297932, "AXD_angle": 159.74850700583985, "XAR_angle": 109.04096398835406}}),
+    ("hydrophobic", "TYR341A", 3.94, {"ligand_atom": "S16", "protein_atom": "C937", "ligand_atom_indices": [16], "protein_atom_indices": [937], "geometry": {}}),
+    ("hydrophobic", "TYR433A", 4.16, {"ligand_atom": "C5", "protein_atom": "C1291", "ligand_atom_indices": [5], "protein_atom_indices": [1291], "geometry": {}}),
+    ("pi_stacking", "TYR433A", 4.08, {"ligand_atom": "C5", "protein_atom": "C1290", "ligand_atom_indices": [5, 6, 7, 8, 9, 10], "protein_atom_indices": [1290, 1291, 1293, 1295, 1294, 1292], "geometry": {"plane_angle": 173.6, "normal_to_centroid_angle": 28.0}}),
+    ("hydrophobic", "VAL232A", 3.74, {"ligand_atom": "C18", "protein_atom": "C589", "ligand_atom_indices": [18], "protein_atom_indices": [589], "geometry": {}}),
+]
 
 
 @dataclass
