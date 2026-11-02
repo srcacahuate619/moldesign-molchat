@@ -34,7 +34,11 @@ from ..conversation.intents import classify
 from ..conversation.tool_loop import Tool, run_tool_loop
 from ..conversation.structure_check import compare_editor_structure
 from ..conversation.harness_tools import assign_case_receptor_tool, create_case_tool, evaluate_case_tool, evaluation_status_tool, load_case_smiles_tool, properties_tool, pubchem_tool, receptor_catalog_tool, random_receptor_tool
-from ..conversation.evidence import context_literals, numbers_in, redact_unverified, split_flow, VERIFICATION_NOTE
+from ..conversation.evidence import context_literals, numbers_in, numeric_leaves, redact_unverified, split_flow, VERIFICATION_NOTE
+from ..conversation.explain_evaluation import EXPLAIN_GUIDANCE, declared_limits, evidence_values, explain_evaluation_tool
+from ..conversation.product_actions import (ACTIONS_GUIDANCE, Proposal, mask_unconfirmed_actions, molcy_video_status_tool,
+                                            molcy_video_tool, new_proposal, outcome_text, proposal_answer, run_proposal,
+                                            save_to_moldex_tool, view as proposal_view)
 from ..conversation.tools import PlatformBackend
 from ..plan import Plan
 from ..providers.base import ProviderDisabled, ProviderError
@@ -360,6 +364,60 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
         pending[1].set_result(payload)
         return JSONResponse({"accepted": True})
 
+    def find_proposal(request: Request, session: Session) -> Proposal | None:
+        proposal = state.proposals.get(request.path_params["action_id"])
+        if proposal is None or proposal.owner != session.sub:
+            return None
+        if proposal.state == "pending" and proposal.expires < time.monotonic():
+            state.proposals.pop(proposal.id, None)
+            return None
+        return proposal
+
+    def record_outcome(proposal: Proposal) -> None:
+        """Keep the resolved action in the conversation, so the next turn reads what really happened."""
+        if proposal.conv_id is None or proposal.outcome is None:
+            return
+        try:
+            state.memory.add_message(proposal.conv_id, proposal.owner, "assistant", outcome_text(proposal, proposal.outcome))
+        except (ConversationNotFound, PersistenciaFallida):
+            pass
+
+    async def action_confirm(request: Request) -> JSONResponse:
+        """The person's click. The model has no route to this endpoint: only the interface calls it."""
+        session = await need_chat(request)
+        proposal = find_proposal(request, session)
+        if proposal is None:
+            return _error(404, "propuesta no encontrada o caducada")
+        if proposal.state == "running":
+            return _error(409, "la propuesta ya se está ejecutando")
+        if proposal.state != "pending":  # a second click returns what happened, it does not repeat it
+            return JSONResponse({"id": proposal.id, "state": proposal.state, "outcome": proposal.outcome})
+        if not state.hosted or state.bridge is None:
+            return _error(409, "se necesita MolDesign para ejecutar esta acción")
+        proposal.state = "running"
+        outcome: dict[str, Any] | None = None
+        try:
+            outcome = await run_proposal(state.bridge.with_token(platform_token(request)), proposal)
+        except Exception:  # noqa: BLE001 - the card must end with an honest status, never hang
+            outcome = None
+        finally:
+            # Also when the interface hung up mid-call: MolDesign may or may not have acted.
+            if outcome is None:
+                outcome = {"status": "unknown", "message": "No se pudo confirmar el resultado; revisa Moldex y Molcy antes de reintentar."}
+            proposal.outcome, proposal.state = outcome, "done"
+            record_outcome(proposal)
+        return JSONResponse({"id": proposal.id, "state": proposal.state, "outcome": outcome})
+
+    async def action_cancel(request: Request) -> JSONResponse:
+        session = await need_chat(request)
+        proposal = find_proposal(request, session)
+        if proposal is None:
+            return _error(404, "propuesta no encontrada o caducada")
+        if proposal.state == "pending":
+            proposal.state, proposal.outcome = "cancelled", {"status": "cancelled", "message": "Cancelado; no se hizo nada."}
+            record_outcome(proposal)
+        return JSONResponse({"id": proposal.id, "state": proposal.state, "outcome": proposal.outcome})
+
     async def list_harness_jobs(request: Request) -> JSONResponse:
         session = await need_chat(request)
         try:
@@ -614,6 +672,8 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
             Route("/v1/receptor-requests/{request_id}/result", receptor_result, methods=["POST"]),
             Route("/v1/evaluation-requests/{request_id}/result", evaluation_result, methods=["POST"]),
             Route("/v1/editor-requests/{request_id}/result", editor_result, methods=["POST"]),
+            Route("/v1/actions/{action_id}/confirm", action_confirm, methods=["POST"]),
+            Route("/v1/actions/{action_id}/cancel", action_cancel, methods=["POST"]),
             Route("/v1/harness-jobs", list_harness_jobs, methods=["GET"]),
             Route("/v1/pubchem/permission", pubchem_permission, methods=["GET", "POST", "DELETE"]),
             Route("/v1/conversations/{conv_id}/pubchem-selection", select_pubchem_reference, methods=["POST"]),
@@ -713,6 +773,11 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
     comparison_cids: list[int] = []
     proposed_actions: list[dict[str, Any]] = []
     verified: set[float] = set()
+    #: Numbers of a result MolDesign declared whole, matched at the precision the answer writes.
+    exact: set[float] = set()
+    explanation_facts: dict[str, Any] | None = None
+    #: Proposals this turn left for the person to confirm (nothing is executed until then).
+    new_proposals: list[Proposal] = []
     events: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
     case_status: dict[str, Any] | None = None
     case_started = False
@@ -746,7 +811,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         elif phase == "arguments" and args:
             for step in reversed(trace):
                 if step["id"] == call_id:
-                    details = [f"{key}: {str(args[key])[:120]}" for key in ("case_name", "pdb_id", "cid", "name", "query", "page", "section", "availability", "task_id")
+                    details = [f"{key}: {str(args[key])[:120]}" for key in ("case_name", "pdb_id", "cid", "name", "query", "page", "section", "availability", "task_id", "job_id", "scene")
                                if isinstance(args.get(key), str) or (key == "cid" and type(args.get(key)) is int)]
                     if details:
                         step["detail"] = " · ".join(details)
@@ -869,6 +934,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         "La aceptación de una tarea no es un resultado ni indica que el cálculo haya terminado. No reintentes un resultado desconocido. "
         "Si el usuario pregunta por el estado o el resultado de una tarea aceptada, usa get_evaluation_status con su task_id; "
         "informa task_status tal cual y, solo si es SUCCESS, la afinidad de Vina como energía de la mejor pose, nunca como actividad ni Ki. "
+        + EXPLAIN_GUIDANCE + ACTIONS_GUIDANCE +
         "Si el usuario no indicó un PDB ID exacto busca en el catálogo y asigna únicamente si el resultado es inequívoco; si hay varias opciones pregunta. "
         "Si el usuario pidió expresamente un receptor aleatorio o al azar, usa pick_random_receptor y asigna el receptor devuelto; "
         "conserva su sección y disponibilidad, sin sustituirlo por uno verificado salvo que el usuario haya pedido ese filtro. "
@@ -1133,6 +1199,30 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
                                  "source": result["source"], "values": values, "error": None})
             return result
         tools.append(Tool(status_tool.name, status_tool.description, status_tool.parameters, capture_status))
+        explain_tool = explain_evaluation_tool(state.bridge.with_token(token))
+        async def capture_explanation(args: dict[str, Any]) -> dict[str, Any]:
+            nonlocal explanation_facts
+            result = await explain_tool.execute(args)
+            if result.get("status") == "ok":
+                explanation_facts = result
+                exact.update(numeric_leaves(result))
+                evidence.append({"tool": explain_tool.name, "label": str(result["task_id"]), "epistemic_class": "dato persistido",
+                                 "source": result["source"], "values": evidence_values(result), "error": None})
+            return result
+        tools.append(Tool(explain_tool.name, explain_tool.description, explain_tool.parameters, capture_explanation))
+        action_bridge = state.bridge.with_token(token)
+
+        def propose(kind: str, spec: dict[str, Any], summary: dict[str, Any]) -> dict[str, Any] | None:
+            if any(item.kind == kind for item in new_proposals):
+                return None  # one card per action and turn; asking twice is not two confirmations
+            proposal = new_proposal(state.proposals, owner, conv_id, kind, spec, summary)
+            if proposal is None:
+                return None
+            new_proposals.append(proposal)
+            return {"id": proposal.id}
+
+        tools.extend([save_to_moldex_tool(action_bridge, propose), molcy_video_tool(action_bridge, propose),
+                      molcy_video_status_tool(action_bridge)])
     if not registro.content_granted(provider.id):
         tools = []
     task = asyncio.create_task(run_tool_loop(provider, messages, tools, max_steps=10, observe=observe_tool))
@@ -1158,6 +1248,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             answer = "La comprobación del dibujo tiene el siguiente resultado:"
         if not case_status or case_status.get("status") != "created":
             answer = _mask_unconfirmed_case_claims(answer)
+        # The model proposes; the person confirms. Nothing it says in this turn can be a done deed.
+        answer = proposal_answer(new_proposals) if new_proposals else mask_unconfirmed_actions(answer)
         linked_cids = {item.get("structure", {}).get("pubchem_cid") for item in evidence}
         if editor_check_result and editor_check_result.get("status") != "no_reference":
             linked_cids.add(editor_check_result.get("cid"))
@@ -1189,7 +1281,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             # bare year as an arbitrary numerical measurement.
             literals.add("clasificación de 1997")
         answer, issues = redact_unverified(answer, verified, quotable=frozenset(quoted),
-                                          literals=frozenset(literals))
+                                          literals=frozenset(literals), exact=frozenset(exact))
         if issues:
             answer = f"{VERIFICATION_NOTE} se ocultaron valores no verificados. " + answer
         normalized_answer = re.sub(r"[*_`]", "", answer)
@@ -1257,6 +1349,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             if evaluation_result_data.get("reason"):
                 message += " " + evaluation_result_data["reason"]
             answer += "\n\n" + message
+        if explanation_facts:
+            answer += "\n\n" + declared_limits(explanation_facts)
         if editor_check_result:
             status = editor_check_result.get("status")
             explanation = {
@@ -1274,7 +1368,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             }.get(status, "No pude comprobar el dibujo; revisa el editor y vuelve a intentarlo.")
             answer += f'\n\nComprobación del editor · caso «{editor_check_result["case_name"]}» · PubChem {editor_check_result["cid"]}: {explanation}'
         if trace:
-            incomplete = result.exhausted or any(step["status"] not in {"ok", "created", "applied", "started", "already_selected", "exists", "match", "match_stereo_unspecified", "different_stereochemistry", "different_structure"}
+            incomplete = result.exhausted or any(step["status"] not in {"ok", "created", "applied", "started", "already_selected", "exists", "match", "match_stereo_unspecified", "different_stereochemistry", "different_structure", "awaiting_confirmation", "already_saved"}
                 and not (step["tool"] in {"pubchem_lookup", "search_receptors", "pick_random_receptor"} and step["status"] == "not_found")
                 for step in trace)
             save_trace("partial" if incomplete else "completed")
@@ -1288,7 +1382,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         state.memory.add_message(conv_id, owner, "assistant", answer, references=displayed_refs, evidence=evidence,
                                  comparison_cids=comparison_cids, suggested_actions=suggested_actions)
         yield {"type": "result", "result": {"text": answer, "intent": "harness", "evidence": evidence,
-               "references": displayed_refs, "comparison_cids": comparison_cids, "suggested_actions": suggested_actions, "used_llm": True, "verified_values": sorted(verified),
+               "references": displayed_refs, "comparison_cids": comparison_cids, "suggested_actions": suggested_actions,
+               "action_proposals": [proposal_view(item) for item in new_proposals], "used_llm": True, "verified_values": sorted(verified),
                "latency_ms": int((time.monotonic() - started) * 1000)}}
     except (ProviderError, ProviderDisabled, ValueError, RuntimeError):
         save_trace("failed")
@@ -1308,6 +1403,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
                 answer += " El registro de la tarea en el caso no se confirmó."
         elif evaluation_started:
             answer += " No pude confirmar el inicio de la evaluación; revisa el caso antes de reintentar."
+        if new_proposals:
+            answer += " " + proposal_answer(new_proposals)
         if trace_error:
             answer += " No se pudo guardar la trazabilidad en Trabajos."
         try:
@@ -1316,6 +1413,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         except PersistenciaFallida:
             pass
         yield {"type": "result", "result": {"text": answer, "intent": "harness", "evidence": [],
+               "action_proposals": [proposal_view(item) for item in new_proposals],
                "used_llm": True, "verified_values": [], "latency_ms": int((time.monotonic() - started) * 1000)}}
     finally:
         if not trace_finished:

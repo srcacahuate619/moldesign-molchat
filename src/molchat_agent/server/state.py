@@ -16,6 +16,7 @@ from typing import Any
 
 from ..conversation.engine import ConversationEngine
 from ..conversation.memory import MemoryStore
+from ..conversation.product_actions import Proposal
 from ..conversation.tools import PlatformBackend, ToolBackend
 from ..providers.registry import ProviderRegistry
 from ..voice.stt import SpeechToText
@@ -43,6 +44,8 @@ class ServerState:
     receptor_requests: dict[str, tuple[str, asyncio.Future[dict[str, str]]]] = field(default_factory=dict)
     evaluation_requests: dict[str, tuple[str, asyncio.Future[dict[str, str]]]] = field(default_factory=dict)
     editor_requests: dict[str, tuple[str, asyncio.Future[dict[str, str]]]] = field(default_factory=dict)
+    #: Actions the model proposed and the person has not confirmed (save in Moldex, Molcy video).
+    proposals: dict[str, Proposal] = field(default_factory=dict)
     structure_cache: OrderedDict[str, tuple[float, dict[str, str]]] = field(default_factory=OrderedDict)
     pubchem_client: Any | None = None  # injected only for tests; production creates a restricted client
     # Hosted mode (MOLCHAT_HOST_SECRET set): platform calls forward the

@@ -921,3 +921,21 @@ MolDesign es por API HTTP, no por copia de código.
 - Transformación: pruebas de resultado exitoso con su advertencia, tarea en curso, tarea ajena o inexistente, identificador no válido, sesión ausente y respuesta incompatible.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/conversation/test_evaluation_status.py
+
+### src/molchat_agent/conversation/explain_evaluation.py, tests/conversation/test_explain_evaluation.py, tests/conversation/test_number_guard_es.py, tests/server/test_explain_chat.py
+
+- Origen: código nuevo en MolChat para explicar el resultado de una evaluación terminada con una herramienta de solo lectura (`explain_evaluation`), y ajustes del verificador de números de `evidence.py` para el español.
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua, con colaboración de un agente de código.
+- Transformación: los hechos se construyen desde una lista de campos permitidos de `GET /evaluation/status/{task_id}` (afinidad de Vina con sus parámetros, calibración del receptor, avisos científicos y vigencia del protocolo), cada uno con la condición que declara MolDesign; el verificador lee la coma decimal y el signo menos tipográfico, y compara los valores de la evaluación a la precisión con que se citan.
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/conversation/test_explain_evaluation.py, tests/conversation/test_number_guard_es.py y tests/server/test_explain_chat.py
+
+### src/molchat_agent/conversation/product_actions.py, tests/conversation/fake_moldesign.py, tests/conversation/test_product_actions.py, tests/server/test_product_actions_chat.py, ui/src/components/ActionProposalCard.tsx, ui/src/components/ActionProposalCard.test.tsx
+
+- Origen: código nuevo en MolChat para proponer, con confirmación de la persona, guardar una corrida en Moldex y pedir un vídeo a Molcy con su receta de presentación (`save_to_moldex`, `request_molcy_video`, `get_molcy_video_status`), y la tarjeta de confirmación de la interfaz.
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua, con colaboración de un agente de código.
+- Transformación: las herramientas comprueban sin efectos (corrida terminada, fuente en Moldex, escena, GPU) y dejan una propuesta en memoria; solo el clic de la persona en `/v1/actions/{id}/confirm` llama a MolDesign con su sesión (`POST /history/save`, `POST /molcy/trabajos`). El simulador de MolDesign de las pruebas sigue las formas leídas de sus routers; la receta cosmética se envía tal como Molcy la valida y el cierre de MolDesign no tiene campo propio.
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/conversation/test_product_actions.py, tests/server/test_product_actions_chat.py y ui/src/components/ActionProposalCard.test.tsx

@@ -187,6 +187,38 @@ describe("Chat error turn with idempotent retry", () => {
     expect(mockStream.mock.calls[1][1]).toMatchObject({ text: "Busca receptores para el caso prueba2" });
   });
 
+  it("shows a confirmation card for a proposed action and runs nothing by itself", async () => {
+    mockList.mockResolvedValue([]);
+    mockStream.mockImplementation((_token: string, _body: unknown, onEvent: (e: Record<string, unknown>) => void) => {
+      queueMicrotask(() => onEvent({ type: "result", result: { text: "Dejé preparado «Guardar en Moldex». Todavía no se hizo nada.", used_llm: true, latency_ms: 1, verified_values: [], evidence: [],
+        action_proposals: [
+          { id: "p-1", kind: "save_moldex", title: "Guardar en Moldex", lines: ["Corrida t-8t69 · receptor VMAT2"] },
+          { id: "p-2", kind: "borrar_todo", title: "Acción desconocida", lines: [] },
+        ] } }));
+      return () => {};
+    });
+    renderChat();
+    fireEvent.change(screen.getByPlaceholderText(/pregunta/i), { target: { value: "guarda la corrida" } });
+    fireEvent.click(screen.getByText("Enviar"));
+    expect(await screen.findByRole("group", { name: "Acción pendiente de tu confirmación" })).toBeInTheDocument();
+    expect(screen.getByText("Corrida t-8t69 · receptor VMAT2")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Confirmar" })).toBeEnabled();
+    expect(screen.queryByText("Acción desconocida")).not.toBeInTheDocument();
+  });
+
+  it("shows no card when the turn proposed nothing", async () => {
+    mockList.mockResolvedValue([]);
+    mockStream.mockImplementation((_token: string, _body: unknown, onEvent: (e: Record<string, unknown>) => void) => {
+      queueMicrotask(() => onEvent({ type: "result", result: { text: "Sin propuestas.", used_llm: true, latency_ms: 1, verified_values: [], evidence: [], action_proposals: [] } }));
+      return () => {};
+    });
+    renderChat();
+    fireEvent.change(screen.getByPlaceholderText(/pregunta/i), { target: { value: "hola" } });
+    fireEvent.click(screen.getByText("Enviar"));
+    await screen.findByText("Sin propuestas.");
+    expect(screen.queryByRole("button", { name: "Confirmar" })).not.toBeInTheDocument();
+  });
+
   it("restores only the latest assistant's recommended actions from history", async () => {
     const reference = { cid: 702, name: "Ethanol", source: "https://pubchem.ncbi.nlm.nih.gov/compound/702", properties: { SMILES: "CCO" } };
     mockList.mockResolvedValue([{ id: "saved-actions", summary: "Etanol", message_count: 4 }]);

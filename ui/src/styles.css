@@ -84,6 +84,11 @@ input, textarea { max-width: 100%; }
 .comparison dd { margin: 0; }
 .context-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
 .context-actions button { max-width: 100%; text-align: left; overflow-wrap: anywhere; }
+.action-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 8px 0; overflow-wrap: anywhere; }
+.action-card p { margin: 4px 0; }
+.action-card ul { margin: 6px 0; padding-left: 18px; }
+.action-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.action-result:not(.error) { color: inherit; }
 .pubchem-properties { margin: 8px 0; }
 .pubchem-properties div { margin: 4px 0; }
 .pubchem-properties dt { font-weight: 600; }

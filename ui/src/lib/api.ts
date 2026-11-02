@@ -45,6 +45,28 @@ export interface TurnResult {
   references?: PubChemReference[];
   comparison_cids?: number[];
   suggested_actions?: SuggestedAction[];
+  action_proposals?: ActionProposal[];
+}
+
+/** An action the model proposed and the person has not confirmed. Never carries a path or a session. */
+export interface ActionProposal {
+  id: string;
+  kind: "save_moldex" | "molcy_video";
+  title: string;
+  lines: string[];
+  saves_first?: boolean;
+}
+
+export interface ActionOutcome {
+  status: string;
+  message?: string;
+  job_id?: string;
+}
+
+export interface ActionResolution {
+  id: string;
+  state: "done" | "cancelled";
+  outcome: ActionOutcome | null;
 }
 
 export interface SuggestedAction {
@@ -145,6 +167,10 @@ export const api = {
     postJson(t, `/v1/evaluation-requests/${encodeURIComponent(id)}/result`, result),
   reportEditorResult: (t: string, id: string, result: { status: string; molfile?: string; revision?: string }) =>
     postJson(t, `/v1/editor-requests/${encodeURIComponent(id)}/result`, result),
+  confirmAction: (t: string, id: string) =>
+    postJson(t, `/v1/actions/${encodeURIComponent(id)}/confirm`, {}) as Promise<ActionResolution>,
+  cancelAction: (t: string, id: string) =>
+    postJson(t, `/v1/actions/${encodeURIComponent(id)}/cancel`, {}) as Promise<ActionResolution>,
   createConversation: (t: string) =>
     postJson(t, "/v1/conversations", {}) as Promise<{ id: string }>,
   listConversations: (t: string) =>
