@@ -32,7 +32,8 @@ def pubchem_tool(bridge: MolDesignBridge, client: httpx.AsyncClient) -> Tool:
         return {"status": "ok" if result.matches else "not_found", "truncated": result.truncated,
                 "methodology": {"source": "https://pubchem.ncbi.nlm.nih.gov/docs/glossary",
                     "hba": "PubChem refiere una clasificación de 1997; las reglas detalladas y su aplicación a esta molécula no se han comprobado aquí.",
-                    "xlogp": "XLogP de PubChem; no es necesariamente el LogP de RDKit."},
+                    "xlogp": "XLogP de PubChem; no es necesariamente el LogP de RDKit.",
+                    "tpsa": "TPSA de PubChem, calculada por PubChem; su definición (con o sin S y P) puede diferir de la de RDKit."},
                 "matches": [{"cid": item.cid, "name": item.name, "source": item.source,
                              "properties": item.properties, "properties_available": item.properties_available}
                             for item in result.matches]}
@@ -309,7 +310,7 @@ def properties_tool(backend: ToolBackend) -> Tool:
             except ImportError:
                 pass
         return {"status": "ok", "name": name, "properties": record.props, "source": record.source,
-                "methods": record.methods, "structure": {"input_smiles": smiles,
+                "methods": record.methods, "variants": record.variants, "structure": {"input_smiles": smiles,
                     "canonical_smiles": record.smiles, "identity": identity,
                     "verifier": verifier, "warnings": record.warnings}}
 

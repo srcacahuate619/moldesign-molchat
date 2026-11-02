@@ -1,0 +1,327 @@
+"""Compare two poses of a finished evaluation: the lock's structural evidence plus the contacts each pose makes.
+
+MolChat does not own the science. The energy, the physical checks and the selector come from
+``GET /evaluation/pose-comparison/{task_id}``, which MolDesign derives from the same contract the
+Evaluation and Moldex tabs show. The contacts come from ``GET /evaluation/interactions/{molecule_id}``
+(one call per pose, ProLIF on the person's machine, a few seconds each). What MolChat adds is the
+difference between the two contact lists, computed here in code so the model never subtracts sets.
+
+The result is built from an allowlist, never by filtering. Nothing here picks a winner: the energy
+difference says which pose Vina scored lower, the physical status says what PoseBusters measured,
+and the contacts describe geometry. A pose the run does not have, a check the run did not persist
+or a contact analysis that failed is reported as such and is never read as good.
+"""
+from __future__ import annotations
+
+import asyncio
+import math
+import re
+from typing import Any
+
+import httpx
+
+from ..bridge import MolDesignBridge
+from .tool_loop import Tool
+
+#: Appended to the system prompt of the hosted chat. Static: no user data is formatted in.
+COMPARE_GUIDANCE = (
+    "Si el usuario pide comparar dos poses de una evaluación terminada (por ejemplo la pose 1 con la 2), usa "
+    "compare_poses con su task_id y los dos rangos, y explica solo con los hechos devueltos. Di primero cuál tiene "
+    "la energía de Vina más baja y por cuánto, y luego, aparte, qué dicen los controles físicos de cada una: una "
+    "pose es físicamente válida solo si pasó; «revisión» y «no evaluada» no lo son. Si el selector sugirió otra "
+    "pose o se abstuvo, dilo. Describe los contactos compartidos y exclusivos con su tipo, residuo y distancia en Å "
+    "y aclara que describen geometría, no cuál pose es la real. No declares ganadora: Vina no mide afinidad real y "
+    "una diferencia menor de 1 kcal/mol es un casi empate. Si faltan datos (corrida anterior, pose sin controles, "
+    "contactos no disponibles), dilo en lugar de suponerlos. Usa contacts «omitir» si el usuario pide solo la "
+    "energía y la validez física. ")
+
+_TASK_ID = re.compile(r"[A-Za-z0-9_.:-]{1,128}")
+_MOLECULE_ID = re.compile(r"[0-9a-fA-F-]{32,36}")
+_LIST_CAP = 20
+
+#: What each uncertainty code means, in the lock's words. The host writes this, not the model.
+UNCERTAINTY_TEXT = {
+    "no_physical_validation": "La corrida no tiene controles físicos de sus poses.",
+    "partial_coverage": "Los controles físicos no cubrieron todas las poses producidas.",
+    "suggested_pose_not_passed": "La pose que sugirió el selector no superó los controles físicos.",
+    "selector_abstained": "El selector de poses se abstuvo.",
+    "selector_unavailable": "El selector de poses no estaba disponible en esta corrida.",
+    "selector_error": "El selector de poses falló.",
+    "selection_diverges": "La pose sugerida por el selector no es la de menor energía de Vina.",
+    "single_pose": "La corrida produjo una sola pose.",
+    "near_tie": "Hay más de una pose a menos de 1 kcal/mol de la mejor: casi empate.",
+    "incomplete_provenance": "Falta parte de la procedencia de la corrida (versión de Vina, semilla o fuente de análisis).",
+    "no_seed": "La corrida no registró la semilla.",
+}
+
+_READING_RULES = (
+    "La energía de Vina compara poses de la misma molécula en el mismo receptor; no es energía libre ni afinidad medida.",
+    "Físicamente válida significa que superó los controles que se evaluaron; no significa que la pose sea la correcta.",
+    "Las cotas de RMSD son las que Vina da contra su mejor pose, no una distancia entre estas dos poses.",
+    "Los contactos describen geometría; una diferencia de contactos no dice cuál pose es la real.",
+    "No se declara ganadora: ausente o no evaluado nunca se lee como bueno.",
+)
+
+
+def _number(value: Any) -> float | int | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        return None
+    return value
+
+
+def _count(value: Any) -> int | None:
+    return value if type(value) is int and value >= 0 else None
+
+
+def _text(value: Any, limit: int) -> str | None:
+    return value.strip()[:limit] or None if isinstance(value, str) else None
+
+
+def _flag(value: Any) -> bool | None:
+    return value if isinstance(value, bool) else None
+
+
+def _pose(raw: Any) -> dict[str, Any]:
+    if not isinstance(raw, dict) or type(raw.get("rank")) is not int:
+        return {"found": False}
+    if raw.get("found") is not True:
+        return {"rank": raw["rank"], "found": False}
+    checks = raw.get("failing_checks")
+    return {
+        "rank": raw["rank"], "found": True,
+        "vina_affinity_kcal_mol": _number(raw.get("vina_affinity_kcal_mol")),
+        "selector_score": _number(raw.get("selector_score")),
+        "physical_status": _text(raw.get("physical_status"), 20),
+        # Derived here from the status, not copied: only ``passed`` is valid, whatever the flag says.
+        "physically_valid": raw.get("physical_status") == "passed",
+        "failing_checks": [text for item in (checks[:10] if isinstance(checks, list) else []) if (text := _text(item, 60))],
+        "checks_passed": _count(raw.get("checks_passed")),
+        "checks_failed": _count(raw.get("checks_failed")),
+        "checks_not_evaluated": _count(raw.get("checks_not_evaluated")),
+        "is_vina_top1": _flag(raw.get("is_vina_top1")),
+        "is_suggested": _flag(raw.get("is_suggested")),
+        "is_physically_valid_alternative": _flag(raw.get("is_physically_valid_alternative")),
+        "vina_rmsd_lb_vs_best": _number(raw.get("vina_rmsd_lb_vs_best")),
+        "vina_rmsd_ub_vs_best": _number(raw.get("vina_rmsd_ub_vs_best")),
+    }
+
+
+def build_comparison_facts(task_id: str, data: dict[str, Any]) -> dict[str, Any]:
+    """The comparable facts of two poses, from an allowlist; see the module docstring."""
+    difference = data.get("difference") if isinstance(data.get("difference"), dict) else {}
+    selection = data.get("selection") if isinstance(data.get("selection"), dict) else {}
+    decision = data.get("decision") if isinstance(data.get("decision"), dict) else {}
+    stage = data.get("stage") if isinstance(data.get("stage"), dict) else {}
+    codes = [code for code in (decision.get("uncertainties") if isinstance(decision.get("uncertainties"), list) else [])
+             if isinstance(code, str)][:12]
+    alternatives = decision.get("alternatives")
+    return {
+        "status": "ok", "task_id": task_id, "source": "MolDesign GET /evaluation/pose-comparison",
+        "poses": {"left": _pose(data.get("left")), "right": _pose(data.get("right"))},
+        "difference": {
+            "right_minus_left_vina_kcal_mol": _number(difference.get("right_minus_left_vina_kcal_mol")),
+            "lower_vina_energy": difference.get("lower_vina_energy") if type(difference.get("lower_vina_energy")) is int
+                                 or difference.get("lower_vina_energy") == "equal" else None,
+            "physical_agreement": _text(difference.get("physical_agreement"), 30),
+            "within_near_tie": _flag(difference.get("within_near_tie")),
+            "near_tie_threshold_kcal_mol": 1,
+        },
+        "selector": {
+            "status": _text(selection.get("status"), 20), "suggested_rank": _count(selection.get("suggested_rank")),
+            "would_have_suggested_rank": _count(selection.get("would_have_suggested_rank")),
+            "abstained": _flag(selection.get("abstained")), "abstention_reason": _text(selection.get("abstention_reason"), 120),
+            "diverges_from_vina_top1": _flag(selection.get("diverges_from_vina_top1")),
+            "is_fallback": _flag(selection.get("is_fallback")),
+        },
+        "vina_top1_rank": _count(data.get("vina_top1_rank")),
+        "poses_produced": _count(data.get("poses_produced")),
+        "physical_stage": {"status": _text(stage.get("status"), 20), "poses_evaluated": _count(stage.get("poses_evaluated")),
+                           "engine": _text(stage.get("engine"), 80), "reason_code": _text(stage.get("reason_code"), 80)},
+        "next_step": _text(decision.get("next_step"), 40),
+        "alternatives": [rank for rank in (alternatives[:10] if isinstance(alternatives, list) else []) if type(rank) is int],
+        "uncertainties": [{"code": code, "meaning": UNCERTAINTY_TEXT.get(code)} for code in codes],
+        "legacy_run": _flag(data.get("legacy_run")),
+        "reading_rules": list(_READING_RULES),
+    }
+
+
+def _contacts_of(report: Any) -> dict[tuple[str, str], dict[str, Any]] | None:
+    """One entry per (type, residue): ProLIF already keeps the first match per type and residue; a distance-only
+    fallback can repeat, so the closest distance stands. ``None`` when the report is not a usable contact list."""
+    interactions = report.get("interactions") if isinstance(report, dict) else None
+    if not isinstance(interactions, list):
+        return None
+    found: dict[tuple[str, str], dict[str, Any]] = {}
+    for item in interactions[:2000]:
+        if not isinstance(item, dict):
+            continue
+        kind, residue = _text(item.get("type"), 30), _text(item.get("residue"), 20)
+        if kind is None or residue is None:
+            continue
+        distance = _number(item.get("distance"))
+        entry = found.setdefault((kind, residue), {"distance": distance})
+        if distance is not None and (entry["distance"] is None or distance < entry["distance"]):
+            entry["distance"] = distance
+    return found
+
+
+def _rounded(distance: float | int | None) -> float | None:
+    return None if distance is None else round(float(distance), 2)
+
+
+def build_contact_diff(left: dict[str, Any], right: dict[str, Any]) -> dict[str, Any]:
+    """The contacts two poses share and the ones only one has, computed here, never by the model."""
+    a, b = _contacts_of(left), _contacts_of(right)
+    if a is None or b is None:
+        return {"status": "unavailable", "message": "MolDesign no devolvió una lista de contactos utilizable para las dos poses."}
+
+    def by_type(contacts: dict[tuple[str, str], dict[str, Any]]) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for kind, _residue in contacts:
+            counts[kind] = counts.get(kind, 0) + 1
+        return dict(sorted(counts.items()))
+
+    def one(keys: list[tuple[str, str]], contacts: dict[tuple[str, str], dict[str, Any]]) -> list[dict[str, Any]]:
+        return [{"type": kind, "residue": residue, "distance_angstrom": _rounded(contacts[(kind, residue)]["distance"])}
+                for kind, residue in keys[:_LIST_CAP]]
+
+    def by_residue(key: tuple[str, str]) -> tuple[str, str]:
+        return key[1], key[0]  # by residue, then type
+
+    shared = sorted(a.keys() & b.keys(), key=by_residue)
+    only_left, only_right = sorted(a.keys() - b.keys(), key=by_residue), sorted(b.keys() - a.keys(), key=by_residue)
+    residues_left, residues_right = {residue for _kind, residue in a}, {residue for _kind, residue in b}
+    conditions = {key: _text(left.get(key), 80) for key in ("engine", "hydrogen_model", "contact_coverage", "pose_identity_verification")}
+    return {
+        "status": "ok",
+        "source": "MolDesign GET /evaluation/interactions",
+        "conditions": conditions,
+        "left": {"total": len(a), "by_type": by_type(a)},
+        "right": {"total": len(b), "by_type": by_type(b)},
+        "shared": [{"type": kind, "residue": residue, "left_distance_angstrom": _rounded(a[(kind, residue)]["distance"]),
+                    "right_distance_angstrom": _rounded(b[(kind, residue)]["distance"])} for kind, residue in shared[:_LIST_CAP]],
+        "only_left": one(only_left, a), "only_right": one(only_right, b),
+        "shared_count": len(shared), "only_left_count": len(only_left), "only_right_count": len(only_right),
+        "residues_in_both": sorted(residues_left & residues_right)[:_LIST_CAP],
+        "residues_only_left": sorted(residues_left - residues_right)[:_LIST_CAP],
+        "residues_only_right": sorted(residues_right - residues_left)[:_LIST_CAP],
+        "truncated": any(len(items) > _LIST_CAP for items in (shared, only_left, only_right)),
+        "note": "Un contacto cuenta una vez por tipo y residuo. Describe geometría de cada pose; no dice cuál es la real.",
+    }
+
+
+async def _get(bridge: MolDesignBridge, path: str, params: dict[str, Any]) -> tuple[int | None, Any]:
+    try:
+        response = await bridge.client.get(path, params=params, timeout=60, follow_redirects=False,
+                                           headers={"Authorization": f"Bearer {bridge.token}"})
+        if response.status_code != 200:
+            return response.status_code, None
+        if len(response.content) > 5_000_000:
+            return None, None
+        return 200, response.json()
+    except (httpx.RequestError, ValueError):
+        return None, None
+
+
+def _refusal(status: int | None, task_id: str) -> dict[str, Any]:
+    if status in (403, 404):
+        return {"status": "not_found", "task_id": task_id}
+    if status == 409:
+        return {"status": "not_ready", "task_id": task_id,
+                "message": "La evaluación todavía no tiene un resultado terminado con poses que comparar."}
+    if status == 422:
+        return {"status": "invalid", "message": "MolDesign no aceptó esos rangos de pose."}
+    return {"status": "unavailable", "message": "No se pudo consultar la comparación en MolDesign."}
+
+
+async def _contacts(bridge: MolDesignBridge, task_id: str, molecule_id: str, left: int, right: int) -> dict[str, Any]:
+    path = f"/evaluation/interactions/{molecule_id}"
+    (_, a), (_, b) = await asyncio.gather(
+        _get(bridge, path, {"pose_rank": left, "task_id": task_id}), _get(bridge, path, {"pose_rank": right, "task_id": task_id}))
+    if a is None or b is None:
+        failed = left if a is None else right
+        return {"status": "unavailable",
+                "message": f"MolDesign no pudo calcular los contactos de la pose {failed}; la comparación de energía y de controles sigue siendo válida."}
+    return build_contact_diff(a, b)
+
+
+def comparison_limits(facts: dict[str, Any]) -> str:
+    """The physical status of each pose as MolDesign declares it, for the host to append to the answer.
+
+    A model can call a pose valid when it did not pass; no check on numbers sees that. This is the lock's own
+    sentence, added after the model's text so the two can be read together."""
+    parts: list[str] = []
+    for side in ("left", "right"):
+        pose = facts["poses"][side]
+        if not pose.get("found"):
+            parts.append(f"pose {pose['rank']}: la corrida no la tiene" if "rank" in pose else "una pose: la corrida no la tiene")
+            continue
+        status = pose.get("physical_status") or "no evaluada"
+        label = {"passed": "superó los controles físicos", "failed": "no superó los controles físicos",
+                 "review": "quedó en revisión (no cuenta como válida)", "not_evaluated": "no tiene controles físicos evaluados"}.get(status, status)
+        parts.append(f"pose {pose['rank']}: {label}")
+    return "Controles físicos según MolDesign — " + "; ".join(parts) + ". La energía de Vina no es afinidad medida y no se declara ganadora."
+
+
+def evidence_values(facts: dict[str, Any]) -> dict[str, str]:
+    """The short rows the interface shows for these facts."""
+    values: dict[str, str] = {}
+    for side in ("left", "right"):
+        pose = facts["poses"][side]
+        if not pose.get("found"):
+            continue
+        name = f"pose {pose['rank']}"
+        if pose.get("vina_affinity_kcal_mol") is not None:
+            values[f"{name}: energía de Vina (kcal/mol)"] = str(pose["vina_affinity_kcal_mol"])
+        values[f"{name}: controles físicos"] = str(pose.get("physical_status") or "no evaluada")
+    delta = facts["difference"]["right_minus_left_vina_kcal_mol"]
+    if delta is not None:
+        values["derecha − izquierda (kcal/mol)"] = str(delta)
+    contacts = facts.get("contacts") or {}
+    if contacts.get("status") == "ok":
+        values["contactos compartidos"] = str(contacts["shared_count"])
+        values["solo en la izquierda"] = str(contacts["only_left_count"])
+        values["solo en la derecha"] = str(contacts["only_right_count"])
+    return values
+
+
+def compare_poses_tool(bridge: MolDesignBridge) -> Tool:
+    """Read-only: what separates two poses of a finished run, with the contacts computed here."""
+    async def compare(args: dict[str, Any]) -> dict[str, Any]:
+        task_id = args["task_id"].strip()
+        left, right = args["left"], args["right"]
+        if not _TASK_ID.fullmatch(task_id):
+            return {"status": "invalid", "message": "Identificador de tarea no válido."}
+        if left == right:
+            return {"status": "invalid", "message": "Elige dos poses distintas para compararlas."}
+        if not getattr(bridge, "token", None):
+            return {"status": "unavailable", "message": "Se necesita una sesión de MolDesign."}
+        status, data = await _get(bridge, f"/evaluation/pose-comparison/{task_id}", {"left": left, "right": right})
+        if data is None:
+            return _refusal(status, task_id)
+        if not isinstance(data, dict) or data.get("task_id") != task_id:
+            return {"status": "unavailable", "message": "MolDesign devolvió una comparación incompatible."}
+        facts = build_comparison_facts(task_id, data)
+        both = facts["poses"]["left"].get("found") and facts["poses"]["right"].get("found")
+        molecule_id = data.get("molecule_id")
+        if args.get("contacts") == "omitir":
+            facts["contacts"] = {"status": "skipped", "message": "El usuario pidió omitir los contactos."}
+        elif not both:
+            facts["contacts"] = {"status": "unavailable", "message": "Falta una de las dos poses; no hay contactos que comparar."}
+        elif not isinstance(molecule_id, str) or not _MOLECULE_ID.fullmatch(molecule_id):
+            facts["contacts"] = {"status": "unavailable", "message": "MolDesign no identificó la molécula de la corrida."}
+        else:
+            facts["contacts"] = await _contacts(bridge, task_id, molecule_id, left, right)
+        return facts
+
+    pose = {"type": "integer", "minimum": 1, "maximum": 20}
+    schema = {"type": "object",
+              "properties": {"task_id": {"type": "string", "maxLength": 128}, "left": pose, "right": pose,
+                             "contacts": {"type": "string", "enum": ["incluir", "omitir"], "maxLength": 10}},
+              "required": ["task_id", "left", "right"], "additionalProperties": False}
+    return Tool("compare_poses", "Solo lectura. Compara dos poses (por su rango, 1 = la primera) de una evaluación terminada "
+                "(task_id de evaluate_case): la energía de Vina de cada una y su diferencia, los controles físicos de PoseBusters, "
+                "lo que dijo el selector de poses, y los contactos con el receptor de cada pose (compartidos y exclusivos, calculados "
+                "con ProLIF en el equipo de la persona, unos segundos por pose). No elige ganadora. No inicia, cancela, reintenta ni "
+                "guarda nada. Usa contacts «omitir» si solo hace falta la energía y la validez física.",
+                schema, compare)

@@ -1,0 +1,401 @@
+{
+  "_comment": "Respuestas de GET /evaluation/pose-comparison/{task_id} generadas por compare_two_poses de MolDesign (backend/services/evaluation/pose_comparison.py) sobre los escenarios del archivo dorado. No se editan a mano.",
+  "responses": {
+    "todas_pasan": {
+      "task_id": "t-8t69",
+      "molecule_id": "3f2b8c1e-5a47-4d0e-9c1b-7e6a2d4f8b10",
+      "left": {
+        "rank": 1,
+        "found": true,
+        "vina_affinity_kcal_mol": -8.3,
+        "selector_score": 0.11,
+        "physical_status": "passed",
+        "physically_valid": true,
+        "failing_checks": [],
+        "checks_passed": 2,
+        "checks_failed": 0,
+        "checks_not_evaluated": 0,
+        "physical_reason_code": null,
+        "is_vina_top1": true,
+        "is_suggested": false,
+        "is_physically_valid_alternative": false,
+        "vina_rmsd_lb_vs_best": 0,
+        "vina_rmsd_ub_vs_best": 0
+      },
+      "right": {
+        "rank": 2,
+        "found": true,
+        "vina_affinity_kcal_mol": -7.9,
+        "selector_score": 0.52,
+        "physical_status": "passed",
+        "physically_valid": true,
+        "failing_checks": [],
+        "checks_passed": 2,
+        "checks_failed": 0,
+        "checks_not_evaluated": 0,
+        "physical_reason_code": null,
+        "is_vina_top1": false,
+        "is_suggested": true,
+        "is_physically_valid_alternative": false,
+        "vina_rmsd_lb_vs_best": 1.1,
+        "vina_rmsd_ub_vs_best": 1.4
+      },
+      "difference": {
+        "right_minus_left_vina_kcal_mol": 0.4,
+        "lower_vina_energy": 1,
+        "physical_agreement": "both_passed",
+        "within_near_tie": true
+      },
+      "selection": {
+        "status": "selected",
+        "suggested_rank": 2,
+        "would_have_suggested_rank": null,
+        "abstained": false,
+        "abstention_reason": null,
+        "diverges_from_vina_top1": true,
+        "is_fallback": false,
+        "confidence": 0.412233,
+        "abstention_threshold": 0.097663,
+        "detail": "El selector recomienda la pose 2."
+      },
+      "vina_top1_rank": 1,
+      "poses_produced": 3,
+      "decision": {
+        "established": [
+          "poses_generated",
+          "physical_checks_run",
+          "selector_ran",
+          "provenance_sealed"
+        ],
+        "uncertainties": [
+          "selection_diverges",
+          "near_tie"
+        ],
+        "alternatives": [],
+        "next_step": "proceed_within_protocol"
+      },
+      "legacy_run": false,
+      "stage": {
+        "status": "passed",
+        "poses_evaluated": 3,
+        "engine": "posebusters:1.0:dock",
+        "reason_code": null
+      }
+    },
+    "sugerida_falla": {
+      "task_id": "t-8t69",
+      "molecule_id": "3f2b8c1e-5a47-4d0e-9c1b-7e6a2d4f8b10",
+      "left": {
+        "rank": 1,
+        "found": true,
+        "vina_affinity_kcal_mol": -8.3,
+        "selector_score": 0.11,
+        "physical_status": "passed",
+        "physically_valid": true,
+        "failing_checks": [],
+        "checks_passed": 2,
+        "checks_failed": 0,
+        "checks_not_evaluated": 0,
+        "physical_reason_code": null,
+        "is_vina_top1": true,
+        "is_suggested": false,
+        "is_physically_valid_alternative": true,
+        "vina_rmsd_lb_vs_best": 0,
+        "vina_rmsd_ub_vs_best": 0
+      },
+      "right": {
+        "rank": 2,
+        "found": true,
+        "vina_affinity_kcal_mol": -7.9,
+        "selector_score": 0.52,
+        "physical_status": "failed",
+        "physically_valid": false,
+        "failing_checks": [
+          "internal_energy"
+        ],
+        "checks_passed": 1,
+        "checks_failed": 1,
+        "checks_not_evaluated": 0,
+        "physical_reason_code": null,
+        "is_vina_top1": false,
+        "is_suggested": true,
+        "is_physically_valid_alternative": false,
+        "vina_rmsd_lb_vs_best": 1.1,
+        "vina_rmsd_ub_vs_best": 1.4
+      },
+      "difference": {
+        "right_minus_left_vina_kcal_mol": 0.4,
+        "lower_vina_energy": 1,
+        "physical_agreement": "only_left_passed",
+        "within_near_tie": true
+      },
+      "selection": {
+        "status": "selected",
+        "suggested_rank": 2,
+        "would_have_suggested_rank": null,
+        "abstained": false,
+        "abstention_reason": null,
+        "diverges_from_vina_top1": true,
+        "is_fallback": false,
+        "confidence": 0.412233,
+        "abstention_threshold": 0.097663,
+        "detail": "El selector recomienda la pose 2."
+      },
+      "vina_top1_rank": 1,
+      "poses_produced": 3,
+      "decision": {
+        "established": [
+          "poses_generated",
+          "physical_checks_run",
+          "selector_ran",
+          "provenance_sealed"
+        ],
+        "uncertainties": [
+          "suggested_pose_not_passed",
+          "selection_diverges",
+          "near_tie"
+        ],
+        "alternatives": [
+          1,
+          3
+        ],
+        "next_step": "review"
+      },
+      "legacy_run": false,
+      "stage": {
+        "status": "review",
+        "poses_evaluated": 3,
+        "engine": "posebusters:1.0:dock",
+        "reason_code": null
+      }
+    },
+    "cobertura_parcial": {
+      "task_id": "t-8t69",
+      "molecule_id": "3f2b8c1e-5a47-4d0e-9c1b-7e6a2d4f8b10",
+      "left": {
+        "rank": 1,
+        "found": true,
+        "vina_affinity_kcal_mol": -8.3,
+        "selector_score": 0.11,
+        "physical_status": "passed",
+        "physically_valid": true,
+        "failing_checks": [],
+        "checks_passed": 2,
+        "checks_failed": 0,
+        "checks_not_evaluated": 0,
+        "physical_reason_code": null,
+        "is_vina_top1": true,
+        "is_suggested": false,
+        "is_physically_valid_alternative": false,
+        "vina_rmsd_lb_vs_best": 0,
+        "vina_rmsd_ub_vs_best": 0
+      },
+      "right": {
+        "rank": 3,
+        "found": true,
+        "vina_affinity_kcal_mol": -6.1,
+        "selector_score": 0.09,
+        "physical_status": "not_evaluated",
+        "physically_valid": false,
+        "failing_checks": [],
+        "checks_passed": 1,
+        "checks_failed": 0,
+        "checks_not_evaluated": 1,
+        "physical_reason_code": null,
+        "is_vina_top1": false,
+        "is_suggested": false,
+        "is_physically_valid_alternative": false,
+        "vina_rmsd_lb_vs_best": 2.1,
+        "vina_rmsd_ub_vs_best": 2.8
+      },
+      "difference": {
+        "right_minus_left_vina_kcal_mol": 2.2,
+        "lower_vina_energy": 1,
+        "physical_agreement": "only_left_passed",
+        "within_near_tie": false
+      },
+      "selection": {
+        "status": "selected",
+        "suggested_rank": 2,
+        "would_have_suggested_rank": null,
+        "abstained": false,
+        "abstention_reason": null,
+        "diverges_from_vina_top1": true,
+        "is_fallback": false,
+        "confidence": 0.412233,
+        "abstention_threshold": 0.097663,
+        "detail": "El selector recomienda la pose 2."
+      },
+      "vina_top1_rank": 1,
+      "poses_produced": 3,
+      "decision": {
+        "established": [
+          "poses_generated",
+          "physical_checks_run",
+          "selector_ran",
+          "provenance_sealed"
+        ],
+        "uncertainties": [
+          "partial_coverage",
+          "selection_diverges",
+          "near_tie"
+        ],
+        "alternatives": [],
+        "next_step": "review"
+      },
+      "legacy_run": false,
+      "stage": {
+        "status": "review",
+        "poses_evaluated": 2,
+        "engine": "posebusters:1.0:dock",
+        "reason_code": null
+      }
+    },
+    "corrida_anterior": {
+      "task_id": "t-8t69",
+      "molecule_id": "3f2b8c1e-5a47-4d0e-9c1b-7e6a2d4f8b10",
+      "left": {
+        "rank": 1,
+        "found": true,
+        "vina_affinity_kcal_mol": -8.3,
+        "selector_score": null,
+        "physical_status": "not_evaluated",
+        "physically_valid": false,
+        "failing_checks": [],
+        "checks_passed": null,
+        "checks_failed": null,
+        "checks_not_evaluated": null,
+        "physical_reason_code": null,
+        "is_vina_top1": true,
+        "is_suggested": false,
+        "is_physically_valid_alternative": false,
+        "vina_rmsd_lb_vs_best": 0,
+        "vina_rmsd_ub_vs_best": 0
+      },
+      "right": {
+        "rank": 2,
+        "found": true,
+        "vina_affinity_kcal_mol": -7.9,
+        "selector_score": null,
+        "physical_status": "not_evaluated",
+        "physically_valid": false,
+        "failing_checks": [],
+        "checks_passed": null,
+        "checks_failed": null,
+        "checks_not_evaluated": null,
+        "physical_reason_code": null,
+        "is_vina_top1": false,
+        "is_suggested": false,
+        "is_physically_valid_alternative": false,
+        "vina_rmsd_lb_vs_best": 1.1,
+        "vina_rmsd_ub_vs_best": 1.4
+      },
+      "difference": {
+        "right_minus_left_vina_kcal_mol": 0.4,
+        "lower_vina_energy": 1,
+        "physical_agreement": "neither_passed",
+        "within_near_tie": true
+      },
+      "selection": {
+        "status": "unavailable",
+        "suggested_rank": null,
+        "would_have_suggested_rank": null,
+        "abstained": false,
+        "abstention_reason": null,
+        "diverges_from_vina_top1": false,
+        "is_fallback": true,
+        "confidence": null,
+        "abstention_threshold": null,
+        "detail": null
+      },
+      "vina_top1_rank": 1,
+      "poses_produced": 3,
+      "decision": {
+        "established": [
+          "poses_generated"
+        ],
+        "uncertainties": [
+          "no_physical_validation",
+          "selector_unavailable",
+          "near_tie"
+        ],
+        "alternatives": [],
+        "next_step": "review"
+      },
+      "legacy_run": true,
+      "stage": {
+        "status": "not_evaluated",
+        "poses_evaluated": 0,
+        "engine": null,
+        "reason_code": null
+      }
+    },
+    "pose_inexistente": {
+      "task_id": "t-8t69",
+      "molecule_id": "3f2b8c1e-5a47-4d0e-9c1b-7e6a2d4f8b10",
+      "left": {
+        "rank": 1,
+        "found": true,
+        "vina_affinity_kcal_mol": -8.3,
+        "selector_score": 0.11,
+        "physical_status": "passed",
+        "physically_valid": true,
+        "failing_checks": [],
+        "checks_passed": 2,
+        "checks_failed": 0,
+        "checks_not_evaluated": 0,
+        "physical_reason_code": null,
+        "is_vina_top1": true,
+        "is_suggested": false,
+        "is_physically_valid_alternative": false,
+        "vina_rmsd_lb_vs_best": 0,
+        "vina_rmsd_ub_vs_best": 0
+      },
+      "right": {
+        "rank": 7,
+        "found": false
+      },
+      "difference": {
+        "right_minus_left_vina_kcal_mol": null,
+        "lower_vina_energy": null,
+        "physical_agreement": "unavailable",
+        "within_near_tie": null
+      },
+      "selection": {
+        "status": "selected",
+        "suggested_rank": 2,
+        "would_have_suggested_rank": null,
+        "abstained": false,
+        "abstention_reason": null,
+        "diverges_from_vina_top1": true,
+        "is_fallback": false,
+        "confidence": 0.412233,
+        "abstention_threshold": 0.097663,
+        "detail": "El selector recomienda la pose 2."
+      },
+      "vina_top1_rank": 1,
+      "poses_produced": 3,
+      "decision": {
+        "established": [
+          "poses_generated",
+          "physical_checks_run",
+          "selector_ran",
+          "provenance_sealed"
+        ],
+        "uncertainties": [
+          "selection_diverges",
+          "near_tie"
+        ],
+        "alternatives": [],
+        "next_step": "proceed_within_protocol"
+      },
+      "legacy_run": false,
+      "stage": {
+        "status": "passed",
+        "poses_evaluated": 3,
+        "engine": "posebusters:1.0:dock",
+        "reason_code": null
+      }
+    }
+  }
+}

@@ -35,7 +35,10 @@ from ..conversation.tool_loop import Tool, run_tool_loop
 from ..conversation.structure_check import compare_editor_structure
 from ..conversation.harness_tools import assign_case_receptor_tool, create_case_tool, evaluate_case_tool, evaluation_status_tool, load_case_smiles_tool, properties_tool, pubchem_tool, receptor_catalog_tool, random_receptor_tool
 from ..conversation.evidence import context_literals, numbers_in, numeric_leaves, redact_unverified, split_flow, VERIFICATION_NOTE
+from ..conversation.compare_poses import (COMPARE_GUIDANCE, compare_poses_tool, comparison_limits,
+                                          evidence_values as comparison_evidence)
 from ..conversation.explain_evaluation import EXPLAIN_GUIDANCE, declared_limits, evidence_values, explain_evaluation_tool
+from ..conversation.property_methods import property_difference_notes
 from ..conversation.product_actions import (ACTIONS_GUIDANCE, Proposal, mask_unconfirmed_actions, molcy_video_status_tool,
                                             molcy_video_tool, new_proposal, outcome_text, proposal_answer, run_proposal,
                                             save_to_moldex_tool, view as proposal_view)
@@ -771,11 +774,15 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
     receptor_results: list[dict[str, Any]] = []
     random_receptor_results: list[dict[str, Any]] = []
     comparison_cids: list[int] = []
+    #: Differences with PubChem that a MolDesign variant reproduces (or fails to), written by the host.
+    property_notes: list[dict[str, Any]] = []
     proposed_actions: list[dict[str, Any]] = []
     verified: set[float] = set()
     #: Numbers of a result MolDesign declared whole, matched at the precision the answer writes.
     exact: set[float] = set()
     explanation_facts: dict[str, Any] | None = None
+    #: Pose comparisons this turn read (read-only), each with the physical status MolDesign declared.
+    comparison_facts: list[dict[str, Any]] = []
     #: Proposals this turn left for the person to confirm (nothing is executed until then).
     new_proposals: list[Proposal] = []
     events: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
@@ -934,7 +941,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         "La aceptación de una tarea no es un resultado ni indica que el cálculo haya terminado. No reintentes un resultado desconocido. "
         "Si el usuario pregunta por el estado o el resultado de una tarea aceptada, usa get_evaluation_status con su task_id; "
         "informa task_status tal cual y, solo si es SUCCESS, la afinidad de Vina como energía de la mejor pose, nunca como actividad ni Ki. "
-        + EXPLAIN_GUIDANCE + ACTIONS_GUIDANCE +
+        + EXPLAIN_GUIDANCE + COMPARE_GUIDANCE + ACTIONS_GUIDANCE +
         "Si el usuario no indicó un PDB ID exacto busca en el catálogo y asigna únicamente si el resultado es inequívoco; si hay varias opciones pregunta. "
         "Si el usuario pidió expresamente un receptor aleatorio o al azar, usa pick_random_receptor y asigna el receptor devuelto; "
         "conserva su sección y disponibilidad, sin sustituirlo por uno verificado salvo que el usuario haya pedido ese filtro. "
@@ -958,6 +965,9 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         "en inglés si lo conoces, sin pedir permiso de nuevo; indica el nombre consultado y conserva la "
         "incertidumbre si la identidad no está clara. No reintentes ante errores o falta de permiso. "
         "Distingue los cálculos de MolDesign/RDKit de los datos de PubChem: LogP y XLogP pueden usar métodos distintos. "
+        "Si compute_properties devuelve variants, son cálculos reales con otra definición del descriptor: cítalos como tales y "
+        "no atribuyas por tu cuenta una diferencia con PubChem a un método; el host añade esa nota solo cuando una variante "
+        "reproduce la cifra de PubChem. "
         "Para comparar, consulta PubChem primero y calcula usando exactamente el SMILES de una referencia inequívoca; "
         "espera el resultado de cada herramienta antes de llamar la siguiente. Si hay varias referencias pide elegir. "
         "No digas que las estructuras son iguales sin identity=same y procedencia de PubChem. "
@@ -1012,6 +1022,15 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             values = {key: str(value) for key, value in result["properties"].items()
                       if value is not None and isinstance(value, (int, float)) and not isinstance(value, bool)}
             verified.update(float(value) for value in values.values())
+            variants = result.get("variants") if isinstance(result.get("variants"), list) else []
+            for variant in variants:
+                values[f"variante: {variant['name']}"] = str(variant["value"])
+                verified.add(float(variant["value"]))
+            if len(matches) == 1:
+                for note in property_difference_notes(matches[0].get("properties"), result["properties"],
+                                                      result.get("methods", {}), variants):
+                    if not any(known["cid"] == matches[0]["cid"] and known["property"] == note["property"] for known in property_notes):
+                        property_notes.append({"cid": matches[0]["cid"], **note})
             evidence.append({"tool": "compute_properties", "label": str(result.get("name", "")),
                              "epistemic_class": "cálculo", "source": str(result.get("source", "MolDesign")),
                              "values": values, "error": None, "structure": structure,
@@ -1210,6 +1229,18 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
                                  "source": result["source"], "values": evidence_values(result), "error": None})
             return result
         tools.append(Tool(explain_tool.name, explain_tool.description, explain_tool.parameters, capture_explanation))
+        compare_tool = compare_poses_tool(state.bridge.with_token(token))
+        async def capture_comparison(args: dict[str, Any]) -> dict[str, Any]:
+            result = await compare_tool.execute(args)
+            if result.get("status") == "ok":
+                comparison_facts.append(result)
+                exact.update(numeric_leaves(result))
+                evidence.append({"tool": compare_tool.name, "label": f"{result['task_id']} · poses "
+                                 f"{result['poses']['left'].get('rank')} y {result['poses']['right'].get('rank')}",
+                                 "epistemic_class": "dato persistido", "source": result["source"],
+                                 "values": comparison_evidence(result), "error": None})
+            return result
+        tools.append(Tool(compare_tool.name, compare_tool.description, compare_tool.parameters, capture_comparison))
         action_bridge = state.bridge.with_token(token)
 
         def propose(kind: str, spec: dict[str, Any], summary: dict[str, Any]) -> dict[str, Any] | None:
@@ -1351,6 +1382,10 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             answer += "\n\n" + message
         if explanation_facts:
             answer += "\n\n" + declared_limits(explanation_facts)
+        for facts in comparison_facts[:3]:
+            answer += "\n\n" + comparison_limits(facts)
+        for note in property_notes[:4]:
+            answer += "\n\n" + note["text"]
         if editor_check_result:
             status = editor_check_result.get("status")
             explanation = {

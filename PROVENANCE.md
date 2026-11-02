@@ -939,3 +939,21 @@ MolDesign es por API HTTP, no por copia de código.
 - Transformación: las herramientas comprueban sin efectos (corrida terminada, fuente en Moldex, escena, GPU) y dejan una propuesta en memoria; solo el clic de la persona en `/v1/actions/{id}/confirm` llama a MolDesign con su sesión (`POST /history/save`, `POST /molcy/trabajos`). El simulador de MolDesign de las pruebas sigue las formas leídas de sus routers; la receta cosmética se envía tal como Molcy la valida y el cierre de MolDesign no tiene campo propio.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/conversation/test_product_actions.py, tests/server/test_product_actions_chat.py y ui/src/components/ActionProposalCard.test.tsx
+
+### src/molchat_agent/conversation/compare_poses.py, tests/conversation/test_compare_poses.py, tests/conversation/fixtures/pose_comparison.json, tests/server/test_compare_poses_chat.py
+
+- Origen: código nuevo en MolChat para comparar dos poses de una evaluación terminada con una herramienta de solo lectura (`compare_poses`): la energía de Vina, los controles físicos y el selector que MolDesign declara, y la diferencia de los contactos de cada pose calculada en código.
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua, con colaboración de un agente de código.
+- Transformación: los hechos se construyen desde una lista de campos permitidos de `GET /evaluation/pose-comparison/{task_id}` y `GET /evaluation/interactions/{molecule_id}`; `physically_valid` se deriva del estado (solo `passed`) y no se copia. El archivo `pose_comparison.json` lo generó la derivación real de MolDesign (`compare_two_poses`) sobre los escenarios de su archivo dorado.
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/conversation/test_compare_poses.py y tests/server/test_compare_poses_chat.py
+
+### src/molchat_agent/conversation/property_methods.py, tests/conversation/test_property_methods.py, tests/server/test_property_differences_chat.py
+
+- Origen: código nuevo en MolChat para explicar una diferencia entre PubChem y MolDesign (TPSA, aceptores de hidrógeno) solo cuando una variante calculada por MolDesign la reproduce, y para leer `variants` de `POST /molchat-host/properties` (`clean_variants` en `conversation/tools.py`).
+- Commit de MolDesign: N/A
+- Autoría: Johan Amezcua, con colaboración de un agente de código.
+- Transformación: la nota se escribe en el host a partir de las cifras y los métodos que MolDesign declara; compara redondeando a la precisión que imprime PubChem y se abstiene sin variante, sin diferencia o sin enlace por el SMILES exacto.
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/conversation/test_property_methods.py y tests/server/test_property_differences_chat.py

@@ -117,6 +117,65 @@ corrida. Con un MolDesign anterior a la corrección la calibración que se expli
 Todavía no hay una herramienta para localizar la tarea de un resultado ya guardado: hace falta el `task_id` que devolvió
 `evaluate_case` o que ya figura en la conversación.
 
+## Comparar dos poses
+
+`compare_poses` es de solo lectura: dice qué separa a dos poses (por su rango, 1 = la primera) de una evaluación terminada.
+Lee `GET /evaluation/pose-comparison/{task_id}` —la misma evidencia estructural que enseñan Evaluación y Moldex, derivada en el
+backend de MolDesign (`services/evaluation/pose_comparison.py`)— y, salvo que se pida `contacts: omitir`, los contactos de cada
+pose con `GET /evaluation/interactions/{molecule_id}?pose_rank=N` (ProLIF en el equipo de la persona, unos segundos por pose;
+no pide tarjeta, y la respuesta lo declara). Devuelve:
+
+- **La energía de Vina de cada pose y su diferencia**, con cuál es la más baja y si están a menos de 1 kcal/mol (casi empate).
+- **Los controles físicos de cada una** (PoseBusters): solo `passed` es válida; «revisión» y «no evaluada» nunca lo son. El
+  host deriva `physically_valid` del estado, no copia la bandera de MolDesign.
+- **Lo que dijo el selector** (sugerida, abstención, divergencia con el top-1) y las incertidumbres de la corrida, cada una con su
+  frase.
+- **Los contactos compartidos y exclusivos**, con tipo, residuo y distancia en Å. La diferencia entre las dos listas la calcula el
+  código; el modelo no resta conjuntos.
+
+Cómo se mantiene honesto:
+
+1. **No hay ganadora.** La diferencia de energía dice cuál pose puntuó más bajo en Vina; los controles físicos y los contactos
+   se leen aparte. Ningún campo dice «mejor pose», y las alternativas físicamente válidas se listan sin elegirse.
+2. **Lo ausente no es bueno.** Una corrida anterior a la evidencia estructural sale `legacy_run`; una pose que la batería no
+   cubrió sale `not_evaluated` y sin conteo de controles; un rango que la corrida no tiene sale `found: false` y no inventa
+   diferencias; un análisis de contactos que falla deja la comparación de energía y validez en pie y lo dice.
+3. **El host cierra la respuesta.** Tras el texto del modelo se añade el estado físico de cada pose tal como lo declara MolDesign,
+   también cuando el modelo dice otra cosa (por ejemplo, «las dos son válidas» con una pose que no superó los controles).
+4. **Lo mismo que la pantalla, comprobado.** MolDesign y su interfaz derivan el veredicto en dos lenguajes; un archivo dorado
+   compartido (`backend/tests/data/pose_comparison_golden.json`, 21 escenarios) lo exige a las dos pruebas. Los ejemplos de
+   `tests/conversation/fixtures/pose_comparison.json` los generó la derivación real de MolDesign.
+
+**Medido el 2026-11-02:** la herramienta contra el router real `/evaluation/pose-comparison` de MolDesign en proceso (con la
+cola y la autorización simuladas), para cuatro corridas distintas; el simulador de `/evaluation/interactions` valida contra el
+modelo real `InteractionResponse` (al construirlo salió que le faltaban cuatro campos obligatorios, corregidos).
+**No verificado:** ProLIF sobre una corrida real de Vina, ni el chat con un modelo real.
+
+## Explicar una diferencia con PubChem
+
+PubChem y MolDesign pueden publicar cifras distintas para la misma molécula sin que ninguna esté mal: el clopidogrel da TPSA
+57,8 Å² en PubChem y 29,54 Å² en MolDesign, y 4 aceptores de hidrógeno frente a 3. MolDesign calcula la TPSA con RDKit sin
+contar azufre ni fósforo, y los aceptores como el número de átomos de N y O.
+
+`POST /molchat-host/properties` devuelve, además de `properties` (que no cambian), `variants`: los mismos descriptores con la
+definición alternativa, como cálculos reales de RDKit con su método declarado (`tpsa_incl_s_p`:
+`CalcTPSA(mol, includeSandP=True)`; `hba_rdkit_num_h_acceptors`: `CalcNumHBA`). `compute_properties` las entrega al modelo y
+`property_difference_notes` (`conversation/property_methods.py`) escribe la nota **solo si**:
+
+1. la referencia de PubChem está enlazada por el SMILES exacto,
+2. las dos cifras difieren al nivel de precisión con que PubChem las imprime, y
+3. MolDesign tiene una variante de ese descriptor.
+
+Si la variante, redondeada a lo que imprime PubChem, da su cifra, la nota dice que la diferencia es la definición del descriptor y
+cita las dos definiciones. Si no la reproduce, dice que la diferencia **no queda explicada** y que no se atribuya a un error de un
+lado. Sin variante (un MolDesign anterior), no hay nota. El texto lo escribe el host después de la respuesta del modelo, y el
+modelo no puede atribuir por su cuenta una diferencia a un método (la guía lo prohíbe, pero el verificador de números no cubre eso).
+
+**Medido el 2026-11-02:** con el host real en proceso, clopidogrel da 29,54 y 3 en `properties`, 57,78 y 4 en `variants`; las dos
+notas reproducen la cifra de PubChem. **No verificado:** que PubChem calcule la TPSA con S y P en general; solo se comprobó que
+esa definición reproduce su cifra para esta molécula. El producto sigue usando su TPSA y su recuento de aceptores (los
+umbrales de Lipinski y Veber se calibraron con ellos).
+
 ## Guardar en Moldex y pedir un vídeo a Molcy
 
 Son acciones con efecto, así que el modelo **propone y la persona confirma**. `save_to_moldex(task_id, name?)` y
