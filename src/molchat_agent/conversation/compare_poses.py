@@ -33,12 +33,18 @@ COMPARE_GUIDANCE = (
     "y aclara que describen geometría, no cuál pose es la real. No declares ganadora: Vina no mide afinidad real y "
     "una diferencia menor de 1 kcal/mol es un casi empate. Si faltan datos (corrida anterior, pose sin controles, "
     "contactos no disponibles), dilo en lugar de suponerlos. Usa contacts «omitir» si el usuario pide solo la "
-    "energía y la validez física. Para decir cuánto se separan las dos poses, usa solo "
-    "difference.vina_rmsd_between_poses: si available es verdadero, cita sus dos cotas como cotas (no como intervalo "
-    "de confianza ni como prueba de cuál es la correcta); si es falso, di el motivo y no estimes la separación. Explica "
-    "cómo cambia la orientación con los contactos exclusivos y los residuos, sin inventar giros ni ángulos. Si el "
-    "análisis de contactos de una pose devuelve cero, no lo presentes como ausencia de interacción: di que no es "
-    "concluyente y por qué. ")
+    "energía y la validez física. Para decir cuánto se separan las dos poses, usa "
+    "difference.pose_rmsd_between_poses si available es verdadero (RMSD medido de las coordenadas guardadas); si no "
+    "existe o no está disponible, usa difference.vina_rmsd_between_poses: si available es verdadero, cita sus dos cotas "
+    "como cotas (no como intervalo de confianza ni como prueba de cuál es la correcta); si es falso, di el motivo y no "
+    "estimes la separación. Explica cómo cambia la orientación con los contactos exclusivos y los residuos, sin inventar "
+    "giros ni ángulos. Si preguntan qué controles físicos superó cada pose, enumera checks_detail de cada una con su "
+    "resultado; si viene vacío, di que la corrida solo guardó el recuento y no el detalle. Si el análisis de contactos "
+    "de una pose devuelve cero, no lo presentes como ausencia de interacción: di que no es concluyente y por qué. Si "
+    "el usuario pide repetir o desarrollar cifras de una comparación anterior, vuelve a llamar a compare_poses con los "
+    "mismos argumentos (solo lee) en lugar de citarlas de memoria. Si piden algo que los datos no pueden dar (un "
+    "intervalo de confianza, cuál es la pose experimentalmente correcta), di que no se puede y conserva las cifras que "
+    "sí están verificadas. ")
 
 _TASK_ID = re.compile(r"[A-Za-z0-9_.:-]{1,128}")
 _MOLECULE_ID = re.compile(r"[0-9a-fA-F-]{32,36}")
@@ -58,6 +64,8 @@ UNCERTAINTY_TEXT = {
     "incomplete_provenance": "Falta parte de la procedencia de la corrida (versión de Vina, semilla o fuente de análisis).",
     "no_seed": "La corrida no registró la semilla.",
 }
+
+_CHECK_RESULTS = frozenset({"passed", "failed", "not_evaluated"})
 
 _READING_RULES = (
     "La energía de Vina compara poses de la misma molécula en el mismo receptor; no es energía libre ni afinidad medida.",
@@ -100,6 +108,40 @@ def _rmsd_between(raw: Any) -> dict[str, Any]:
     return {"available": False, "reason_code": code, "meaning": f"No hay un RMSD de Vina entre estas dos poses: {why}."}
 
 
+#: Why MolDesign could not measure the distance between the two poses from their stored coordinates.
+_POSE_RMSD_UNAVAILABLE = {
+    "POSES_NOT_AVAILABLE": "la corrida no conserva el archivo de poses",
+    "POSE_NOT_IN_SDF": "una de las poses no está en el archivo de poses",
+    "POSE_UNREADABLE": "una de las poses no se puede leer",
+    "POSES_NOT_THE_SAME_MOLECULE": "las dos poses no tienen el mismo grafo molecular",
+    "RMSD_NOT_COMPUTABLE": "el cálculo falló",
+    "RMSD_NOT_FINITE": "el cálculo no dio un número",
+    "SAME_POSE": "son la misma pose",
+}
+
+
+def _pose_rmsd(raw: Any, left: int | None, right: int | None) -> dict[str, Any] | None:
+    """The distance between the two poses measured from the run's stored coordinates, or ``None`` if the lock does not
+    report one at all (an older MolDesign). The sentence is the host's: what was measured and what it does not say."""
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raw = {}  # reported, but not in a shape that can be a measurement
+    value, in_order, atoms = _number(raw.get("rmsd_angstrom")), _number(raw.get("rmsd_atom_order_angstrom")), _count(raw.get("heavy_atoms"))
+    if raw.get("available") is True and value is not None and in_order is not None and atoms:
+        pair = f"las poses {left} y {right}" if left is not None and right is not None else "las dos poses"
+        return {
+            "available": True, "rmsd_angstrom": value, "rmsd_atom_order_angstrom": in_order, "heavy_atoms": atoms,
+            "meaning": (f"Distancia entre {pair}: RMSD de {value} Å en {atoms} átomos pesados, medido de las coordenadas guardadas "
+                        "de la corrida en el marco del receptor, sin superponer, con la correspondencia atómica del grafo de la "
+                        f"molécula (entre las equivalentes por simetría, la de menor distancia); con el mismo orden de átomos son "
+                        f"{in_order} Å. Mide cuánto se separan las dos poses; no dice cuál es la correcta."),
+        }
+    code = _text(raw.get("reason_code"), 40)
+    why = _POSE_RMSD_UNAVAILABLE.get(code or "", "MolDesign no declaró el motivo")
+    return {"available": False, "reason_code": code, "meaning": f"No se midió la distancia entre estas dos poses: {why}."}
+
+
 def _number(value: Any) -> float | int | None:
     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
         return None
@@ -124,6 +166,7 @@ def _pose(raw: Any) -> dict[str, Any]:
     if raw.get("found") is not True:
         return {"rank": raw["rank"], "found": False}
     checks = raw.get("failing_checks")
+    detail = raw.get("checks_detail")
     return {
         "rank": raw["rank"], "found": True,
         "vina_affinity_kcal_mol": _number(raw.get("vina_affinity_kcal_mol")),
@@ -135,6 +178,11 @@ def _pose(raw: Any) -> dict[str, Any]:
         "checks_passed": _count(raw.get("checks_passed")),
         "checks_failed": _count(raw.get("checks_failed")),
         "checks_not_evaluated": _count(raw.get("checks_not_evaluated")),
+        # Each control with the result the run stored; an unknown result is "unknown", never "passed". Empty when the
+        # run kept only the counts.
+        "checks_detail": [{"check": name, "result": item["result"] if item.get("result") in _CHECK_RESULTS else "unknown"}
+                          for item in (detail[:60] if isinstance(detail, list) else [])
+                          if isinstance(item, dict) and (name := _text(item.get("check"), 60))],
         "is_vina_top1": _flag(raw.get("is_vina_top1")),
         "is_suggested": _flag(raw.get("is_suggested")),
         "is_physically_valid_alternative": _flag(raw.get("is_physically_valid_alternative")),
@@ -153,9 +201,11 @@ def build_comparison_facts(task_id: str, data: dict[str, Any]) -> dict[str, Any]
              if isinstance(code, str)][:12]
     alternatives = decision.get("alternatives")
     rmsd = _rmsd_between(difference.get("vina_rmsd_between_poses"))
+    poses = {"left": _pose(data.get("left")), "right": _pose(data.get("right"))}
+    measured = _pose_rmsd(difference.get("pose_rmsd_between_poses"), poses["left"].get("rank"), poses["right"].get("rank"))
     return {
         "status": "ok", "task_id": task_id, "source": "MolDesign GET /evaluation/pose-comparison",
-        "poses": {"left": _pose(data.get("left")), "right": _pose(data.get("right"))},
+        "poses": poses,
         "difference": {
             "right_minus_left_vina_kcal_mol": _number(difference.get("right_minus_left_vina_kcal_mol")),
             "lower_vina_energy": difference.get("lower_vina_energy") if type(difference.get("lower_vina_energy")) is int
@@ -164,6 +214,8 @@ def build_comparison_facts(task_id: str, data: dict[str, Any]) -> dict[str, Any]
             "within_near_tie": _flag(difference.get("within_near_tie")),
             "near_tie_threshold_kcal_mol": 1,
             "vina_rmsd_between_poses": rmsd,
+            # Present only when MolDesign reports it (an older one does not): the distance measured from the coordinates.
+            **({"pose_rmsd_between_poses": measured} if measured is not None else {}),
         },
         "selector": {
             "status": _text(selection.get("status"), 20), "suggested_rank": _count(selection.get("suggested_rank")),
@@ -180,7 +232,7 @@ def build_comparison_facts(task_id: str, data: dict[str, Any]) -> dict[str, Any]
         "alternatives": [rank for rank in (alternatives[:10] if isinstance(alternatives, list) else []) if type(rank) is int],
         "uncertainties": [{"code": code, "meaning": UNCERTAINTY_TEXT.get(code)} for code in codes],
         "legacy_run": _flag(data.get("legacy_run")),
-        "reading_rules": [*_READING_RULES, rmsd["meaning"]],
+        "reading_rules": [*_READING_RULES, *([measured["meaning"]] if measured is not None else []), rmsd["meaning"]],
     }
 
 
@@ -330,7 +382,10 @@ def comparison_limits(facts: dict[str, Any]) -> str:
     text = "Controles físicos según MolDesign — " + "; ".join(parts) + "."
     # What separates the two poses and what a silent contact list means are the lock's words too: a model can read
     # Vina's bounds as a confidence interval or an empty contact list as "no interaction", and no number check sees it.
-    rmsd = facts["difference"].get("vina_rmsd_between_poses")
+    # The distance measured from the stored coordinates answers "how far apart are they"; Vina's bounds (which are
+    # against its best pose) only speak when nothing was measured.
+    measured = facts["difference"].get("pose_rmsd_between_poses")
+    rmsd = measured if isinstance(measured, dict) and measured.get("available") else facts["difference"].get("vina_rmsd_between_poses")
     if isinstance(rmsd, dict) and rmsd.get("meaning"):
         text += " " + rmsd["meaning"]
     contacts = facts.get("contacts")
@@ -350,11 +405,21 @@ def evidence_values(facts: dict[str, Any]) -> dict[str, str]:
         if pose.get("vina_affinity_kcal_mol") is not None:
             values[f"{name}: energía de Vina (kcal/mol)"] = str(pose["vina_affinity_kcal_mol"])
         values[f"{name}: controles físicos"] = str(pose.get("physical_status") or "no evaluada")
+        detail = pose.get("checks_detail") or []
+        for result, label in (("passed", "superados"), ("failed", "que fallan"), ("not_evaluated", "no evaluados")):
+            names = [item["check"] for item in detail if item["result"] == result]
+            if names:
+                values[f"{name}: controles {label}"] = ", ".join(names[:30])
+        if not detail and (pose.get("checks_passed") is not None):
+            values[f"{name}: detalle de los controles"] = f"no guardado; solo el recuento ({pose['checks_passed']} superados)"
     delta = facts["difference"]["right_minus_left_vina_kcal_mol"]
     if delta is not None:
         values["derecha − izquierda (kcal/mol)"] = str(delta)
     contacts = facts.get("contacts") or {}
     rmsd = facts["difference"].get("vina_rmsd_between_poses") or {}
+    measured = facts["difference"].get("pose_rmsd_between_poses") or {}
+    if measured.get("available") is True:
+        values["RMSD entre las poses (Å, coordenadas)"] = str(measured["rmsd_angstrom"])
     if rmsd.get("available") is True:
         values["RMSD de Vina entre las poses (Å, cotas)"] = f"{rmsd['lower_bound_angstrom']} – {rmsd['upper_bound_angstrom']}"
     if contacts.get("status") == "ok":

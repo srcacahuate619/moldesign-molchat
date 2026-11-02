@@ -15,6 +15,19 @@
 - Una lista con cero contactos tipificados en una pose deja de leerse como ausencia de interacción: `contacts.conclusive` es falso,
   `contacts.caution` la explica según la química del receptor que MolDesign declara (`receptor_chemistry`) y el host la añade a la
   respuesta.
+- `compare_poses` entrega la distancia entre las dos poses medida desde sus coordenadas (`difference.pose_rmsd_between_poses`,
+  que calcula MolDesign): sirve para cualquier par, también 2 contra 3, donde las cotas de Vina no valen. El host la redacta con su
+  correspondencia atómica (átomos pesados, sin superponer, simétrica y por orden de átomo) y, cuando está, la prefiere a las cotas.
+  Si MolDesign no pudo medirla, lo dice y no la estima.
+- Los controles físicos de cada pose llegan con nombre y resultado (`checks_detail`) y aparecen como filas de evidencia («controles
+  que fallan», «controles superados»); si la corrida solo guardó el recuento, la fila dice que el detalle no está guardado en vez de
+  resumirlo como «22 controles pasados».
+- Las cifras ya verificadas de un turno se conservan en los siguientes de la misma conversación: cada mensaje del asistente guarda
+  sus `verified_numbers` y el turno siguiente las recupera de ahí, de modo que al rechazar un intervalo de confianza que no existe
+  no se pierden las energías ni el RMSD que ya se habían citado. No conservan ningún número que ninguna herramienta devolvió ni
+  cruzan de una conversación a otra.
+- Las frases que escribe el host al final de una respuesta (controles físicos, RMSD, cero contactos) se añaden una sola vez, aunque
+  se lea el mismo par dos veces en el turno.
 - Una diferencia con PubChem en TPSA o aceptores de hidrógeno se explica automáticamente, pero solo si un cálculo de MolDesign la
   reproduce: `POST /molchat-host/properties` devuelve ahora `variants` (los mismos descriptores con la definición alternativa y
   su método), y el host escribe la nota cuando la variante redondeada a lo que imprime PubChem da su cifra. Si ninguna la

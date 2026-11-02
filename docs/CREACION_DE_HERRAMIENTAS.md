@@ -132,11 +132,17 @@ no pide tarjeta, y la respuesta lo declara). Devuelve:
   frase.
 - **Los contactos compartidos y exclusivos**, con tipo, residuo y distancia en Å. La diferencia entre las dos listas la calcula el
   código; el modelo no resta conjuntos.
+- **Cuánto se separan, medido** (`difference.pose_rmsd_between_poses`). MolDesign calcula el RMSD entre las dos poses desde las
+  coordenadas que guardó la corrida, con la correspondencia atómica declarada: átomos pesados, sin superponer, y dos valores (el
+  simétrico, que elige el mapeo de menor RMSD, y el de orden de átomo, que coincide con la cota `u.b.` de Vina). Sirve para cualquier
+  par. Si la corrida no guardó las poses o no tienen los mismos átomos, `available` es falso con su motivo y no se estima nada.
 - **Cuánto se separan, si Vina lo dice** (`difference.vina_rmsd_between_poses`). Las cotas `rmsd l.b.` y `rmsd u.b.` de Vina son
   siempre contra la mejor pose de su propia búsqueda, así que describen un par solo cuando una de las dos es esa pose, en una
   corrida de Vina de un solo conformador. Entonces el host las redacta como cotas (no un intervalo de confianza; no dicen cuál
   pose es la correcta). Si no (varios conformadores, otro motor, ninguna es la mejor), `available` es falso con su motivo y no se
-  estima nada.
+  estima nada. Cuando hay una distancia medida, el host usa esa y deja las cotas.
+- **Los controles físicos con nombre** (`poses.*.checks_detail`): cada control de PoseBusters que la corrida persistió, con su
+  resultado (`passed`, `failed`, `not_evaluated`). Si solo guardó el recuento, la evidencia dice que el detalle no está guardado.
 
 Cómo se mantiene honesto:
 
@@ -151,15 +157,23 @@ Cómo se mantiene honesto:
    advertencia de que cero contactos no prueba que no haya interacción (`contacts.conclusive`, `contacts.caution`). Una corrida real
    de 8T69 dio cero contactos en dos poses que tocan el bolsillo porque el análisis leía el receptor sin aromaticidad ni cargas y
    dejaba los hidrógenos fuera de su residuo; MolDesign ya lo declara (`receptor_chemistry`) y lo corrige, y la lista vacía sigue
-   sin leerse como un hallazgo.
-4. **Lo mismo que la pantalla, comprobado.** MolDesign y su interfaz derivan el veredicto en dos lenguajes; un archivo dorado
+   sin leerse como un hallazgo. Cada frase se añade una sola vez (`_append_once`), aunque el mismo par se lea dos veces en el turno.
+   La medición de MolDesign con el receptor entero de esa corrida dio 5, 7 y 9 contactos en las poses 1, 2 y 3
+   (`backend/tests/test_contactos_reales_8t69.py` en MolDesign); `tests/server/test_compare_poses_chat.py` fija en MolChat qué
+   hace el host con esas listas y con una lista vacía.
+4. **Las cifras verificadas sobreviven al siguiente turno.** Cada mensaje del asistente guarda los números que sí estaban en lo que
+   devolvieron las herramientas (`verified_numbers`) y el turno siguiente los recupera: rechazar un intervalo de confianza que no
+   existe no tira las energías ni el RMSD ya citados. Esos números no respaldan ninguna otra cifra y no pasan a otra conversación.
+5. **Lo mismo que la pantalla, comprobado.** MolDesign y su interfaz derivan el veredicto en dos lenguajes; un archivo dorado
    compartido (`backend/tests/data/pose_comparison_golden.json`, 21 escenarios) lo exige a las dos pruebas. Los ejemplos de
    `tests/conversation/fixtures/pose_comparison.json` los generó la derivación real de MolDesign.
 
 **Medido el 2026-11-02:** la herramienta contra el router real `/evaluation/pose-comparison` de MolDesign en proceso (con la
 cola y la autorización simuladas), para cuatro corridas distintas; el simulador de `/evaluation/interactions` valida contra el
 modelo real `InteractionResponse` (al construirlo salió que le faltaban cuatro campos obligatorios, corregidos).
-**No verificado:** ProLIF sobre una corrida real de Vina, ni el chat con un modelo real.
+**Medido el 2026-11-02, con la corrida real de 8T69:** ProLIF sobre las poses 1 a 3 (5, 7 y 9 contactos, con control negativo sin la
+química del receptor) y el RMSD entre las poses desde sus coordenadas (para el par 1–2 coincide con la cota `u.b.` de Vina).
+**No verificado:** el chat con un modelo real después de estos cambios.
 
 ## Explicar una diferencia con PubChem
 

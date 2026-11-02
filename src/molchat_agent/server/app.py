@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import math
 import re
 import time
 import uuid
@@ -764,6 +765,26 @@ def _hostname(value: str) -> str:
         return ""
 
 
+def _append_once(answer: str, paragraph: str) -> str:
+    """A paragraph the host writes goes in once: two reads of the same pair (or a model that calls a tool twice)
+    must not leave the answer ending in the same sentences twice."""
+    return answer if paragraph in answer else answer + "\n\n" + paragraph
+
+
+def _stored_numbers(messages: list[dict[str, Any]]) -> set[float]:
+    """The numbers earlier assistant turns of this conversation had a read-only tool back, as they were stored.
+
+    A follow-up that refuses something (a confidence interval that does not exist) must not lose the energies and
+    distances the previous turn verified; the person's own conversation is the persisted source."""
+    found: set[float] = set()
+    for entry in messages:
+        stored = entry.get("verified_numbers") if entry.get("role") == "assistant" else None
+        if isinstance(stored, list):
+            found.update(float(value) for value in stored[:2000]
+                         if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value))
+    return found
+
+
 async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner: str,
                         conv_id: str, text: str, token: str | None) -> AsyncIterator[dict[str, Any]]:
     """Model-first conversation. MolChat owns tools; product changes use the host."""
@@ -780,6 +801,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
     verified: set[float] = set()
     #: Numbers of a result MolDesign declared whole, matched at the precision the answer writes.
     exact: set[float] = set()
+    #: The part of ``exact`` this turn's tools returned (what the next turn can inherit), not what it inherited.
+    turn_exact: set[float] = set()
     explanation_facts: dict[str, Any] | None = None
     #: Pose comparisons this turn read (read-only), each with the physical status MolDesign declared.
     comparison_facts: list[dict[str, Any]] = []
@@ -988,6 +1011,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         recent = conv.messages[-12:]
         messages.extend({"role": m["role"], "content": m["content"]} for m in recent
                         if m.get("role") in ("user", "assistant"))
+        exact.update(_stored_numbers(recent))
         # Multiple search results are not a choice. Only a single reference or
         # the reference explicitly selected and persisted by the user is eligible.
         for entry in recent:
@@ -1225,6 +1249,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             if result.get("status") == "ok":
                 explanation_facts = result
                 exact.update(numeric_leaves(result))
+                turn_exact.update(numeric_leaves(result))
                 evidence.append({"tool": explain_tool.name, "label": str(result["task_id"]), "epistemic_class": "dato persistido",
                                  "source": result["source"], "values": evidence_values(result), "error": None})
             return result
@@ -1235,6 +1260,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             if result.get("status") == "ok":
                 comparison_facts.append(result)
                 exact.update(numeric_leaves(result))
+                turn_exact.update(numeric_leaves(result))
                 evidence.append({"tool": compare_tool.name, "label": f"{result['task_id']} · poses "
                                  f"{result['poses']['left'].get('rank')} y {result['poses']['right'].get('rank')}",
                                  "epistemic_class": "dato persistido", "source": result["source"],
@@ -1381,11 +1407,11 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
                 message += " " + evaluation_result_data["reason"]
             answer += "\n\n" + message
         if explanation_facts:
-            answer += "\n\n" + declared_limits(explanation_facts)
+            answer = _append_once(answer, declared_limits(explanation_facts))
         for facts in comparison_facts[:3]:
-            answer += "\n\n" + comparison_limits(facts)
+            answer = _append_once(answer, comparison_limits(facts))
         for note in property_notes[:4]:
-            answer += "\n\n" + note["text"]
+            answer = _append_once(answer, note["text"])
         if editor_check_result:
             status = editor_check_result.get("status")
             explanation = {
@@ -1415,7 +1441,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
                 "messages": result.messages, "provider_id": provider.id, "references": refs})
         state.memory.add_message(conv_id, owner, "user", text)
         state.memory.add_message(conv_id, owner, "assistant", answer, references=displayed_refs, evidence=evidence,
-                                 comparison_cids=comparison_cids, suggested_actions=suggested_actions)
+                                 comparison_cids=comparison_cids, suggested_actions=suggested_actions,
+                                 verified_numbers=sorted(turn_exact)[:2000])
         yield {"type": "result", "result": {"text": answer, "intent": "harness", "evidence": evidence,
                "references": displayed_refs, "comparison_cids": comparison_cids, "suggested_actions": suggested_actions,
                "action_proposals": [proposal_view(item) for item in new_proposals], "used_llm": True, "verified_values": sorted(verified),

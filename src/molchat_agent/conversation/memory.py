@@ -283,11 +283,15 @@ class MemoryStore:
                     references: list[dict[str, Any]] | None = None,
                     evidence: list[dict[str, Any]] | None = None,
                     comparison_cids: list[int] | None = None,
-                    suggested_actions: list[dict[str, Any]] | None = None) -> None:
+                    suggested_actions: list[dict[str, Any]] | None = None,
+                    verified_numbers: list[float] | None = None) -> None:
         conv = self.get_conversation(conv_id, user_id)
         if conv is None:
             raise ConversationNotFound(conv_id)
         conv.add_message(role, content)
+        if verified_numbers:
+            # Numbers a read-only tool had back this turn, so a follow-up can still cite them (see _stored_numbers).
+            conv.messages[-1]["verified_numbers"] = verified_numbers
         if references:
             conv.messages[-1]["references"] = references
         if evidence:

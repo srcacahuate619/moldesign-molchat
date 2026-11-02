@@ -172,6 +172,115 @@ async def test_a_malformed_rmsd_claim_never_becomes_a_distance(claim):
     assert rmsd["meaning"].startswith("No hay un RMSD de Vina entre estas dos poses")
 
 
+# ── The distance between ANY two poses is measured from the run's stored coordinates ──────────────
+
+@pytest.mark.asyncio
+async def test_two_poses_that_are_not_the_best_get_a_measured_distance_not_a_guess():
+    """Pose 2 against pose 3: Vina's bounds say nothing about it; MolDesign measured 2.979 Å from the coordinates."""
+    fake = FakeMolDesign(comparison_case="rmsd_medido_entre_dos_que_no_son_la_mejor", contacts={2: LEFT, 3: RIGHT})
+    result, _ = await compare(fake, left=2, right=3)
+    measured = result["difference"]["pose_rmsd_between_poses"]
+    assert (measured["available"], measured["rmsd_angstrom"], measured["heavy_atoms"]) == (True, 2.979, 21)
+    assert "Distancia entre las poses 2 y 3: RMSD de 2.979 Å en 21 átomos pesados" in measured["meaning"]
+    assert "no dice cuál es la correcta" in measured["meaning"] and measured["meaning"] in result["reading_rules"]
+    # Vina's bounds still say what they are: against its best pose, and not a distance between these two.
+    assert result["difference"]["vina_rmsd_between_poses"]["reason_code"] == "NEITHER_IS_VINA_BEST"
+    limits = cp.comparison_limits(result)
+    assert measured["meaning"] in limits and "No hay un RMSD de Vina" not in limits
+    assert cp.evidence_values(result)["RMSD entre las poses (Å, coordenadas)"] == "2.979"
+
+
+@pytest.mark.asyncio
+async def test_with_the_best_pose_the_measured_distance_is_the_one_the_host_states():
+    result, _ = await compare(FakeMolDesign(comparison_case="rmsd_medido_con_la_mejor", contacts={1: LEFT, 2: RIGHT}))
+    assert result["difference"]["pose_rmsd_between_poses"]["rmsd_angstrom"] == 4.259
+    limits = cp.comparison_limits(result)
+    assert "Distancia entre las poses 1 y 2: RMSD de 4.259 Å" in limits and "Vina da las cotas" not in limits
+
+
+@pytest.mark.asyncio
+async def test_an_older_moldesign_without_the_measurement_still_falls_back_to_vinas_bounds():
+    result, _ = await compare(FakeMolDesign(comparison_case="rmsd_de_la_mejor_pose", contacts={1: LEFT, 2: RIGHT}))
+    assert "pose_rmsd_between_poses" not in result["difference"]
+    assert "Vina da las cotas de la pose 2 contra su mejor pose, la 1" in cp.comparison_limits(result)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("claim", [
+    {"available": True, "rmsd_angstrom": "4.2", "rmsd_atom_order_angstrom": 4.2, "heavy_atoms": 21},
+    {"available": True, "rmsd_angstrom": None, "rmsd_atom_order_angstrom": 4.2, "heavy_atoms": 21},
+    {"available": True, "rmsd_angstrom": 4.2, "rmsd_atom_order_angstrom": 4.2, "heavy_atoms": 0},
+    {"available": True, "rmsd_angstrom": 4.2, "rmsd_atom_order_angstrom": 4.2, "heavy_atoms": True},
+    {"available": True, "rmsd_angstrom": float("inf"), "rmsd_atom_order_angstrom": 4.2, "heavy_atoms": 21},
+    {"available": "yes", "rmsd_angstrom": 4.2, "rmsd_atom_order_angstrom": 4.2, "heavy_atoms": 21},
+    {"available": False, "reason_code": "POSES_NOT_THE_SAME_MOLECULE"}, "available",
+])
+async def test_a_malformed_or_unavailable_measurement_never_becomes_a_distance(claim):
+    class Sloppy(FakeMolDesign):
+        def handler(self, request):
+            response = super().handler(request)
+            if request.url.path.startswith("/evaluation/pose-comparison/"):
+                data = response.json()
+                data["difference"]["pose_rmsd_between_poses"] = claim
+                return httpx.Response(200, content=json.dumps(data).encode(), headers={"content-type": "application/json"})
+            return response
+
+    result, _ = await compare(Sloppy(comparison_case="rmsd_de_la_mejor_pose", contacts={1: LEFT, 2: RIGHT}))
+    measured = result["difference"]["pose_rmsd_between_poses"]
+    assert measured["available"] is False and "rmsd_angstrom" not in measured
+    assert measured["meaning"].startswith("No se midió la distancia entre estas dos poses")
+    # With nothing measured, the host falls back to Vina's own statement.
+    assert "Vina da las cotas" in cp.comparison_limits(result)
+
+
+# ── Each physical control with its result, or the admission that only the count was kept ──────────
+
+@pytest.mark.asyncio
+async def test_the_controls_each_pose_passed_are_listed_by_name():
+    result, _ = await compare(FakeMolDesign(comparison_case="sugerida_falla", contacts={1: LEFT, 2: RIGHT}))
+    assert result["poses"]["left"]["checks_detail"] == [{"check": "sanitization", "result": "passed"},
+                                                        {"check": "internal_energy", "result": "passed"}]
+    assert result["poses"]["right"]["checks_detail"] == [{"check": "sanitization", "result": "passed"},
+                                                         {"check": "internal_energy", "result": "failed"}]
+    rows = cp.evidence_values(result)
+    assert rows["pose 1: controles superados"] == "sanitization, internal_energy"
+    assert rows["pose 2: controles superados"] == "sanitization" and rows["pose 2: controles que fallan"] == "internal_energy"
+
+
+@pytest.mark.asyncio
+async def test_a_run_that_kept_only_the_count_says_so_instead_of_listing_names():
+    class CountsOnly(FakeMolDesign):
+        def handler(self, request):
+            response = super().handler(request)
+            if request.url.path.startswith("/evaluation/pose-comparison/"):
+                data = response.json()
+                for side in ("left", "right"):
+                    data[side].pop("checks_detail", None)
+                return httpx.Response(200, content=json.dumps(data).encode(), headers={"content-type": "application/json"})
+            return response
+
+    result, _ = await compare(CountsOnly(comparison_case="todas_pasan", contacts={1: LEFT, 2: RIGHT}))
+    assert result["poses"]["left"]["checks_detail"] == []
+    assert cp.evidence_values(result)["pose 1: detalle de los controles"].startswith("no guardado; solo el recuento")
+
+
+@pytest.mark.asyncio
+async def test_an_unknown_control_result_is_never_read_as_passed():
+    class Odd(FakeMolDesign):
+        def handler(self, request):
+            response = super().handler(request)
+            if request.url.path.startswith("/evaluation/pose-comparison/"):
+                data = response.json()
+                data["left"]["checks_detail"] = [{"check": "sanitization", "result": "TAL VEZ"}, {"check": "", "result": "passed"},
+                                                 {"result": "passed"}, "x", None]
+                return httpx.Response(200, content=json.dumps(data).encode(), headers={"content-type": "application/json"})
+            return response
+
+    result, _ = await compare(Odd(comparison_case="todas_pasan", contacts={1: LEFT, 2: RIGHT}))
+    assert result["poses"]["left"]["checks_detail"] == [{"check": "sanitization", "result": "unknown"}]
+    assert "pose 1: controles superados" not in cp.evidence_values(result)
+
+
 # ── The contacts are subtracted in code ────────────────────────────────────────────────────────────
 
 @pytest.mark.asyncio
