@@ -36,7 +36,8 @@ def interactions_report(rank: int, contacts: list[tuple[str, str, float]]) -> di
             "pose_source_path": "run/poses.sdf", "pose_source_kind": "stored", "pose_source_sha256": "a" * 64,
             "protein_source_path": "run/receptor.pdb", "protein_source_sha256": "b" * 64, "protein_filter": "ATOM_only",
             "engine": "prolif", "hydrogen_model": "rdkit_addhs",
-            "contact_coverage": "first_match_per_type_and_residue", "pose_identity_verification": "stored_run_path_and_current_file_hash",
+            "contact_coverage": "first_match_per_type_and_residue", "receptor_chemistry": "standard_residue_templates",
+            "pose_identity_verification": "stored_run_path_and_current_file_hash",
             "total_interactions": len(contacts), "summary": summary, "interactions_by_type": {}, "pharmacophore_features": {},
             "interactions": interactions}
 

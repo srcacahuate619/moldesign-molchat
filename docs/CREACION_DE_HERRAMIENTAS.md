@@ -132,6 +132,11 @@ no pide tarjeta, y la respuesta lo declara). Devuelve:
   frase.
 - **Los contactos compartidos y exclusivos**, con tipo, residuo y distancia en Å. La diferencia entre las dos listas la calcula el
   código; el modelo no resta conjuntos.
+- **Cuánto se separan, si Vina lo dice** (`difference.vina_rmsd_between_poses`). Las cotas `rmsd l.b.` y `rmsd u.b.` de Vina son
+  siempre contra la mejor pose de su propia búsqueda, así que describen un par solo cuando una de las dos es esa pose, en una
+  corrida de Vina de un solo conformador. Entonces el host las redacta como cotas (no un intervalo de confianza; no dicen cuál
+  pose es la correcta). Si no (varios conformadores, otro motor, ninguna es la mejor), `available` es falso con su motivo y no se
+  estima nada.
 
 Cómo se mantiene honesto:
 
@@ -141,7 +146,12 @@ Cómo se mantiene honesto:
    cubrió sale `not_evaluated` y sin conteo de controles; un rango que la corrida no tiene sale `found: false` y no inventa
    diferencias; un análisis de contactos que falla deja la comparación de energía y validez en pie y lo dice.
 3. **El host cierra la respuesta.** Tras el texto del modelo se añade el estado físico de cada pose tal como lo declara MolDesign,
-   también cuando el modelo dice otra cosa (por ejemplo, «las dos son válidas» con una pose que no superó los controles).
+   también cuando el modelo dice otra cosa (por ejemplo, «las dos son válidas» con una pose que no superó los controles), la frase
+   del RMSD de Vina entre las dos poses (o por qué no hay) y, si el análisis de contactos de una pose no tipificó ninguno, la
+   advertencia de que cero contactos no prueba que no haya interacción (`contacts.conclusive`, `contacts.caution`). Una corrida real
+   de 8T69 dio cero contactos en dos poses que tocan el bolsillo porque el análisis leía el receptor sin aromaticidad ni cargas y
+   dejaba los hidrógenos fuera de su residuo; MolDesign ya lo declara (`receptor_chemistry`) y lo corrige, y la lista vacía sigue
+   sin leerse como un hallazgo.
 4. **Lo mismo que la pantalla, comprobado.** MolDesign y su interfaz derivan el veredicto en dos lenguajes; un archivo dorado
    compartido (`backend/tests/data/pose_comparison_golden.json`, 21 escenarios) lo exige a las dos pruebas. Los ejemplos de
    `tests/conversation/fixtures/pose_comparison.json` los generó la derivación real de MolDesign.

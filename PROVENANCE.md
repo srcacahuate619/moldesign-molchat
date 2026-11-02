@@ -945,7 +945,7 @@ MolDesign es por API HTTP, no por copia de código.
 - Origen: código nuevo en MolChat para comparar dos poses de una evaluación terminada con una herramienta de solo lectura (`compare_poses`): la energía de Vina, los controles físicos y el selector que MolDesign declara, y la diferencia de los contactos de cada pose calculada en código.
 - Commit de MolDesign: N/A
 - Autoría: Johan Amezcua, con colaboración de un agente de código.
-- Transformación: los hechos se construyen desde una lista de campos permitidos de `GET /evaluation/pose-comparison/{task_id}` y `GET /evaluation/interactions/{molecule_id}`; `physically_valid` se deriva del estado (solo `passed`) y no se copia. El archivo `pose_comparison.json` lo generó la derivación real de MolDesign (`compare_two_poses`) sobre los escenarios de su archivo dorado.
+- Transformación: los hechos se construyen desde una lista de campos permitidos de `GET /evaluation/pose-comparison/{task_id}` y `GET /evaluation/interactions/{molecule_id}`; `physically_valid` se deriva del estado (solo `passed`) y no se copia. El archivo `pose_comparison.json` lo generó la derivación real de MolDesign (`compare_two_poses`) sobre los escenarios de su archivo dorado; los dos casos de RMSD (`rmsd_de_la_mejor_pose` y `rmsd_entre_dos_que_no_son_la_mejor`) parten del escenario `todas_pasan` con el protocolo de una búsqueda única de Vina y las cotas de la corrida real de 8T69 (2,251 y 4,259 Å). La frase del RMSD entre poses y la advertencia de cero contactos las escribe el host, no el modelo.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/conversation/test_compare_poses.py y tests/server/test_compare_poses_chat.py
 

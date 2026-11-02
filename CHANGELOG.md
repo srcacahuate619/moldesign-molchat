@@ -8,6 +8,13 @@
   declara ganadora, no da por buena una pose sin controles y, tras la respuesta, el host añade el estado físico de cada pose
   tal como lo declara MolDesign (`docs/CREACION_DE_HERRAMIENTAS.md`). Necesita un MolDesign con
   `GET /evaluation/pose-comparison/{task_id}`.
+- `compare_poses` ya no dice que las cotas de RMSD de Vina «no son una distancia entre estas dos poses» cuando una de las dos es la
+  mejor pose de Vina (entonces sí lo son): MolDesign devuelve `difference.vina_rmsd_between_poses` solo cuando valen para ese par
+  (búsqueda de un solo conformador y una de las dos es la mejor), el host las redacta como cotas —no un intervalo de confianza, y
+  no dicen cuál pose es la correcta— y, si no valen, dice por qué y no estima nada.
+- Una lista con cero contactos tipificados en una pose deja de leerse como ausencia de interacción: `contacts.conclusive` es falso,
+  `contacts.caution` la explica según la química del receptor que MolDesign declara (`receptor_chemistry`) y el host la añade a la
+  respuesta.
 - Una diferencia con PubChem en TPSA o aceptores de hidrógeno se explica automáticamente, pero solo si un cálculo de MolDesign la
   reproduce: `POST /molchat-host/properties` devuelve ahora `variants` (los mismos descriptores con la definición alternativa y
   su método), y el host escribe la nota cuando la variante redondeada a lo que imprime PubChem da su cifra. Si ninguna la

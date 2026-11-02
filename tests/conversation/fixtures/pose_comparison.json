@@ -44,7 +44,15 @@
         "right_minus_left_vina_kcal_mol": 0.4,
         "lower_vina_energy": 1,
         "physical_agreement": "both_passed",
-        "within_near_tie": true
+        "within_near_tie": true,
+        "vina_rmsd_between_poses": {
+          "available": false,
+          "reason_code": "ENGINE_NOT_DECLARED",
+          "reference_rank": null,
+          "other_rank": null,
+          "lower_bound_angstrom": null,
+          "upper_bound_angstrom": null
+        }
       },
       "selection": {
         "status": "selected",
@@ -127,7 +135,15 @@
         "right_minus_left_vina_kcal_mol": 0.4,
         "lower_vina_energy": 1,
         "physical_agreement": "only_left_passed",
-        "within_near_tie": true
+        "within_near_tie": true,
+        "vina_rmsd_between_poses": {
+          "available": false,
+          "reason_code": "ENGINE_NOT_DECLARED",
+          "reference_rank": null,
+          "other_rank": null,
+          "lower_bound_angstrom": null,
+          "upper_bound_angstrom": null
+        }
       },
       "selection": {
         "status": "selected",
@@ -212,7 +228,15 @@
         "right_minus_left_vina_kcal_mol": 2.2,
         "lower_vina_energy": 1,
         "physical_agreement": "only_left_passed",
-        "within_near_tie": false
+        "within_near_tie": false,
+        "vina_rmsd_between_poses": {
+          "available": false,
+          "reason_code": "ENGINE_NOT_DECLARED",
+          "reference_rank": null,
+          "other_rank": null,
+          "lower_bound_angstrom": null,
+          "upper_bound_angstrom": null
+        }
       },
       "selection": {
         "status": "selected",
@@ -294,7 +318,15 @@
         "right_minus_left_vina_kcal_mol": 0.4,
         "lower_vina_energy": 1,
         "physical_agreement": "neither_passed",
-        "within_near_tie": true
+        "within_near_tie": true,
+        "vina_rmsd_between_poses": {
+          "available": false,
+          "reason_code": "ENGINE_NOT_DECLARED",
+          "reference_rank": null,
+          "other_rank": null,
+          "lower_bound_angstrom": null,
+          "upper_bound_angstrom": null
+        }
       },
       "selection": {
         "status": "unavailable",
@@ -359,7 +391,193 @@
         "right_minus_left_vina_kcal_mol": null,
         "lower_vina_energy": null,
         "physical_agreement": "unavailable",
-        "within_near_tie": null
+        "within_near_tie": null,
+        "vina_rmsd_between_poses": {
+          "available": false,
+          "reason_code": "POSE_NOT_FOUND",
+          "reference_rank": null,
+          "other_rank": null,
+          "lower_bound_angstrom": null,
+          "upper_bound_angstrom": null
+        }
+      },
+      "selection": {
+        "status": "selected",
+        "suggested_rank": 2,
+        "would_have_suggested_rank": null,
+        "abstained": false,
+        "abstention_reason": null,
+        "diverges_from_vina_top1": true,
+        "is_fallback": false,
+        "confidence": 0.412233,
+        "abstention_threshold": 0.097663,
+        "detail": "El selector recomienda la pose 2."
+      },
+      "vina_top1_rank": 1,
+      "poses_produced": 3,
+      "decision": {
+        "established": [
+          "poses_generated",
+          "physical_checks_run",
+          "selector_ran",
+          "provenance_sealed"
+        ],
+        "uncertainties": [
+          "selection_diverges",
+          "near_tie"
+        ],
+        "alternatives": [],
+        "next_step": "proceed_within_protocol"
+      },
+      "legacy_run": false,
+      "stage": {
+        "status": "passed",
+        "poses_evaluated": 3,
+        "engine": "posebusters:1.0:dock",
+        "reason_code": null
+      }
+    },
+    "rmsd_de_la_mejor_pose": {
+      "task_id": "t-8t69",
+      "molecule_id": "3f2b8c1e-5a47-4d0e-9c1b-7e6a2d4f8b10",
+      "left": {
+        "rank": 1,
+        "found": true,
+        "vina_affinity_kcal_mol": -8.3,
+        "selector_score": 0.11,
+        "physical_status": "passed",
+        "physically_valid": true,
+        "failing_checks": [],
+        "checks_passed": 2,
+        "checks_failed": 0,
+        "checks_not_evaluated": 0,
+        "physical_reason_code": null,
+        "is_vina_top1": true,
+        "is_suggested": false,
+        "is_physically_valid_alternative": false,
+        "vina_rmsd_lb_vs_best": 0,
+        "vina_rmsd_ub_vs_best": 0
+      },
+      "right": {
+        "rank": 2,
+        "found": true,
+        "vina_affinity_kcal_mol": -7.9,
+        "selector_score": 0.52,
+        "physical_status": "passed",
+        "physically_valid": true,
+        "failing_checks": [],
+        "checks_passed": 2,
+        "checks_failed": 0,
+        "checks_not_evaluated": 0,
+        "physical_reason_code": null,
+        "is_vina_top1": false,
+        "is_suggested": true,
+        "is_physically_valid_alternative": false,
+        "vina_rmsd_lb_vs_best": 2.251,
+        "vina_rmsd_ub_vs_best": 4.259
+      },
+      "difference": {
+        "right_minus_left_vina_kcal_mol": 0.4,
+        "lower_vina_energy": 1,
+        "physical_agreement": "both_passed",
+        "within_near_tie": true,
+        "vina_rmsd_between_poses": {
+          "available": true,
+          "reason_code": null,
+          "reference_rank": 1,
+          "other_rank": 2,
+          "lower_bound_angstrom": 2.251,
+          "upper_bound_angstrom": 4.259
+        }
+      },
+      "selection": {
+        "status": "selected",
+        "suggested_rank": 2,
+        "would_have_suggested_rank": null,
+        "abstained": false,
+        "abstention_reason": null,
+        "diverges_from_vina_top1": true,
+        "is_fallback": false,
+        "confidence": 0.412233,
+        "abstention_threshold": 0.097663,
+        "detail": "El selector recomienda la pose 2."
+      },
+      "vina_top1_rank": 1,
+      "poses_produced": 3,
+      "decision": {
+        "established": [
+          "poses_generated",
+          "physical_checks_run",
+          "selector_ran",
+          "provenance_sealed"
+        ],
+        "uncertainties": [
+          "selection_diverges",
+          "near_tie"
+        ],
+        "alternatives": [],
+        "next_step": "proceed_within_protocol"
+      },
+      "legacy_run": false,
+      "stage": {
+        "status": "passed",
+        "poses_evaluated": 3,
+        "engine": "posebusters:1.0:dock",
+        "reason_code": null
+      }
+    },
+    "rmsd_entre_dos_que_no_son_la_mejor": {
+      "task_id": "t-8t69",
+      "molecule_id": "3f2b8c1e-5a47-4d0e-9c1b-7e6a2d4f8b10",
+      "left": {
+        "rank": 2,
+        "found": true,
+        "vina_affinity_kcal_mol": -7.9,
+        "selector_score": 0.52,
+        "physical_status": "passed",
+        "physically_valid": true,
+        "failing_checks": [],
+        "checks_passed": 2,
+        "checks_failed": 0,
+        "checks_not_evaluated": 0,
+        "physical_reason_code": null,
+        "is_vina_top1": false,
+        "is_suggested": true,
+        "is_physically_valid_alternative": false,
+        "vina_rmsd_lb_vs_best": 2.251,
+        "vina_rmsd_ub_vs_best": 4.259
+      },
+      "right": {
+        "rank": 3,
+        "found": true,
+        "vina_affinity_kcal_mol": -6.1,
+        "selector_score": 0.09,
+        "physical_status": "passed",
+        "physically_valid": true,
+        "failing_checks": [],
+        "checks_passed": 2,
+        "checks_failed": 0,
+        "checks_not_evaluated": 0,
+        "physical_reason_code": null,
+        "is_vina_top1": false,
+        "is_suggested": false,
+        "is_physically_valid_alternative": false,
+        "vina_rmsd_lb_vs_best": 2.1,
+        "vina_rmsd_ub_vs_best": 2.8
+      },
+      "difference": {
+        "right_minus_left_vina_kcal_mol": 1.8,
+        "lower_vina_energy": 2,
+        "physical_agreement": "both_passed",
+        "within_near_tie": false,
+        "vina_rmsd_between_poses": {
+          "available": false,
+          "reason_code": "NEITHER_IS_VINA_BEST",
+          "reference_rank": null,
+          "other_rank": null,
+          "lower_bound_angstrom": null,
+          "upper_bound_angstrom": null
+        }
       },
       "selection": {
         "status": "selected",

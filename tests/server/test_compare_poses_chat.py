@@ -42,6 +42,31 @@ async def test_the_answer_ends_with_what_the_lock_says_even_if_the_model_calls_a
 
 
 @pytest.mark.asyncio
+async def test_zero_contacts_are_never_left_as_proof_of_no_interaction(tmp_path, monkeypatch):
+    """The real 8T69 run gave zero contacts for two poses that touch the pocket; the model said they do not interact."""
+    fake = FakeMolDesign(contacts={1: [], 2: []})
+    async with Chat(tmp_path, monkeypatch, fake) as chat:
+        result = await chat.say(ASK, [call("compare_poses", {"task_id": TASK, "left": 1, "right": 2})],
+                                final="Ninguna de las dos poses interactúa con el receptor.")
+        (shown,) = chat.tool_results
+    assert shown["contacts"]["conclusive"] is False
+    assert "Cero contactos tipificados en la pose 1, la pose 2" in result["text"]
+    assert "no prueba que no haya interacción" in result["text"]
+    assert result["text"].rstrip().endswith("no se declara ganadora.")
+
+
+@pytest.mark.asyncio
+async def test_vinas_rmsd_bounds_are_worded_by_the_host_not_left_to_the_model(tmp_path, monkeypatch):
+    """The model called Vina's bounds a confidence interval; the host's sentence says what they are."""
+    fake = FakeMolDesign(comparison_case="rmsd_de_la_mejor_pose", contacts=CONTACTS)
+    async with Chat(tmp_path, monkeypatch, fake) as chat:
+        result = await chat.say(ASK, [call("compare_poses", {"task_id": TASK, "left": 1, "right": 2})],
+                                final="El RMSD de Vina entre ambas es un intervalo de confianza de 2,251 a 4,259 Å.")
+    assert "Vina da las cotas de la pose 2 contra su mejor pose, la 1" in result["text"]
+    assert "Son cotas, no un intervalo de confianza" in result["text"]
+
+
+@pytest.mark.asyncio
 async def test_a_failed_comparison_adds_no_verdict_it_does_not_have(tmp_path, monkeypatch):
     async with Chat(tmp_path, monkeypatch, FakeMolDesign(comparison_status=409)) as chat:
         result = await chat.say(ASK, [call("compare_poses", {"task_id": TASK, "left": 1, "right": 2})],

@@ -33,7 +33,12 @@ COMPARE_GUIDANCE = (
     "y aclara que describen geometría, no cuál pose es la real. No declares ganadora: Vina no mide afinidad real y "
     "una diferencia menor de 1 kcal/mol es un casi empate. Si faltan datos (corrida anterior, pose sin controles, "
     "contactos no disponibles), dilo en lugar de suponerlos. Usa contacts «omitir» si el usuario pide solo la "
-    "energía y la validez física. ")
+    "energía y la validez física. Para decir cuánto se separan las dos poses, usa solo "
+    "difference.vina_rmsd_between_poses: si available es verdadero, cita sus dos cotas como cotas (no como intervalo "
+    "de confianza ni como prueba de cuál es la correcta); si es falso, di el motivo y no estimes la separación. Explica "
+    "cómo cambia la orientación con los contactos exclusivos y los residuos, sin inventar giros ni ángulos. Si el "
+    "análisis de contactos de una pose devuelve cero, no lo presentes como ausencia de interacción: di que no es "
+    "concluyente y por qué. ")
 
 _TASK_ID = re.compile(r"[A-Za-z0-9_.:-]{1,128}")
 _MOLECULE_ID = re.compile(r"[0-9a-fA-F-]{32,36}")
@@ -57,10 +62,42 @@ UNCERTAINTY_TEXT = {
 _READING_RULES = (
     "La energía de Vina compara poses de la misma molécula en el mismo receptor; no es energía libre ni afinidad medida.",
     "Físicamente válida significa que superó los controles que se evaluaron; no significa que la pose sea la correcta.",
-    "Las cotas de RMSD son las que Vina da contra su mejor pose, no una distancia entre estas dos poses.",
     "Los contactos describen geometría; una diferencia de contactos no dice cuál pose es la real.",
     "No se declara ganadora: ausente o no evaluado nunca se lee como bueno.",
 )
+
+#: Why MolDesign has no RMSD between this pair of poses. Vina's bounds are always against the best pose of
+#: its own search, so they only describe a pair when one of the two is that pose.
+_RMSD_UNAVAILABLE = {
+    "NEITHER_IS_VINA_BEST": "ninguna de las dos es la mejor pose de Vina: sus cotas son contra esa mejor pose, no entre ellas",
+    "ENSEMBLE_RUN": "la corrida usó varios conformadores del ligando y las cotas de cada pose son dentro de su propia búsqueda",
+    "ENGINE_NOT_VINA": "la corrida no la hizo Vina",
+    "ENGINE_NOT_DECLARED": "la corrida no declara el motor que produjo las poses",
+    "CONFORMERS_NOT_DECLARED": "la corrida no declara cuántos conformadores usó",
+    "REFERENCE_RMSD_NOT_ZERO": "la mejor pose no trae RMSD 0 contra sí misma, así que las cotas no se pueden leer como una distancia entre las dos",
+    "RMSD_NOT_REPORTED": "la corrida no guardó las cotas de RMSD de esa pose",
+    "SAME_POSE": "son la misma pose",
+    "POSE_NOT_FOUND": "falta una de las dos poses",
+}
+
+
+def _rmsd_between(raw: Any) -> dict[str, Any]:
+    """Vina's RMSD bounds for this pair, only when MolDesign says they describe it; the sentence is the host's."""
+    if isinstance(raw, dict) and raw.get("available") is True:
+        ref, other = raw.get("reference_rank"), raw.get("other_rank")
+        lower, upper = _number(raw.get("lower_bound_angstrom")), _number(raw.get("upper_bound_angstrom"))
+        if type(ref) is int and type(other) is int and lower is not None and upper is not None:
+            return {
+                "available": True, "reference_rank": ref, "other_rank": other,
+                "lower_bound_angstrom": lower, "upper_bound_angstrom": upper,
+                "meaning": (f"Vina da las cotas de la pose {other} contra su mejor pose, la {ref}: entre ambas, el RMSD queda "
+                            f"entre {lower} Å (cota inferior: empareja átomos del mismo elemento sin importar el orden) y "
+                            f"{upper} Å (cota superior: compara cada átomo con el que ocupa su mismo lugar en la molécula). "
+                            "Son cotas, no un intervalo de confianza, y no dicen cuál de las dos poses es la correcta."),
+            }
+    code = _text(raw.get("reason_code"), 40) if isinstance(raw, dict) else None
+    why = _RMSD_UNAVAILABLE.get(code or "", "MolDesign no declaró de dónde salen esas cotas")
+    return {"available": False, "reason_code": code, "meaning": f"No hay un RMSD de Vina entre estas dos poses: {why}."}
 
 
 def _number(value: Any) -> float | int | None:
@@ -115,6 +152,7 @@ def build_comparison_facts(task_id: str, data: dict[str, Any]) -> dict[str, Any]
     codes = [code for code in (decision.get("uncertainties") if isinstance(decision.get("uncertainties"), list) else [])
              if isinstance(code, str)][:12]
     alternatives = decision.get("alternatives")
+    rmsd = _rmsd_between(difference.get("vina_rmsd_between_poses"))
     return {
         "status": "ok", "task_id": task_id, "source": "MolDesign GET /evaluation/pose-comparison",
         "poses": {"left": _pose(data.get("left")), "right": _pose(data.get("right"))},
@@ -125,6 +163,7 @@ def build_comparison_facts(task_id: str, data: dict[str, Any]) -> dict[str, Any]
             "physical_agreement": _text(difference.get("physical_agreement"), 30),
             "within_near_tie": _flag(difference.get("within_near_tie")),
             "near_tie_threshold_kcal_mol": 1,
+            "vina_rmsd_between_poses": rmsd,
         },
         "selector": {
             "status": _text(selection.get("status"), 20), "suggested_rank": _count(selection.get("suggested_rank")),
@@ -141,7 +180,7 @@ def build_comparison_facts(task_id: str, data: dict[str, Any]) -> dict[str, Any]
         "alternatives": [rank for rank in (alternatives[:10] if isinstance(alternatives, list) else []) if type(rank) is int],
         "uncertainties": [{"code": code, "meaning": UNCERTAINTY_TEXT.get(code)} for code in codes],
         "legacy_run": _flag(data.get("legacy_run")),
-        "reading_rules": list(_READING_RULES),
+        "reading_rules": [*_READING_RULES, rmsd["meaning"]],
     }
 
 
@@ -169,6 +208,27 @@ def _rounded(distance: float | int | None) -> float | None:
     return None if distance is None else round(float(distance), 2)
 
 
+def zero_contacts_caution(ranks: list[int | None], engine: str | None, chemistry: str | None) -> str:
+    """What a list with no typed contacts does and does not say. The host writes it; the model does not decide it.
+
+    MolDesign reads the receptor from the PDBQT the docking used. Until 2026-11-02 that left it with single bonds only,
+    no aromaticity and no charges, and a real 8T69 run gave zero contacts for poses that touch the pocket; the report
+    now says which chemistry it perceived, and a list read without it is never a finding about the pose."""
+    which = ", ".join(f"la pose {rank}" if rank is not None else "una de las poses" for rank in ranks)
+    fell_back = bool(engine) and not engine.startswith("prolif")
+    if fell_back:
+        how = "El análisis usó el respaldo por distancias, que no tipifica contactos."
+    elif chemistry == "standard_residue_templates":
+        how = ("ProLIF no encontró ningún par de átomos que cumpliera sus criterios de tipo, distancia y ángulo, con la "
+               "química estándar de los residuos del receptor.")
+    else:
+        how = ("El análisis no percibió la aromaticidad ni las cargas del receptor, así que no pudo detectar apilamiento "
+               "aromático, catión–π ni puentes salinos.")
+    return (f"Cero contactos tipificados en {which}. {how} Eso no prueba que no haya interacción con el receptor: puede "
+            "ser que ningún contacto cumpliera los criterios configurados o un límite de la preparación del análisis. No lo "
+            "leas como ausencia de interacción ni como comparación concluyente; revisa la pose en Moldex antes de decidir.")
+
+
 def build_contact_diff(left: dict[str, Any], right: dict[str, Any]) -> dict[str, Any]:
     """The contacts two poses share and the ones only one has, computed here, never by the model."""
     a, b = _contacts_of(left), _contacts_of(right)
@@ -191,11 +251,18 @@ def build_contact_diff(left: dict[str, Any], right: dict[str, Any]) -> dict[str,
     shared = sorted(a.keys() & b.keys(), key=by_residue)
     only_left, only_right = sorted(a.keys() - b.keys(), key=by_residue), sorted(b.keys() - a.keys(), key=by_residue)
     residues_left, residues_right = {residue for _kind, residue in a}, {residue for _kind, residue in b}
-    conditions = {key: _text(left.get(key), 80) for key in ("engine", "hydrogen_model", "contact_coverage", "pose_identity_verification")}
+    conditions = {key: _text(left.get(key), 80) for key in
+                  ("engine", "hydrogen_model", "contact_coverage", "receptor_chemistry", "pose_identity_verification")}
+    silent = [(side, report) for side, contacts, report in (("left", a, left), ("right", b, right)) if not contacts]
     return {
         "status": "ok",
         "source": "MolDesign GET /evaluation/interactions",
         "conditions": conditions,
+        # A list with zero typed contacts is not a finding about the pose: say so before anyone reads it as one.
+        "conclusive": not silent,
+        "no_typed_contacts_in": [side for side, _report in silent],
+        "caution": zero_contacts_caution([_count(report.get("pose_rank")) for _side, report in silent],
+                                         conditions.get("engine"), conditions.get("receptor_chemistry")) if silent else None,
         "left": {"total": len(a), "by_type": by_type(a)},
         "right": {"total": len(b), "by_type": by_type(b)},
         "shared": [{"type": kind, "residue": residue, "left_distance_angstrom": _rounded(a[(kind, residue)]["distance"]),
@@ -260,7 +327,16 @@ def comparison_limits(facts: dict[str, Any]) -> str:
         label = {"passed": "superó los controles físicos", "failed": "no superó los controles físicos",
                  "review": "quedó en revisión (no cuenta como válida)", "not_evaluated": "no tiene controles físicos evaluados"}.get(status, status)
         parts.append(f"pose {pose['rank']}: {label}")
-    return "Controles físicos según MolDesign — " + "; ".join(parts) + ". La energía de Vina no es afinidad medida y no se declara ganadora."
+    text = "Controles físicos según MolDesign — " + "; ".join(parts) + "."
+    # What separates the two poses and what a silent contact list means are the lock's words too: a model can read
+    # Vina's bounds as a confidence interval or an empty contact list as "no interaction", and no number check sees it.
+    rmsd = facts["difference"].get("vina_rmsd_between_poses")
+    if isinstance(rmsd, dict) and rmsd.get("meaning"):
+        text += " " + rmsd["meaning"]
+    contacts = facts.get("contacts")
+    if isinstance(contacts, dict) and contacts.get("caution"):
+        text += " " + contacts["caution"]
+    return text + " La energía de Vina no es afinidad medida y no se declara ganadora."
 
 
 def evidence_values(facts: dict[str, Any]) -> dict[str, str]:
@@ -278,7 +354,12 @@ def evidence_values(facts: dict[str, Any]) -> dict[str, str]:
     if delta is not None:
         values["derecha − izquierda (kcal/mol)"] = str(delta)
     contacts = facts.get("contacts") or {}
+    rmsd = facts["difference"].get("vina_rmsd_between_poses") or {}
+    if rmsd.get("available") is True:
+        values["RMSD de Vina entre las poses (Å, cotas)"] = f"{rmsd['lower_bound_angstrom']} – {rmsd['upper_bound_angstrom']}"
     if contacts.get("status") == "ok":
+        if contacts.get("conclusive") is False:
+            values["contactos tipificados"] = "0 en alguna pose: no concluyente"
         values["contactos compartidos"] = str(contacts["shared_count"])
         values["solo en la izquierda"] = str(contacts["only_left_count"])
         values["solo en la derecha"] = str(contacts["only_right_count"])

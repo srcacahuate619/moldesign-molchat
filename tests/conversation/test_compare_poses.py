@@ -44,9 +44,12 @@ async def test_two_poses_that_pass_are_compared_with_their_energies_and_contacts
     assert result["status"] == "ok" and result["source"] == "MolDesign GET /evaluation/pose-comparison"
     left, right = result["poses"]["left"], result["poses"]["right"]
     assert (left["rank"], left["vina_affinity_kcal_mol"], right["rank"], right["vina_affinity_kcal_mol"]) == (1, -8.3, 2, -7.9)
-    assert result["difference"] == {"right_minus_left_vina_kcal_mol": 0.4, "lower_vina_energy": 1,
-                                    "physical_agreement": "both_passed", "within_near_tie": True,
-                                    "near_tie_threshold_kcal_mol": 1}
+    difference = dict(result["difference"])
+    rmsd = difference.pop("vina_rmsd_between_poses")
+    assert difference == {"right_minus_left_vina_kcal_mol": 0.4, "lower_vina_energy": 1,
+                          "physical_agreement": "both_passed", "within_near_tie": True,
+                          "near_tie_threshold_kcal_mol": 1}
+    assert rmsd["available"] is False and rmsd["reason_code"] == "ENGINE_NOT_DECLARED"
     assert right["selector_score"] == 0.52 and right["is_suggested"] is True and left["is_vina_top1"] is True
     assert result["selector"]["status"] == "selected" and result["next_step"] == "proceed_within_protocol"
     assert fake.writes() == []  # reading only
@@ -117,6 +120,58 @@ async def test_a_pose_the_run_does_not_have_invents_neither_differences_nor_cont
     assert "la corrida no la tiene" in cp.comparison_limits(result)
 
 
+# ── Vina's RMSD bounds are against ITS best pose: they describe a pair only when one of the two is that pose ──
+
+@pytest.mark.asyncio
+async def test_the_rmsd_bounds_describe_the_pair_when_one_pose_is_vinas_best():
+    """The case of the real 8T69 run: pose 1 is the best (RMSD 0) and pose 2 carries 2.251 / 4.259 Å."""
+    result, _ = await compare(FakeMolDesign(comparison_case="rmsd_de_la_mejor_pose", contacts={1: LEFT, 2: RIGHT}))
+    rmsd = result["difference"]["vina_rmsd_between_poses"]
+    assert (rmsd["available"], rmsd["reference_rank"], rmsd["other_rank"]) == (True, 1, 2)
+    assert (rmsd["lower_bound_angstrom"], rmsd["upper_bound_angstrom"]) == (2.251, 4.259)
+    # They are bounds, not a confidence interval, and they do not say which pose is the right one.
+    assert "no un intervalo de confianza" in rmsd["meaning"] and "cuál de las dos poses es la correcta" in rmsd["meaning"]
+    assert rmsd["meaning"] in result["reading_rules"]
+    assert not any("no una distancia entre estas dos poses" in rule for rule in result["reading_rules"])
+
+
+@pytest.mark.asyncio
+async def test_two_poses_that_are_not_the_best_have_no_rmsd_between_them():
+    result, _ = await compare(FakeMolDesign(comparison_case="rmsd_entre_dos_que_no_son_la_mejor", contacts={2: LEFT, 3: RIGHT}),
+                              left=2, right=3)
+    rmsd = result["difference"]["vina_rmsd_between_poses"]
+    assert rmsd["available"] is False and rmsd["reason_code"] == "NEITHER_IS_VINA_BEST"
+    assert "lower_bound_angstrom" not in rmsd and "upper_bound_angstrom" not in rmsd
+    assert "ninguna de las dos es la mejor pose de Vina" in rmsd["meaning"] and rmsd["meaning"] in result["reading_rules"]
+    # The per-pose bounds stay what they are: against Vina's best pose.
+    assert result["poses"]["left"]["vina_rmsd_lb_vs_best"] == 2.251 and result["poses"]["right"]["vina_rmsd_lb_vs_best"] == 2.1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("claim", [
+    {"available": True, "reference_rank": 1, "other_rank": 2, "lower_bound_angstrom": "2.2", "upper_bound_angstrom": 4.2},
+    {"available": True, "reference_rank": 1, "other_rank": 2, "lower_bound_angstrom": None, "upper_bound_angstrom": 4.2},
+    {"available": True, "reference_rank": True, "other_rank": 2, "lower_bound_angstrom": 2.2, "upper_bound_angstrom": 4.2},
+    {"available": "yes", "reference_rank": 1, "other_rank": 2, "lower_bound_angstrom": 2.2, "upper_bound_angstrom": 4.2},
+    {"available": True, "reference_rank": 1, "other_rank": 2, "lower_bound_angstrom": float("inf"), "upper_bound_angstrom": 4.2},
+    "available", None,
+])
+async def test_a_malformed_rmsd_claim_never_becomes_a_distance(claim):
+    class Sloppy(FakeMolDesign):
+        def handler(self, request):
+            response = super().handler(request)
+            if request.url.path.startswith("/evaluation/pose-comparison/"):
+                data = response.json()
+                data["difference"]["vina_rmsd_between_poses"] = claim
+                return httpx.Response(200, content=json.dumps(data).encode(), headers={"content-type": "application/json"})
+            return response
+
+    result, _ = await compare(Sloppy(comparison_case="rmsd_de_la_mejor_pose", contacts={1: LEFT, 2: RIGHT}))
+    rmsd = result["difference"]["vina_rmsd_between_poses"]
+    assert rmsd["available"] is False and "lower_bound_angstrom" not in rmsd
+    assert rmsd["meaning"].startswith("No hay un RMSD de Vina entre estas dos poses")
+
+
 # ── The contacts are subtracted in code ────────────────────────────────────────────────────────────
 
 @pytest.mark.asyncio
@@ -136,7 +191,9 @@ async def test_the_contacts_two_poses_share_and_the_ones_only_one_has_are_comput
     assert contacts["residues_only_left"] == ["PHE80A", "TYR41A"] and contacts["residues_only_right"] == ["SER90A", "VAL15A"]
     assert contacts["conditions"] == {"engine": "prolif", "hydrogen_model": "rdkit_addhs",
                                       "contact_coverage": "first_match_per_type_and_residue",
+                                      "receptor_chemistry": "standard_residue_templates",
                                       "pose_identity_verification": "stored_run_path_and_current_file_hash"}
+    assert contacts["conclusive"] is True and contacts["caution"] is None and contacts["no_typed_contacts_in"] == []
     # One analysis per pose, asked for by the run's task and the rank, with the account's session.
     asked = [(params["pose_rank"], params["task_id"]) for path, params in reads(fake) if path == f"/evaluation/interactions/{MOLECULE}"]
     assert sorted(asked) == [("1", TASK), ("2", TASK)]
@@ -167,6 +224,50 @@ def test_a_contact_list_with_nothing_usable_is_an_empty_list_not_a_failure():
     junk = {"interactions": [None, 3, {"type": 1}, {"type": "hbond"}]}
     diff = cp.build_contact_diff(junk, junk)
     assert diff["status"] == "ok" and diff["left"]["total"] == 0 and diff["shared_count"] == 0
+
+
+# ── A list with zero typed contacts is not a finding about the pose ───────────────────────────────
+
+def _report(rank, contacts=(), engine="prolif:2.1.0", chemistry="standard_residue_templates"):
+    return {"pose_rank": rank, "engine": engine, "receptor_chemistry": chemistry,
+            "interactions": [{"type": kind, "residue": residue, "distance": distance} for kind, residue, distance in contacts]}
+
+
+@pytest.mark.asyncio
+async def test_zero_contacts_in_both_poses_is_declared_not_conclusive_and_the_host_says_so():
+    result, _ = await compare(FakeMolDesign(contacts={1: [], 2: []}))
+    contacts = result["contacts"]
+    assert contacts["status"] == "ok" and contacts["conclusive"] is False
+    assert contacts["no_typed_contacts_in"] == ["left", "right"] and contacts["shared_count"] == 0
+    assert "Cero contactos tipificados en la pose 1, la pose 2" in contacts["caution"]
+    assert "no prueba que no haya interacción" in contacts["caution"]
+    limits = cp.comparison_limits(result)
+    assert contacts["caution"] in limits and "comparación concluyente" in limits
+    assert cp.evidence_values(result)["contactos tipificados"] == "0 en alguna pose: no concluyente"
+
+
+def test_a_single_silent_pose_makes_the_comparison_not_conclusive_even_if_the_other_has_contacts():
+    diff = cp.build_contact_diff(_report(1, [("hbond", "ASP34A", 2.9)]), _report(2))
+    assert diff["conclusive"] is False and diff["no_typed_contacts_in"] == ["right"]
+    assert "la pose 2" in diff["caution"] and "la pose 1" not in diff["caution"]
+    assert diff["only_left_count"] == 1  # what was found is still reported; it is the silence that is not a finding
+
+
+def test_two_poses_with_contacts_have_no_caution():
+    diff = cp.build_contact_diff(_report(1, [("hbond", "ASP34A", 2.9)]), _report(2, [("hydrophobic", "LEU12A", 3.8)]))
+    assert diff["conclusive"] is True and diff["caution"] is None and diff["no_typed_contacts_in"] == []
+
+
+@pytest.mark.parametrize("engine,chemistry,expected", [
+    ("prolif:2.1.0", "standard_residue_templates", "con la química estándar de los residuos del receptor"),
+    ("prolif:2.1.0", "bonds_by_distance_only", "no percibió la aromaticidad ni las cargas del receptor"),
+    ("prolif:2.1.0", "not_declared", "no percibió la aromaticidad ni las cargas del receptor"),
+    ("prolif:2.1.0", None, "no percibió la aromaticidad ni las cargas del receptor"),
+    ("distancias_sin_quimica", "not_declared", "respaldo por distancias"),
+])
+def test_the_caution_names_what_the_analysis_could_and_could_not_see(engine, chemistry, expected):
+    diff = cp.build_contact_diff(_report(1, engine=engine, chemistry=chemistry), _report(2, engine=engine, chemistry=chemistry))
+    assert expected in diff["caution"] and "no prueba que no haya interacción" in diff["caution"]
 
 
 @pytest.mark.asyncio
