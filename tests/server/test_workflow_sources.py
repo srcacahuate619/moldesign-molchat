@@ -114,3 +114,41 @@ async def test_a_failed_turn_says_why(tmp_path, monkeypatch):
     text = next(e["result"]["text"] for e in entries if e["type"] == "result")
     assert text.startswith("No pude completar el turno con el proveedor de herramientas "
                            "(El proveedor rechazó las herramientas (HTTP 400).)")
+
+
+@pytest.mark.asyncio
+async def test_a_turn_in_english_asks_the_model_for_english_and_the_plan_keeps_it(tmp_path, monkeypatch):
+    """MolDesign shows English: the model is told to answer in English and the host's own sentences follow."""
+    state, registry, headers = state_for(tmp_path)
+    provider = registry.get("fake")
+    seen = []
+    plan = call("propose_iteration", {"case_name": "c", "pdb_id": "8T69", "threshold_kcal": -9.0,
+                                      "molecules": [{"name": "ethanol", "smiles": "CCO"}]}, 1)
+
+    async def model(messages, tools):
+        seen.append(messages[0]["content"])
+        if not any(m["role"] == "tool" for m in messages):
+            return {"role": "assistant", "content": None, "tool_calls": [plan]}
+        return {"role": "assistant", "content": "Done."}
+
+    monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
+
+    class Bridge:
+        def with_token(self, token):
+            return self
+
+    state.bridge = Bridge()
+
+    async def registry_for_turn(_token):
+        return registry
+
+    monkeypatch.setattr(state, "registro_de_turno", registry_for_turn)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))),
+                                 base_url="http://testserver") as client:
+        entries = events(await client.post("/v1/chat", headers=headers,
+                                           json={"text": "dock ethanol against 8T69", "lang": "en"}))
+    assert seen and all(prompt.endswith("Answer in English, whatever the language of these instructions.") for prompt in seen)
+    (workflow,) = state.workflows.values()
+    assert workflow.lang == "en" and workflow.view()["title"] == "Molecule iteration"
+    text = next(e["result"]["text"] for e in entries if e["type"] == "result")
+    assert text.startswith("I prepared an iteration over 1 molecule")

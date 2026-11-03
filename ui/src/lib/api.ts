@@ -266,7 +266,7 @@ export function runWorkflow(
 /** Open an SSE POST stream; returns an aborter. Events flow to onEvent. */
 export function openChatStream(
   token: string,
-  body: { text: string; conversation_id?: string },
+  body: { text: string; conversation_id?: string; lang?: string },
   onEvent: (event: Record<string, unknown>) => void,
   onError: (error: Error) => void,
 ): () => void {

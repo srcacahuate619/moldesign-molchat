@@ -187,7 +187,7 @@ export default function Chat({
       };
       aborter.current = openChatStream(
         token,
-        { text: trimmed, ...(activeId ? { conversation_id: activeId } : {}) },
+        { text: trimmed, lang, ...(activeId ? { conversation_id: activeId } : {}) },
         (event) => {
           const kind = event["type"] as string;
           if (kind === "conversation") {
@@ -268,7 +268,7 @@ export default function Chat({
         },
       );
     },
-    [token, activeId, streaming, refreshList, t, onSessionInvalid],
+    [token, activeId, streaming, refreshList, t, onSessionInvalid, lang],
   );
 
   const stop = useCallback(() => {

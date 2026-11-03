@@ -18,11 +18,13 @@ import re
 import zipfile
 from typing import Any
 
+from ..lang import tr
+
 DELIVERABLE_SCHEMA = "moldesign.molchat.deliverable/1"
 _FIXED_TIME = (1980, 1, 1, 0, 0, 0)
 _SAFE = re.compile(r"[^A-Za-z0-9._-]+")
 
-README = """Entrega de MolChat
+README_ES = """Entrega de MolChat
 ==================
 
 Este ZIP junta lo que produjo un plan aprobado. Nada de lo que contiene lo inventó el modelo.
@@ -35,6 +37,31 @@ MANIFEST.json  Cada pieza con su SHA-256, quién la produjo y lo que falta con s
 Cómo comprobarlo: calcula el SHA-256 de cada archivo y compáralo con MANIFEST.json.
 La energía de Vina no es una energía libre ni una medida de actividad.
 """
+README = README_ES
+
+README_EN = """MolChat delivery
+================
+
+This ZIP gathers what an approved plan produced. Nothing in it was made up by the model.
+
+notebook/      What was asked, what was approved and what happened to each molecule (written by MolChat, not the model).
+preparation/   The Preparation package EXACTLY as MolDesign delivered it, unopened and unchanged (its hash is in MANIFEST.json).
+video/         The video Molcy rendered in MolDesign, with its closing.
+MANIFEST.json  Every piece with its SHA-256, who produced it, and what is missing with the reason.
+
+How to check it: compute the SHA-256 of each file and compare it with MANIFEST.json.
+The Vina energy is not a free energy nor a measure of activity.
+"""
+_README_NAMES = ("LEEME.txt", "README.txt")
+
+
+def notebook_dir() -> str:
+    return tr("cuaderno", "notebook")
+
+
+def preparation_dir() -> str:
+    """The folder of MolDesign's package inside the ZIP, and the key a missing package is declared under."""
+    return tr("preparacion/", "preparation/")
 
 
 @dataclass(frozen=True)
@@ -54,22 +81,25 @@ def build_deliverable(case: str, plan_digest: str, *, notebook_pdf: bytes | None
                       notebook_json: bytes, preparation: tuple[str, bytes] | None, video: tuple[str, bytes] | None,
                       missing: dict[str, str] | None = None) -> tuple[bytes, dict[str, Any]]:
     """``(zip bytes, manifest)``. ``preparation`` and ``video`` are ``(file name, bytes)`` as received, or ``None``."""
-    pieces = [Piece("cuaderno/cuaderno.md", notebook_md, "MolChat", "notebook"),
-              Piece("cuaderno/cuaderno.json", notebook_json, "MolChat", "notebook")]
+    book = f"{notebook_dir()}/{notebook_dir()}"
+    pieces = [Piece(f"{book}.md", notebook_md, "MolChat", "notebook"),
+              Piece(f"{book}.json", notebook_json, "MolChat", "notebook")]
     absent = dict(missing or {})
     if notebook_pdf is not None:
-        pieces.append(Piece("cuaderno/cuaderno.pdf", notebook_pdf, "MolChat", "notebook"))
+        pieces.append(Piece(f"{book}.pdf", notebook_pdf, "MolChat", "notebook"))
     else:
-        absent.setdefault("cuaderno/cuaderno.pdf", "reportlab no está instalado en este equipo; el cuaderno va en Markdown y JSON.")
+        absent.setdefault(f"{book}.pdf", tr("reportlab no está instalado en este equipo; el cuaderno va en Markdown y JSON.",
+                                             "reportlab is not installed on this computer; the notebook comes as Markdown and JSON."))
     if preparation is not None:
-        pieces.append(Piece("preparacion/" + _safe_name(preparation[0], "preparacion.zip"), preparation[1], "MolDesign",
+        pieces.append(Piece(preparation_dir() + _safe_name(preparation[0], "preparacion.zip"), preparation[1], "MolDesign",
                             "preparation_package"))
     else:
-        absent.setdefault("preparacion/", "No hay paquete de Preparación en esta entrega.")
+        absent.setdefault(preparation_dir(), tr("No hay paquete de Preparación en esta entrega.",
+                                                "There is no Preparation package in this delivery."))
     if video is not None:
         pieces.append(Piece("video/" + _safe_name(video[0], "video.mp4"), video[1], "MolDesign", "video"))
     else:
-        absent.setdefault("video/", "No hay vídeo en esta entrega.")
+        absent.setdefault("video/", tr("No hay vídeo en esta entrega.", "There is no video in this delivery."))
     pieces.sort(key=lambda piece: piece.path)
     if len({piece.path for piece in pieces}) != len(pieces):
         raise ValueError("dos piezas con el mismo nombre en la entrega")
@@ -77,12 +107,15 @@ def build_deliverable(case: str, plan_digest: str, *, notebook_pdf: bytes | None
                 "pieces": [{"path": p.path, "bytes": len(p.data), "sha256": sha256(p.data).hexdigest(),
                             "origin": p.origin, "kind": p.kind} for p in pieces],
                 "missing": [{"item": item, "reason": reason} for item, reason in sorted(absent.items())],
-                "note": ("El paquete de Preparación entra tal como lo entregó MolDesign; su contenido y su hash no se "
-                         "modificaron aquí.")}
+                "note": tr("El paquete de Preparación entra tal como lo entregó MolDesign; su contenido y su hash no se "
+                           "modificaron aquí.",
+                           "The Preparation package goes in exactly as MolDesign delivered it; its content and its hash were "
+                           "not changed here.")}
     manifest_bytes = (json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
-        for path, data in sorted([("LEEME.txt", README.encode("utf-8")), ("MANIFEST.json", manifest_bytes),
+        readme = (tr(_README_NAMES[0], _README_NAMES[1]), tr(README_ES, README_EN).encode("utf-8"))
+        for path, data in sorted([readme, ("MANIFEST.json", manifest_bytes),
                                   *[(p.path, p.data) for p in pieces]]):
             info = zipfile.ZipInfo(path, _FIXED_TIME)
             info.compress_type = zipfile.ZIP_STORED if path.endswith((".zip", ".mp4")) else zipfile.ZIP_DEFLATED
@@ -99,7 +132,7 @@ def verify_deliverable(blob: bytes) -> list[str]:
             manifest = json.loads(archive.read("MANIFEST.json"))
         except (KeyError, ValueError):
             return ["MANIFEST.json falta o no es JSON."]
-        names = set(archive.namelist()) - {"MANIFEST.json", "LEEME.txt"}
+        names = set(archive.namelist()) - {"MANIFEST.json", *_README_NAMES}
         listed = {piece["path"] for piece in manifest.get("pieces", [])}
         for extra in sorted(names - listed):
             problems.append(f"{extra} está en el ZIP pero no en el manifiesto.")

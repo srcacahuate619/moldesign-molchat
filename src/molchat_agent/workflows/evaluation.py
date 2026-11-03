@@ -20,6 +20,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from ..lang import tr
 from .run_record import record_from_result
 
 TERMINAL = frozenset({"SUCCESS", "FAILURE", "FAILED", "CANCELLED", "CANCELED", "REVOKED"})
@@ -104,7 +105,8 @@ class EvaluationStep:
                 return FreeReading(status if isinstance(status, str) else "unknown", round(waited, 1), run_state, asked)
             if not announced:
                 announced = True
-                self._on_wait("MolDesign sigue cerrando la corrida anterior; espero a que el caso quede libre.")
+                self._on_wait(tr("MolDesign sigue cerrando la corrida anterior; espero a que el caso quede libre.",
+                                 "MolDesign is still closing the previous run; waiting for the case to be free."))
             await self._sleep(self._busy_wait_s)
 
     async def _until_not_busy(self, call: Callable[[], Awaitable[dict[str, Any]]], budget: float) -> tuple[dict[str, Any], float]:
@@ -125,8 +127,11 @@ class EvaluationStep:
         loaded, waited = await self._until_not_busy(lambda: self.host.load_smiles(case_name, smiles), budget)
         if loaded.get("status") != "applied":
             return EvaluationReading("failed", reason=(
-                f"MolDesign siguió ocupado {waited:.0f} s y no se cargó la molécula en el caso." if loaded.get("status") == "busy"
-                else f"No se cargó la molécula en el caso («{loaded.get('status')}»)."))
+                tr(f"MolDesign siguió ocupado {waited:.0f} s y no se cargó la molécula en el caso.",
+                   f"MolDesign stayed busy for {waited:.0f} s and the molecule was not loaded into the case.")
+                if loaded.get("status") == "busy"
+                else tr(f"No se cargó la molécula en el caso («{loaded.get('status')}»).",
+                        f"The molecule was not loaded into the case (“{loaded.get('status')}”).")))
         reading = await self._start_and_read(case_name, budget, timeout_s, began)
         if reading.status == "failed" and _out_of_memory(reading.reason):
             # Vina could not get memory from the machine (another program was using it). The failed run left nothing
@@ -137,31 +142,40 @@ class EvaluationStep:
             reading = await self._start_and_read(case_name, budget, timeout_s, self._clock())
             reading.retried_for = "memoria"
             if reading.status == "failed" and _out_of_memory(reading.reason):
-                reading.reason = (f"{first} Se repitió una vez tras {self._memory_wait_s:g} s y volvió a faltar memoria: "
-                                  "el equipo no tenía memoria libre para Vina.")
+                reading.reason = f"{first} " + tr(
+                    f"Se repitió una vez tras {self._memory_wait_s:g} s y volvió a faltar memoria: "
+                    "el equipo no tenía memoria libre para Vina.",
+                    f"It was repeated once after {self._memory_wait_s:g} s and ran out of memory again: "
+                    "the computer had no free memory for Vina.")
         return reading
 
     async def _start_and_read(self, case_name: str, budget: float, timeout_s: float, began: float) -> EvaluationReading:
         started, waited = await self._until_not_busy(lambda: self.host.evaluate(case_name), budget)
         status, task_id = started.get("status"), started.get("task_id")
         if status == "unknown":
-            return EvaluationReading("unknown", reason="No se pudo confirmar si la evaluación empezó; no se repitió para no duplicarla.")
+            return EvaluationReading("unknown", reason=tr(
+                "No se pudo confirmar si la evaluación empezó; no se repitió para no duplicarla.",
+                "Could not confirm whether the run started; it was not repeated, so as not to run it twice."))
         if status not in {"started", "started_unregistered"} or not isinstance(task_id, str):
             reason = started.get("reason") if isinstance(started.get("reason"), str) else None
             return EvaluationReading("failed", reason=(
-                f"MolDesign siguió ocupado {waited:.0f} s y no inició la evaluación." if status == "busy"
-                else f"MolDesign no inició la evaluación («{status}»)" + (f": {reason}" if reason else ".")))
+                tr(f"MolDesign siguió ocupado {waited:.0f} s y no inició la evaluación.",
+                   f"MolDesign stayed busy for {waited:.0f} s and did not start the run.") if status == "busy"
+                else tr(f"MolDesign no inició la evaluación («{status}»)", f"MolDesign did not start the run (“{status}”)")
+                + (f": {reason}" if reason else ".")))
         run_began = self._clock()
         reading = EvaluationReading("running", task_id=task_id, seconds_to_start=round(run_began - began, 1))
         job = await self._follow(task_id, timeout_s)
         reading.seconds_to_result = round(self._clock() - run_began, 1)
         if job is None:
-            reading.status, reading.reason = "timeout", f"La evaluación no terminó en {timeout_s:g} s."
+            reading.status, reading.reason = "timeout", tr(f"La evaluación no terminó en {timeout_s:g} s.",
+                                                           f"The run did not finish in {timeout_s:g} s.")
             return reading
         if job.get("status") != "SUCCESS" or not isinstance(job.get("result"), dict):
             error = job.get("error") if isinstance(job.get("error"), str) else None
             reading.status = "failed"
-            reading.reason = f"La evaluación terminó en {job.get('status')}" + (f": {error[:200]}" if error else ".")
+            reading.reason = tr(f"La evaluación terminó en {job.get('status')}", f"The run ended as {job.get('status')}") + (
+                f": {error[:200]}" if error else ".")
             return reading
         result = job["result"]
         reading.run = record_from_result(result)

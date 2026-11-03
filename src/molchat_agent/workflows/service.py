@@ -26,7 +26,8 @@ import httpx
 from ..bridge import MolDesignBridge
 from ..conversation.harness_tools import fetch_job
 from ..conversation.product_actions import _UUID, _http, _moldex_entry, prepare_video, run_save, run_video
-from .deliverable import build_deliverable
+from ..lang import current, tr, using
+from .deliverable import build_deliverable, preparation_dir
 from .notebook import build_notebook, notebook_json, now_iso, render_markdown, render_pdf
 from .iteration import Emit, HostPort, IterationOutcome, IterationRunner, IterationSpec, VideoRequest
 
@@ -35,6 +36,8 @@ MAX_PENDING = 5
 MAX_VIDEO_BYTES = 600 * 1024 * 1024
 MAX_PACKAGE_BYTES = 200 * 1024 * 1024
 _SAFE = re.compile(r"[^A-Za-z0-9._-]+")
+_DISK_NAMES = {"cuaderno.md": "notebook.md", "cuaderno.json": "notebook.json", "cuaderno.pdf": "notebook.pdf",
+               "entrega.zip": "delivery.zip"}
 
 
 class PreparationPort(Protocol):
@@ -176,14 +179,21 @@ class HostRelay:
 
 
 _PREPARATION_PROBLEMS = {
-    "case_not_found": "Ningún caso del usuario contiene esa corrida: no hay nada que auditar.",
-    "case_mismatch": "La corrida pertenece a otro caso que el indicado; no se entregó nada.",
-    "not_auditable": "La corrida no está en un estado auditable (no terminó o no tiene molécula).",
-    "audit_failed": "La auditoría de Preparación falló.",
-    "busy": "Preparación estaba atendiendo otra petición.",
-    "failed": "La ventana de MolDesign no pudo atender la petición.",
-    "unknown": "No se pudo confirmar la auditoría; no se repitió.",
+    "case_not_found": ("Ningún caso del usuario contiene esa corrida: no hay nada que auditar.",
+                       "None of your cases holds that run: there is nothing to audit."),
+    "case_mismatch": ("La corrida pertenece a otro caso que el indicado; no se entregó nada.",
+                      "The run belongs to a different case than the one named; nothing was delivered."),
+    "not_auditable": ("La corrida no está en un estado auditable (no terminó o no tiene molécula).",
+                      "The run cannot be audited (it did not finish or has no molecule)."),
+    "audit_failed": ("La auditoría de Preparación falló.", "The Preparation audit failed."),
+    "busy": ("Preparación estaba atendiendo otra petición.", "Preparation was busy with another request."),
+    "failed": ("La ventana de MolDesign no pudo atender la petición.", "The MolDesign window could not handle the request."),
+    "unknown": ("No se pudo confirmar la auditoría; no se repitió.", "The audit could not be confirmed; it was not repeated."),
 }
+
+
+def _problem(status: str) -> str:
+    return tr(*_PREPARATION_PROBLEMS.get(status, _PREPARATION_PROBLEMS["unknown"]))
 
 
 class PreparationHttp:
@@ -203,15 +213,16 @@ class PreparationHttp:
         status = asked.get("status") if isinstance(asked, dict) else None
         if status != "audited":
             return {"status": status if status in _PREPARATION_PROBLEMS else "unknown",
-                    "message": _PREPARATION_PROBLEMS.get(status, _PREPARATION_PROBLEMS["unknown"]),
+                    "message": _problem(status),
                     **({"reason": asked["reason"]} if isinstance(asked.get("reason"), str) else {})}
         projection = asked.get("projection")
         if asked.get("molecule_id") != molecule_id or not isinstance(projection, dict):
-            return {"status": "case_mismatch", "message": _PREPARATION_PROBLEMS["case_mismatch"]}
+            return {"status": "case_mismatch", "message": _problem("case_mismatch")}
         base = f"/evaluation/dossier/{molecule_id}"
         code, audit = await self.platform.post_json(f"{base}/preparacion", projection)
         if code != 200 or not isinstance(audit, dict) or audit.get("estado") not in {"BLOQUEADO", "REVISION", "TRANSFERIBLE"}:
-            return {"status": "audit_failed", "message": "MolDesign no devolvió la auditoría de Preparación."}
+            return {"status": "audit_failed", "message": tr("MolDesign no devolvió la auditoría de Preparación.",
+                                                            "MolDesign did not return the Preparation audit.")}
         readiness = audit["estado"]
         blockers = [str(item)[:120] for item in (audit.get("bloqueantes") or [])][:10]
         review = [str(item)[:120] for item in (audit.get("en_revision") or [])][:10]
@@ -219,12 +230,15 @@ class PreparationHttp:
                                "blockers": blockers, "in_review": review}
         code, blob, name = await self.platform.post_bytes(f"{base}/package", projection)
         if code != 200 or not blob:
-            out.update(status="export_failed", message=f"Preparación quedó en {readiness}, pero MolDesign no entregó el paquete.")
+            out.update(status="export_failed", message=tr(f"Preparación quedó en {readiness}, pero MolDesign no entregó el paquete.",
+                                                          f"Preparation ended in {readiness}, but MolDesign did not deliver the package."))
             return out
         out.update(status="exported", package=(name or f"dossier_{_fname(task_id)}.zip", blob),
-                   message=(f"Preparación: {readiness}. " + (
-                       "Nada propio del caso pide revisión." if readiness == "TRANSFERIBLE" else
-                       f"{len(blockers)} bloqueantes y {len(review)} requisitos en revisión; MolChat no los decidió.")))
+                   message=(tr(f"Preparación: {readiness}. ", f"Preparation: {readiness}. ") + (
+                       tr("Nada propio del caso pide revisión.", "Nothing in the case asks for review.")
+                       if readiness == "TRANSFERIBLE" else
+                       tr(f"{len(blockers)} bloqueantes y {len(review)} requisitos en revisión; MolChat no los decidió.",
+                          f"{len(blockers)} blockers and {len(review)} requirements under review; MolChat did not decide them."))))
         return out
 
 
@@ -245,12 +259,17 @@ class WorkflowProposal:
     video_file: tuple[str, bytes] | None = None  # the MP4, once the background render finished
     folder: Path | None = None  # where the files were written; the finished render rewrites them there
     sources: list[dict[str, Any] | None] = field(default_factory=list)  # per molecule, from the conversation's PubChem lookups
+    lang: str = "es"  # the language of the turn that proposed it: its events and notebook keep it
 
     def view(self) -> dict[str, Any]:
+        with using(self.lang):  # read from any request, it shows the card in the plan's language
+            return self._view()
+
+    def _view(self) -> dict[str, Any]:
         spec = self.spec
         steps = ["case", "receptor", "molecules"] + (["moldex"] if spec.save else []) + (["video"] if spec.video else []) \
             + (["preparation"] if spec.preparation else []) + (["deliverable"] if spec.package else [])
-        return {"id": self.id, "kind": "iteration", "digest": spec.digest, "title": "Iteración de moléculas",
+        return {"id": self.id, "kind": "iteration", "digest": spec.digest, "title": tr("Iteración de moléculas", "Molecule iteration"),
                 "lines": spec.card_lines(), "molecules": [m.name for m in spec.molecules], "steps": steps}
 
 
@@ -261,7 +280,7 @@ def new_workflow(workflows: dict[str, WorkflowProposal], owner: str, conv_id: st
         del workflows[key]
     if sum(1 for item in workflows.values() if item.owner == owner and item.state in {"pending", "running"}) >= MAX_PENDING:
         return None
-    proposal = WorkflowProposal(uuid.uuid4().hex, owner, conv_id, spec, now + PROPOSAL_TTL_S)
+    proposal = WorkflowProposal(uuid.uuid4().hex, owner, conv_id, spec, now + PROPOSAL_TTL_S, lang=current())
     workflows[proposal.id] = proposal
     return proposal
 
@@ -269,9 +288,12 @@ def new_workflow(workflows: dict[str, WorkflowProposal], owner: str, conv_id: st
 def workflow_answer(proposal: WorkflowProposal) -> str:
     """What the turn says once it left a plan: written by the host, so it cannot claim a done deed."""
     spec = proposal.spec
-    return (f"Dejé preparado una iteración de {len(spec.molecules)} moléculas con el umbral de "
-            f"{spec.threshold_kcal:g} kcal/mol; el receptor y las reglas están en la tarjeta. Todavía no se evaluó nada: "
-            "revísala y apruébala con un solo botón; después no necesitará más intervención. Si no la apruebas, caduca.")
+    return tr(f"Dejé preparado una iteración de {len(spec.molecules)} moléculas con el umbral de "
+              f"{spec.threshold_kcal:g} kcal/mol; el receptor y las reglas están en la tarjeta. Todavía no se evaluó nada: "
+              "revísala y apruébala con un solo botón; después no necesitará más intervención. Si no la apruebas, caduca.",
+              f"I prepared an iteration over {len(spec.molecules)} molecule{'' if len(spec.molecules) == 1 else 's'} with a threshold of "
+              f"{spec.threshold_kcal:g} kcal/mol; the receptor and the rules are on the card. Nothing has been docked yet: "
+              "review it and approve it with one button; after that it needs nothing else from you. If you don't approve it, it expires.")
 
 
 def workflow_outcome_text(proposal: WorkflowProposal) -> str:
@@ -279,20 +301,27 @@ def workflow_outcome_text(proposal: WorkflowProposal) -> str:
     summary = proposal.summary or {}
     counts = summary.get("counts") or {}
     done = counts.get("evaluated", 0)
-    parts = [f"Iteración «{proposal.spec.case_name}» terminada: {done} de {len(proposal.spec.molecules)} moléculas evaluadas."]
+    total = len(proposal.spec.molecules)
+    parts = [tr(f"Iteración «{proposal.spec.case_name}» terminada: {done} de {total} moléculas evaluadas.",
+                f"Iteration “{proposal.spec.case_name}” finished: {done} of {total} molecules docked.")]
     selected = summary.get("selected")
     if selected:
         energy = selected.get("vina_kcal_mol")
-        parts.append(f"Cumplió la regla {selected['name']}: energía de Vina {energy:g} kcal/mol, controles físicos "
-                     f"«{selected.get('physical_status') or 'no evaluados'}» (tarea {selected['task_id']}).")
-        for label, key in (("Moldex", "saved"), ("vídeo de Molcy", "video"), ("Preparación", "preparation")):
+        physical = selected.get('physical_status') or tr('no evaluados', 'not evaluated')
+        parts.append(tr(f"Cumplió la regla {selected['name']}: energía de Vina {energy:g} kcal/mol, controles físicos "
+                        f"«{physical}» (tarea {selected['task_id']}).",
+                        f"{selected['name']} met the rule: Vina energy {energy:g} kcal/mol, physical checks "
+                        f"“{physical}” (task {selected['task_id']})."))
+        for label, key in (("Moldex", "saved"), (tr("vídeo de Molcy", "Molcy video"), "video"),
+                           (tr("Preparación", "Preparation"), "preparation")):
             if summary.get(key):
                 parts.append(f"{label}: {summary[key]}.")
     else:
-        parts.append("Ninguna molécula cumplió la regla; no se guardó nada ni se pidió el vídeo.")
+        parts.append(tr("Ninguna molécula cumplió la regla; no se guardó nada ni se pidió el vídeo.",
+                        "No molecule met the rule; nothing was saved and no video was requested."))
     if "entrega.zip" in (summary.get("files") or {}):
         where = (summary.get("paths") or {}).get("entrega.zip")
-        parts.append("Entrega lista" + (f": {where}" if where else "."))
+        parts.append(tr("Entrega lista", "Delivery ready") + (f": {where}" if where else "."))
     return " ".join(parts)
 
 
@@ -316,22 +345,28 @@ async def execute(proposal: WorkflowProposal, host: HostPort, platform: Platform
     if outcome.video and outcome.video.get("job_id"):
         outcome.video["final"] = None
         emit({"type": "workflow", "event": "phase", "phase": "video",
-              "message": "Molcy renderiza el vídeo en segundo plano; mientras tanto sigue el plan."})
+              "message": tr("Molcy renderiza el vídeo en segundo plano; mientras tanto sigue el plan.",
+                            "Molcy renders the video in the background; the plan goes on meanwhile.")})
 
     if spec.preparation:
         if selected is None or not selected.task_id or not selected.molecule_id:
-            outcome.preparation = {"status": "not_run", "message": "Ninguna molécula quedó seleccionada: no hay corrida que auditar."}
+            outcome.preparation = {"status": "not_run", "message": tr(
+                "Ninguna molécula quedó seleccionada: no hay corrida que auditar.",
+                "No molecule was selected: there is no run to audit.")}
         elif preparation is None:
-            outcome.preparation = {"status": "unavailable",
-                                   "message": "Esta versión de MolDesign no permite auditar en Preparación desde el chat."}
+            outcome.preparation = {"status": "unavailable", "message": tr(
+                "Esta versión de MolDesign no permite auditar en Preparación desde el chat.",
+                "This version of MolDesign cannot run the Preparation audit from the chat.")}
         else:
-            emit({"type": "workflow", "event": "phase", "phase": "preparation", "message": "Auditando la corrida en Preparación."})
+            emit({"type": "workflow", "event": "phase", "phase": "preparation",
+                  "message": tr("Auditando la corrida en Preparación.", "Auditing the run in Preparation.")})
             try:
                 outcome.preparation = await preparation.audit_and_export(spec.case_name, selected.task_id, selected.molecule_id)
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # noqa: BLE001
-                outcome.preparation = {"status": "failed", "message": f"La auditoría falló ({type(exc).__name__})."}
+                outcome.preparation = {"status": "failed", "message": tr(f"La auditoría falló ({type(exc).__name__}).",
+                                                                         f"The audit failed ({type(exc).__name__}).")}
 
     prep_zip = outcome.preparation.pop("package", None) if isinstance(outcome.preparation, dict) else None
     proposal.prep_package = prep_zip if isinstance(prep_zip, tuple) and len(prep_zip) == 2 else None
@@ -352,7 +387,8 @@ def _write_outputs(proposal: WorkflowProposal, output_dir: Path | None) -> None:
     assert outcome is not None
     finished = now_iso()
     if spec.package:
-        outcome.deliverable = {"status": "building", "message": "Este cuaderno forma parte de la entrega."}
+        outcome.deliverable = {"status": "building", "message": tr("Este cuaderno forma parte de la entrega.",
+                                                                   "This notebook is part of the delivery.")}
     notebook = build_notebook(outcome, approved_at=proposal.approved_at, finished_at=finished)
     pdf = render_pdf(notebook)
     md, js = render_markdown(notebook).encode("utf-8"), notebook_json(notebook)
@@ -364,7 +400,7 @@ def _write_outputs(proposal: WorkflowProposal, output_dir: Path | None) -> None:
         if proposal.video_file is None:
             missing["video/"] = _why_no_video(outcome)
         if proposal.prep_package is None:
-            missing["preparacion/"] = _why_no_preparation(outcome)
+            missing[preparation_dir()] = _why_no_preparation(outcome)
         blob, manifest = build_deliverable(spec.case_name, outcome.digest, notebook_pdf=pdf, notebook_md=md, notebook_json=js,
                                            preparation=proposal.prep_package, video=proposal.video_file, missing=missing)
         files["entrega.zip"] = blob
@@ -375,8 +411,10 @@ def _write_outputs(proposal: WorkflowProposal, output_dir: Path | None) -> None:
             proposal.folder = output_dir / f"{_fname(spec.case_name)}-{finished.replace(':', '').replace('-', '')[:15]}"
         proposal.folder.mkdir(parents=True, exist_ok=True)
         for name, data in files.items():
-            (proposal.folder / name).write_bytes(data)
-            proposal.saved_paths[name] = str(proposal.folder / name)
+            # The keys are the API's names; on disk the person reads them in the plan's language.
+            path = proposal.folder / (_DISK_NAMES.get(name, name) if current() == "en" else name)
+            path.write_bytes(data)
+            proposal.saved_paths[name] = str(path)
     proposal.summary = summarize(outcome, proposal)
 
 
@@ -410,7 +448,7 @@ async def complete_video(proposal: WorkflowProposal, platform: PlatformHttp, *, 
     if video["final"] == "completo":
         fetched = await platform.fetch_video(video["job_id"])
         if fetched is None:
-            video["file"] = "no se pudo descargar el MP4"
+            video["file"] = tr("no se pudo descargar el MP4", "the MP4 could not be downloaded")
         else:
             proposal.video_file, video["file"] = fetched, fetched[0]
     _write_outputs(proposal, output_dir)
@@ -419,20 +457,26 @@ async def complete_video(proposal: WorkflowProposal, platform: PlatformHttp, *, 
 def _why_no_video(outcome: IterationOutcome) -> str:
     video = outcome.video
     if video is None:
-        return "El plan no pidió vídeo, o ninguna molécula cumplió la regla." if outcome.selected is None else "El plan no pidió vídeo."
+        return (tr("El plan no pidió vídeo, o ninguna molécula cumplió la regla.",
+                   "The plan did not ask for a video, or no molecule met the rule.") if outcome.selected is None
+                else tr("El plan no pidió vídeo.", "The plan did not ask for a video."))
     if video.get("status") != "started":
-        return f"No se pidió el vídeo: {video.get('message') or video.get('status')}"
+        return tr("No se pidió el vídeo: ", "The video was not requested: ") + str(video.get('message') or video.get('status'))
     if not video.get("final"):
-        return ("Molcy sigue renderizando el vídeo en segundo plano; cuando termine, esta entrega se rehace con el MP4 "
-                "en la misma carpeta.")
-    return f"El vídeo terminó en «{video.get('final') or 'sin estado'}»" + (f"; {video['file']}" if video.get("file") else ".")
+        return tr("Molcy sigue renderizando el vídeo en segundo plano; cuando termine, esta entrega se rehace con el MP4 "
+                  "en la misma carpeta.",
+                  "Molcy is still rendering the video in the background; when it ends, this delivery is rebuilt with the "
+                  "MP4 in the same folder.")
+    final = video.get('final') or tr('sin estado', 'no state')
+    return tr(f"El vídeo terminó en «{final}»", f"The video ended as “{final}”") + (f"; {video['file']}" if video.get("file") else ".")
 
 
 def _why_no_preparation(outcome: IterationOutcome) -> str:
     prep = outcome.preparation
     if prep is None:
-        return "El plan no pidió auditar en Preparación."
-    return str(prep.get("message") or f"Preparación terminó en «{prep.get('status')}».")
+        return tr("El plan no pidió auditar en Preparación.", "The plan did not ask for a Preparation audit.")
+    return str(prep.get("message") or tr(f"Preparación terminó en «{prep.get('status')}».",
+                                         f"Preparation ended as “{prep.get('status')}”."))
 
 
 def summarize(outcome: IterationOutcome, proposal: WorkflowProposal) -> dict[str, Any]:

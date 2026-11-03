@@ -2,6 +2,15 @@
 
 ## No publicado
 
+- MolChat habla inglés cuando MolDesign está en inglés. Antes la interfaz ya cambiaba de idioma, pero todo lo que escribe
+  el servidor salía en castellano. Ahora cada mensaje del chat lleva el idioma de la interfaz (`lang`). Con él:
+  - el modelo recibe la instrucción de contestar en inglés;
+  - lo que escribe el anfitrión sale en ese idioma: la tarjeta del plan, los avisos y motivos de cada molécula, el resumen
+    final, el cuaderno en Markdown y PDF, y el ZIP de entrega (carpetas `notebook/` y `preparation/`, `README.txt`);
+  - un plan conserva el idioma en que se propuso, también si termina en segundo plano o se consulta desde otra petición.
+  Sin `lang`, o con un idioma desconocido, todo sigue en castellano. Los avisos de cada corrida se copian tal como los da
+  MolDesign, que hoy los escribe en castellano.
+
 - El cuaderno de la iteración ya no tira lo que MolDesign y PubChem dijeron (revisión de la entrega de 12 ligandos de VMAT2):
   - **procedencia de cada SMILES**: cada consulta a PubChem borraba la anterior, así que un plan armado sobre doce consultas
     sólo conservaba la última. Ahora la conversación guarda todas (sólo la identidad: CID, nombre, página y los dos SMILES)

@@ -26,6 +26,7 @@ import unicodedata
 from collections.abc import Awaitable, Callable
 from typing import Any, Protocol
 
+from ..lang import tr
 from .evaluation import EvaluationStep
 
 SCHEMA = "moldesign.molchat.iteration/1"
@@ -236,24 +237,34 @@ class IterationSpec:
         """What the approval card shows: everything the run will do, and the rule that stops it."""
         rule = f"Vina ≤ {self.threshold_kcal:g} kcal/mol"
         if self.require_physical:
-            rule += " y controles físicos de la mejor pose superados"
-        lines = [f"Caso «{self.case_name}» · receptor {self.pdb_id}",
-                 f"{len(self.molecules)} moléculas, una tras otra en este mismo caso: " + ", ".join(m.name for m in self.molecules),
-                 f"Se detiene {'en la primera que cumple' if self.stop == 'first' else 'al recorrer la lista entera'}: {rule}",
-                 "Si una molécula falla, se anota y se sigue con la siguiente."]
+            rule += tr(" y controles físicos de la mejor pose superados", " and the best pose passes the physical checks")
+        names = ", ".join(m.name for m in self.molecules)
+        stop = (tr("en la primera que cumple", "at the first one that meets it") if self.stop == "first"
+                else tr("al recorrer la lista entera", "after the whole list"))
+        lines = [tr(f"Caso «{self.case_name}» · receptor {self.pdb_id}", f"Case “{self.case_name}” · receptor {self.pdb_id}"),
+                 tr(f"{len(self.molecules)} moléculas, una tras otra en este mismo caso: ",
+                    f"{len(self.molecules)} molecules, one after another in this same case: ") + names,
+                 tr(f"Se detiene {stop}: {rule}", f"Stops {stop}: {rule}"),
+                 tr("Si una molécula falla, se anota y se sigue con la siguiente.",
+                    "If a molecule fails, it is noted and the next one goes on.")]
         if self.save:
-            lines.append("La que cumpla se guarda en Moldex.")
+            lines.append(tr("La que cumpla se guarda en Moldex.", "The one that meets it is saved to Moldex."))
         if self.video is not None:
-            shown = {"previsualizacion": "prueba (vista previa corta)"}.get(self.video.format, self.video.format)
-            lines.append(f"Vídeo de Molcy (solo GPU): escena {self.video.scene}, formato {shown}; "
-                         "el cierre de MolDesign se añade siempre.")
+            shown = {"previsualizacion": tr("prueba (vista previa corta)", "test (short preview)")}.get(self.video.format, self.video.format)
+            lines.append(tr(f"Vídeo de Molcy (solo GPU): escena {self.video.scene}, formato {shown}; "
+                            "el cierre de MolDesign se añade siempre.",
+                            f"Molcy video (GPU only): scene {self.video.scene}, format {shown}; "
+                            "MolDesign's closing is always added."))
             custom = self.video.customized()
-            lines.append("Presentación: " + ("; ".join(custom) if custom else "la automática de Molcy") + ".")
+            lines.append(tr("Presentación: ", "Presentation: ")
+                         + ("; ".join(custom) if custom else tr("la automática de Molcy", "Molcy's automatic one")) + ".")
         if self.preparation:
-            lines.append("Se audita la corrida en Preparación; si queda en revisión, se declara, no se decide.")
+            lines.append(tr("Se audita la corrida en Preparación; si queda en revisión, se declara, no se decide.",
+                            "The run is audited in Preparation; if it needs review, that is declared, not decided."))
         if self.package:
-            lines.append("Al final se junta todo en un único ZIP.")
-        lines.append(f"Tope: {self.per_molecule_timeout_s // 60} min por molécula y {self.budget_s // 60} min en total.")
+            lines.append(tr("Al final se junta todo en un único ZIP.", "At the end everything goes into a single ZIP."))
+        lines.append(tr(f"Tope: {self.per_molecule_timeout_s // 60} min por molécula y {self.budget_s // 60} min en total.",
+                        f"Limit: {self.per_molecule_timeout_s // 60} min per molecule and {self.budget_s // 60} min in total."))
         return lines
 
 
@@ -329,14 +340,22 @@ class IterationOutcome:
 def judge(spec: IterationSpec, affinity: float | None, physical: str | None) -> tuple[str, str]:
     """``(outcome, reason)`` for one evaluated molecule, from numbers MolDesign returned."""
     if affinity is None:
-        return "below_threshold", "MolDesign no devolvió la energía de Vina."
+        return "below_threshold", tr("MolDesign no devolvió la energía de Vina.", "MolDesign did not return the Vina energy.")
     if affinity > spec.threshold_kcal:
-        return "below_threshold", f"Vina {affinity:g} kcal/mol no llega al umbral de {spec.threshold_kcal:g}."
+        return "below_threshold", tr(f"Vina {affinity:g} kcal/mol no llega al umbral de {spec.threshold_kcal:g}.",
+                                     f"Vina {affinity:g} kcal/mol does not reach the {spec.threshold_kcal:g} threshold.")
     if spec.require_physical and physical != "passed":
-        shown = physical or "no evaluados"
-        return "near", (f"Vina {affinity:g} kcal/mol llega al umbral, pero los controles físicos de la mejor pose "
-                        f"quedaron «{shown}»: no cumple la regla.")
-    return "qualifies", f"Vina {affinity:g} kcal/mol y controles físicos superados."
+        shown = physical or tr("no evaluados", "not evaluated")
+        return "near", tr(f"Vina {affinity:g} kcal/mol llega al umbral, pero los controles físicos de la mejor pose "
+                          f"quedaron «{shown}»: no cumple la regla.",
+                          f"Vina {affinity:g} kcal/mol reaches the threshold, but the best pose's physical checks "
+                          f"came out “{shown}”: it does not meet the rule.")
+    return "qualifies", tr(f"Vina {affinity:g} kcal/mol y controles físicos superados.",
+                           f"Vina {affinity:g} kcal/mol and physical checks passed.")
+
+
+def _could_not(what: str) -> str:
+    return tr(f"No se pudo {what}", f"Could not {what}")
 
 
 async def _noop_sleep(_: float) -> None:
@@ -373,16 +392,17 @@ class IterationRunner:
         if not await self._prepare_case():
             out.state = "blocked"
             for record in out.records:
-                record.status, record.reason = "skipped", "El caso no quedó preparado: no se evaluó nada."
+                record.status, record.reason = "skipped", tr("El caso no quedó preparado: no se evaluó nada.",
+                                                             "The case was not set up: nothing was docked.")
             self.emit("finished", state=out.state)
             return out
         qualifiers: list[MoleculeRecord] = []
         for record in out.records:
             if qualifiers and spec.stop == "first":
-                record.status, record.reason = "skipped", "Ya se cumplió la regla de parada."
+                record.status, record.reason = "skipped", tr("Ya se cumplió la regla de parada.", "The stop rule was already met.")
                 continue
             if self._clock() - started >= spec.budget_s:
-                record.status, record.reason = "skipped", "Se agotó el tiempo total del plan."
+                record.status, record.reason = "skipped", tr("Se agotó el tiempo total del plan.", "The plan's total time ran out.")
                 out.state = "budget_exhausted"
                 continue
             await self._run_one(record)
@@ -400,30 +420,34 @@ class IterationRunner:
             await self._after_selection(best)
         elif out.state == "running":
             out.state = "none_qualified"
-            out.notes.append("Ninguna molécula cumplió la regla: no se guardó nada ni se pidió el vídeo.")
+            out.notes.append(tr("Ninguna molécula cumplió la regla: no se guardó nada ni se pidió el vídeo.",
+                                "No molecule met the rule: nothing was saved and no video was requested."))
         self.emit("finished", state=out.state)
         return out
 
     async def _prepare_case(self) -> bool:
         spec, out = self.spec, self.outcome
-        for label, call, ok in (("crear el caso", lambda: self.host.create_case(spec.case_name), _CASE_OK),
-                                ("asignar el receptor", lambda: self.host.assign_receptor(spec.case_name, spec.pdb_id),
-                                 _RECEPTOR_OK)):
+        for label, call, ok in ((tr("crear el caso", "create the case"), lambda: self.host.create_case(spec.case_name), _CASE_OK),
+                                (tr("asignar el receptor", "assign the receptor"),
+                                 lambda: self.host.assign_receptor(spec.case_name, spec.pdb_id), _RECEPTOR_OK)):
             try:
                 result, waited = await self._until_free(label, call)
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # noqa: BLE001 - the plan must end with an honest state, never hang
-                out.notes.append(f"No se pudo {label}: {type(exc).__name__}.")
+                out.notes.append(_could_not(label) + f": {type(exc).__name__}.")
                 return False
             status = result.get("status") if isinstance(result, dict) else None
             self.emit("case_step", step=label, status=status)
             if status not in ok:
-                out.notes.append(f"No se pudo {label}: " + (f"MolDesign siguió ocupado {waited:.0f} s." if status == "busy"
-                                                          else f"el host respondió «{status or 'sin respuesta'}»."))
+                answered = status or tr("sin respuesta", "no answer")
+                out.notes.append(_could_not(label) + ": " + (
+                    tr(f"MolDesign siguió ocupado {waited:.0f} s.", f"MolDesign stayed busy for {waited:.0f} s.") if status == "busy"
+                    else tr(f"el host respondió «{answered}».", f"the host answered “{answered}”.")))
                 return False
             if status == "exists":
-                out.notes.append("El caso ya existía: se reutilizó con su nombre; sus inputs se reemplazan molécula a molécula.")
+                out.notes.append(tr("El caso ya existía: se reutilizó con su nombre; sus inputs se reemplazan molécula a molécula.",
+                                    "The case already existed: it was reused by name; its inputs are replaced molecule by molecule."))
         return True
 
     async def _until_free(self, label: str, call: Callable[[], Awaitable[dict[str, Any]]]) -> tuple[dict[str, Any], float]:
@@ -444,7 +468,8 @@ class IterationRunner:
                 break
             if not announced:
                 announced = True
-                self.emit("phase", message=f"MolDesign sigue cerrando la corrida anterior; espero a que esté libre para {label}.")
+                self.emit("phase", message=tr(f"MolDesign sigue cerrando la corrida anterior; espero a que esté libre para {label}.",
+                                              f"MolDesign is still closing the previous run; waiting until it is free to {label}."))
             await self._sleep(self._busy_wait_s)
             waited += self._busy_wait_s
         if announced:
@@ -467,7 +492,8 @@ class IterationRunner:
             record.case_state_before, record.seconds_waiting_case = free.status, free.seconds
             if free.status in {"not_found", "ambiguous"}:
                 record.status = "failed"
-                record.reason = f"MolDesign no encontró un único caso «{self.spec.case_name}» ({free.status})."
+                record.reason = tr(f"MolDesign no encontró un único caso «{self.spec.case_name}» ({free.status}).",
+                                   f"MolDesign did not find a single case “{self.spec.case_name}” ({free.status}).")
             else:
                 reading = await step.evaluate(self.spec.case_name, record.smiles,
                                               timeout_s=self.spec.per_molecule_timeout_s, budget_s=self._left())
@@ -476,27 +502,35 @@ class IterationRunner:
                 record.physical_status, record.run = reading.physical_status, reading.run
                 record.seconds_to_start, record.seconds_to_result = reading.seconds_to_start, reading.seconds_to_result
                 if reading.retried_for == "memoria":
-                    self.outcome.notes.append(f"Molécula {record.index} ({record.name}): a Vina le faltó memoria del equipo; "
-                                              "se repitió una vez" + (" y salió bien." if reading.status == "evaluated" else " y volvió a fallar."))
+                    ok = reading.status == "evaluated"
+                    self.outcome.notes.append(tr(
+                        f"Molécula {record.index} ({record.name}): a Vina le faltó memoria del equipo; "
+                        "se repitió una vez" + (" y salió bien." if ok else " y volvió a fallar."),
+                        f"Molecule {record.index} ({record.name}): Vina ran out of memory on this computer; "
+                        "it was repeated once" + (" and worked." if ok else " and failed again.")))
                 if reading.status == "evaluated":
                     record.outcome, record.reason = judge(self.spec, record.affinity_kcal, record.physical_status)
         except asyncio.CancelledError:
             raise
         except Exception as exc:  # noqa: BLE001 - one molecule never stops the others
-            record.status, record.reason = "failed", f"Error inesperado ({type(exc).__name__}); se siguió con la siguiente."
+            record.status, record.reason = "failed", tr(f"Error inesperado ({type(exc).__name__}); se siguió con la siguiente.",
+                                                        f"Unexpected error ({type(exc).__name__}); moved on to the next one.")
         record.seconds = round(self._clock() - began, 1)
 
     async def _after_selection(self, best: MoleculeRecord) -> None:
         """Save, ask for the video and follow it. Each step is its own attempt and its own line in the record."""
         spec, out = self.spec, self.outcome
         if spec.save and best.task_id and best.molecule_id:
-            out.saved = await self._guarded("guardar en Moldex", self.platform.save(best.task_id, best.molecule_id, best.name))
+            out.saved = await self._guarded(tr("guardar en Moldex", "save to Moldex"),
+                                            self.platform.save(best.task_id, best.molecule_id, best.name))
             self.emit("saved", result=out.saved)
         if spec.video is not None and best.task_id and best.molecule_id:
             if out.saved is None or out.saved.get("status") not in {"saved", "already_saved"}:
-                out.video = {"status": "not_requested", "message": "No se pidió el vídeo porque la corrida no quedó guardada en Moldex."}
+                out.video = {"status": "not_requested", "message": tr(
+                    "No se pidió el vídeo porque la corrida no quedó guardada en Moldex.",
+                    "The video was not requested because the run was not saved to Moldex.")}
             else:
-                out.video = await self._guarded("pedir el vídeo", self._request_video(best))
+                out.video = await self._guarded(tr("pedir el vídeo", "request the video"), self._request_video(best))
             self.emit("video", result=out.video)
         # Preparation and the package are added by the callers that own those ports (see runner_extras).
 
@@ -511,19 +545,26 @@ class IterationRunner:
             result = await self.platform.request_video(best.task_id, best.molecule_id, video)
             dropped = [item for item in video.customized() if not item.startswith("título")]
             if dropped and isinstance(result, dict):
-                result = {**result, "message": f"{result.get('message') or ''} Esta vía no aplica la presentación pedida "
-                                               f"({'; '.join(dropped)}): el vídeo sale con la automática.".strip()}
+                dropped_text = "; ".join(dropped)
+                result = {**result, "message": f"{result.get('message') or ''} " + tr(
+                    f"Esta vía no aplica la presentación pedida ({dropped_text}): el vídeo sale con la automática.",
+                    f"This route does not apply the requested presentation ({dropped_text}): the video uses the automatic one.")}
+                result["message"] = result["message"].strip()
             return result
-        self.emit("phase", message="Preparando el vídeo en la pestaña de Molcy.")
+        self.emit("phase", message=tr("Preparando el vídeo en la pestaña de Molcy.", "Setting up the video in the Molcy tab."))
         answer = await render(best.task_id, video.scene, video.format, video)
         status = answer.get("status") if isinstance(answer, dict) else None
         if status == "started" and isinstance(answer.get("job_id"), str):
-            return {"status": "started", "job_id": answer["job_id"], "message": "Vídeo en cola en Molcy (lanzado desde su pestaña)."}
+            return {"status": "started", "job_id": answer["job_id"], "message": tr(
+                "Vídeo en cola en Molcy (lanzado desde su pestaña).", "Video queued in Molcy (started from its tab).")}
         reason = answer.get("reason") if isinstance(answer, dict) and isinstance(answer.get("reason"), str) else None
-        messages = {"not_found": "La corrida no aparece entre las guardadas en Moldex.",
-                    "unavailable": "Molcy no puede generar el vídeo ahora.", "busy": "Molcy está ocupado con otro trabajo.",
-                    "unknown": "No se pudo confirmar si Molcy empezó el vídeo; no se repitió."}
-        return {"status": status or "failed", "message": (messages.get(status or "", "Molcy no empezó el vídeo.")
+        messages = {"not_found": tr("La corrida no aparece entre las guardadas en Moldex.", "The run is not among those saved in Moldex."),
+                    "unavailable": tr("Molcy no puede generar el vídeo ahora.", "Molcy cannot make the video right now."),
+                    "busy": tr("Molcy está ocupado con otro trabajo.", "Molcy is busy with another job."),
+                    "unknown": tr("No se pudo confirmar si Molcy empezó el vídeo; no se repitió.",
+                                  "Could not confirm whether Molcy started the video; it was not repeated.")}
+        return {"status": status or "failed", "message": (messages.get(status or "", tr("Molcy no empezó el vídeo.",
+                                                                                         "Molcy did not start the video."))
                                                           + (f" {reason}" if reason else ""))}
 
     async def _guarded(self, what: str, call: Awaitable[dict[str, Any]]) -> dict[str, Any]:
@@ -532,9 +573,9 @@ class IterationRunner:
         except asyncio.CancelledError:
             raise
         except Exception as exc:  # noqa: BLE001
-            self.outcome.notes.append(f"No se pudo {what}: {type(exc).__name__}.")
-            return {"status": "failed", "message": f"No se pudo {what}."}
-        return result if isinstance(result, dict) else {"status": "failed", "message": f"No se pudo {what}."}
+            self.outcome.notes.append(_could_not(what) + f": {type(exc).__name__}.")
+            return {"status": "failed", "message": _could_not(what) + "."}
+        return result if isinstance(result, dict) else {"status": "failed", "message": _could_not(what) + "."}
 
     async def follow_video(self, timeout_s: int = 1800) -> dict[str, Any] | None:
         """Wait for the Molcy job the loop started; the video is the slow step and Preparación runs meanwhile."""
@@ -544,7 +585,7 @@ class IterationRunner:
             return video
         deadline = self._clock() + timeout_s
         while True:
-            status = await self._guarded("consultar el vídeo", self.platform.video_status(job_id))
+            status = await self._guarded(tr("consultar el vídeo", "check the video"), self.platform.video_status(job_id))
             video.update({"job_state": status.get("job_state"), "phase": status.get("phase"),
                           "progress": status.get("progress")})
             if status.get("job_state") in {"completo", "fallido", "cancelado"} or status.get("status") in {"not_found", "invalid"}:

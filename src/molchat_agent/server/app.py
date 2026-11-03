@@ -43,6 +43,7 @@ from ..conversation.property_methods import property_difference_notes
 from ..conversation.product_actions import (ACTIONS_GUIDANCE, Proposal, mask_unconfirmed_actions, molcy_video_status_tool,
                                             molcy_video_tool, new_proposal, outcome_text, proposal_answer, run_proposal,
                                             save_to_moldex_tool, view as proposal_view)
+from ..lang import tr, using, valid as valid_lang
 from ..workflows.notebook import now_iso
 from ..workflows.run_record import molecule_source
 from ..workflows.service import (HostRelay, PlatformHttp, WorkflowProposal, complete_video, execute as execute_workflow, new_workflow,
@@ -224,6 +225,7 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
         conv_id = payload.get("conversation_id")
         if conv_id is not None and not isinstance(conv_id, str):
             return _error(400, "conversation_id no válido")
+        lang = valid_lang(payload.get("lang"))  # the language MolDesign shows; Spanish when the interface sent none
         registro = await state.registro_de_turno(platform_token(request))
         engine = state.engine_for(session.sub, platform_token(request), registro)
         if conv_id is None:
@@ -232,6 +234,11 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
             return _error(404, "conversación no encontrada")
 
         async def stream() -> AsyncIterator[bytes]:
+            with using(lang):
+                async for chunk in turn_stream():
+                    yield chunk
+
+        async def turn_stream() -> AsyncIterator[bytes]:
             yield encode_event({"type": "conversation", "id": conv_id})
             try:
                 if state.hosted and registro.active_id and not registro.block_reason(registro.active_id):
@@ -512,8 +519,9 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
         if workflow.outcome is not None:
             numbers = [r.affinity_kcal for r in workflow.outcome.records if r.affinity_kcal is not None]
             numbers += [float(workflow.spec.threshold_kcal), abs(float(workflow.spec.threshold_kcal)), float(len(workflow.spec.molecules))]
-        text = workflow_outcome_text(workflow) if workflow.summary and workflow.summary.get("counts") is not None else (
-            "Iteración interrumpida: no se pudo confirmar todo lo que ocurrió; revisa MolDesign antes de repetirlo.")
+        text = workflow_outcome_text(workflow) if workflow.summary and workflow.summary.get("counts") is not None else tr(
+            "Iteración interrumpida: no se pudo confirmar todo lo que ocurrió; revisa MolDesign antes de repetirlo.",
+            "Iteration interrupted: not everything that happened could be confirmed; check MolDesign before repeating it.")
         try:
             state.memory.add_message(workflow.conv_id, workflow.owner, "assistant", text, verified_numbers=sorted(numbers)[:200])
         except (ConversationNotFound, PersistenciaFallida):
@@ -521,6 +529,12 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
 
     async def run_workflow(workflow: WorkflowProposal, relay: HostRelay, platform: PlatformHttp,
                            queue: "asyncio.Queue[dict[str, Any]]") -> None:
+        # The plan speaks the language it was proposed in, also the render followed after it (a task copies the context).
+        with using(workflow.lang):
+            await _run_workflow(workflow, relay, platform, queue)
+
+    async def _run_workflow(workflow: WorkflowProposal, relay: HostRelay, platform: PlatformHttp,
+                            queue: "asyncio.Queue[dict[str, Any]]") -> None:
         def emit(event: dict[str, Any]) -> None:
             queue.put_nowait(event)
 
@@ -535,11 +549,13 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
                 follow.add_done_callback(video_tasks.discard)
         except asyncio.CancelledError:
             workflow.state = "cancelled"
-            workflow.summary = {"state": "interrupted", "counts": None, "notes": ["Se interrumpió antes de terminar."]}
+            workflow.summary = {"state": "interrupted", "counts": None,
+                                "notes": [tr("Se interrumpió antes de terminar.", "It was interrupted before finishing.")]}
             raise
         except Exception:  # noqa: BLE001 - the plan must end with an honest status, never hang the card
             workflow.summary = {"state": "failed", "counts": None,
-                                "notes": ["El plan terminó con un error interno; revisa MolDesign antes de repetirlo."]}
+                                "notes": [tr("El plan terminó con un error interno; revisa MolDesign antes de repetirlo.",
+                                             "The plan ended with an internal error; check MolDesign before repeating it.")]}
             emit({"type": "workflow", "event": "done", "summary": workflow.summary})
         finally:
             if workflow.state == "running":
@@ -1146,13 +1162,15 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             state.case_requests.pop(request_id, None)
 
     def case_answer() -> str:
+        unconfirmed = tr("No pude confirmar el resultado. Revisa la lista de casos antes de reintentar.",
+                         "I could not confirm the result. Check the case list before trying again.")
         if not case_status:
-            return "No pude confirmar el resultado. Revisa la lista de casos antes de reintentar."
+            return unconfirmed
         name = case_status["name"]
-        return {"created": f'Se creó el caso "{name}" en MolDesign.',
-                "exists": f'Ya existe un caso o carpeta con el nombre "{name}".',
-                "failed": "MolDesign no pudo crear el caso."}.get(
-                    case_status["status"], "No pude confirmar el resultado. Revisa la lista de casos antes de reintentar.")
+        return {"created": tr(f'Se creó el caso "{name}" en MolDesign.', f'The case "{name}" was created in MolDesign.'),
+                "exists": tr(f'Ya existe un caso o carpeta con el nombre "{name}".', f'A case or folder named "{name}" already exists.'),
+                "failed": tr("MolDesign no pudo crear el caso.", "MolDesign could not create the case.")}.get(
+                    case_status["status"], unconfirmed)
 
     messages: list[dict[str, Any]] = [{"role": "system", "content": (
         "Eres MolChat. Interpreta la solicitud y usa las herramientas disponibles cuando las necesites. "
@@ -1202,7 +1220,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         "Para listas paginadas indica la página, el total y si hay una siguiente página. "
         "Para verificar el dibujo real frente a PubChem usa verify_editor_structure y comunica su estado. "
         "No afirmes que el dibujo coincide si la herramienta no lo confirmó; indica la estereoquímica no especificada. "
-        "No promete información que no llegó. Comunica los errores con claridad. Responde en español.") }]
+        "No promete información que no llegó. Comunica los errores con claridad. "
+        + tr("Responde en español.", "Answer in English, whatever the language of these instructions.")) }]
     conv = state.memory.get_conversation(conv_id, owner)
     historical_refs: list[dict[str, Any]] = []
     # Every PubChem lookup of this conversation (earlier turns first), so a plan can say where each SMILES came from.
@@ -1569,7 +1588,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         answer, issues = redact_unverified(answer, verified, quotable=frozenset(quoted),
                                           literals=frozenset(literals), exact=frozenset(exact))
         if issues:
-            answer = f"{VERIFICATION_NOTE} se ocultaron valores no verificados. " + answer
+            answer = tr(f"{VERIFICATION_NOTE} se ocultaron valores no verificados. ",
+                        "Verification note: unverified values were hidden. ") + answer
         normalized_answer = re.sub(r"[*_`]", "", answer)
         already_confirmed = (case_status and case_status.get("status") == "created"
             and case_status["name"] in normalized_answer
@@ -1684,7 +1704,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         # carry no key. Without it a failed turn could not be diagnosed: MolChat's output is not kept on disk.
         reason = " ".join(str(exc).split())[:200] or type(exc).__name__
         print(f"molchat: turno fallido: {type(exc).__name__}: {reason}", flush=True)
-        answer = (case_answer() if case_started else f"No pude completar el turno con el proveedor de herramientas ({reason}).")
+        answer = (case_answer() if case_started else tr(f"No pude completar el turno con el proveedor de herramientas ({reason}).",
+                                                         f"I could not complete the turn with the tools provider ({reason})."))
         if smiles_result_data and smiles_result_data.get("status") == "applied":
             answer += f' MolDesign confirmó el SMILES en el campo del caso «{smiles_result_data.get("case_name", "")}»; no se confirmó el guardado ni el dibujo.'
         elif smiles_started:

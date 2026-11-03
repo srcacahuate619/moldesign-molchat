@@ -15,6 +15,8 @@ import math
 import re
 from typing import Any
 
+from ..lang import tr
+
 #: Closes the evidence block in flow text. The model never sees it in
 #: history; the UI splits evidence from answer on it.
 EVIDENCE_END = "<!--__FIN_DE_EVIDENCIA__-->"
@@ -192,7 +194,7 @@ def redact_unverified(text: str, verified: set[float],
             return raw
         if _backed(raw, claimed, verified, tolerance, exact):
             return raw
-        return "[dato no verificado]"
+        return tr("[dato no verificado]", "[unverified value]")
 
     return _NUMBER_RE.sub(_sub, text), problems
 

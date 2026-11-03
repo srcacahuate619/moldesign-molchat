@@ -14,6 +14,8 @@ from hashlib import sha256
 import json
 from typing import Any
 
+from ..lang import tr
+
 MAX_FIELD_CHARS = 20_000
 MAX_WARNINGS = 40
 MAX_TEXT = 500
@@ -49,9 +51,11 @@ def _warnings(raw: Any) -> list[dict[str, str | None]] | None:
                 out.append({"code": _text(item.get("codigo") or item.get("code")),
                             "severity": _text(item.get("severidad") or item.get("severity")), "message": message})
         elif _text(item):
-            out.append({"code": None, "severity": "heredada", "message": _text(item)})
+            out.append({"code": None, "severity": tr("heredada", "legacy"), "message": _text(item)})
     if len(raw) > MAX_WARNINGS:
-        out.append({"code": None, "severity": None, "message": f"y {len(raw) - MAX_WARNINGS} avisos más en MolDesign."})
+        more = len(raw) - MAX_WARNINGS
+        out.append({"code": None, "severity": None, "message": tr(f"y {more} avisos más en MolDesign.",
+                                                                   f"and {more} more warnings in MolDesign.")})
     return out
 
 
