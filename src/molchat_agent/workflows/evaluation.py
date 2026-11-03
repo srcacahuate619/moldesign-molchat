@@ -20,6 +20,8 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from .run_record import record_from_result
+
 TERMINAL = frozenset({"SUCCESS", "FAILURE", "FAILED", "CANCELLED", "CANCELED", "REVOKED"})
 FREE_STATES = frozenset({"idle"})
 WAIT_STATES = frozenset({"busy"})
@@ -51,6 +53,7 @@ class EvaluationReading:
     seconds_to_start: float | None = None  # waiting for the case, loading and starting
     seconds_to_result: float | None = None  # from the start of the run to the backend's terminal state
     retried_for: str | None = None  # why the run was repeated once (the machine ran out of memory), if it was
+    run: dict[str, Any] | None = None  # what MolDesign said about the run besides the number (see run_record)
 
 
 @dataclass
@@ -161,6 +164,7 @@ class EvaluationStep:
             reading.reason = f"La evaluación terminó en {job.get('status')}" + (f": {error[:200]}" if error else ".")
             return reading
         result = job["result"]
+        reading.run = record_from_result(result)
         reading.vina_kcal = _number(result.get("affinity_kcal"))
         molecule_id = result.get("molecule_id")
         reading.molecule_id = molecule_id if isinstance(molecule_id, str) else None

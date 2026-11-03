@@ -298,9 +298,11 @@ class MoleculeRecord:
     case_state_before: str | None = None  # what the window answered (idle, busy, unknown...)
     seconds_to_start: float | None = None
     seconds_to_result: float | None = None  # run start → backend terminal: when the number was known
+    source: dict[str, Any] | None = None  # where the SMILES came from (a PubChem lookup of this conversation), if known
+    run: dict[str, Any] | None = None  # protocol, warnings and docked species as MolDesign returned them
 
     def as_dict(self) -> dict[str, Any]:
-        return dict(self.__dict__)
+        return copy.deepcopy(self.__dict__)
 
 
 @dataclass
@@ -345,7 +347,8 @@ class IterationRunner:
     def __init__(self, spec: IterationSpec, host: HostPort, platform: PlatformPort, emit: Emit | None = None, *,
                  clock: Callable[[], float] = time.monotonic,
                  sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
-                 poll_s: float = 3.0, busy_wait_s: float = 5.0, busy_budget_s: float = 240.0) -> None:
+                 poll_s: float = 3.0, busy_wait_s: float = 5.0, busy_budget_s: float = 240.0,
+                 sources: list[dict[str, Any] | None] | None = None) -> None:
         self.spec, self.host, self.platform = spec, host, platform
         self._emit = emit or (lambda _event: None)
         self._clock, self._sleep = clock, sleep
@@ -354,6 +357,8 @@ class IterationRunner:
         self.outcome = IterationOutcome(spec.as_dict(), spec.digest,
                                         records=[MoleculeRecord(i, m.name, m.smiles)
                                                  for i, m in enumerate(spec.molecules, start=1)])
+        for record, source in zip(self.outcome.records, sources or []):
+            record.source = copy.deepcopy(source)
 
     def emit(self, kind: str, **data: Any) -> None:
         self._emit({"type": "workflow", "event": kind, **data})
@@ -381,7 +386,10 @@ class IterationRunner:
                 out.state = "budget_exhausted"
                 continue
             await self._run_one(record)
-            self.emit("molecule", record=record.as_dict())
+            shown = record.as_dict()
+            if isinstance(shown.get("run"), dict):
+                shown["run"].pop("raw", None)  # the card needs the summary; the full copy stays in the notebook
+            self.emit("molecule", record=shown)
             if record.outcome == "qualifies":
                 qualifiers.append(record)
         if qualifiers:
@@ -465,7 +473,7 @@ class IterationRunner:
                                               timeout_s=self.spec.per_molecule_timeout_s, budget_s=self._left())
                 record.status, record.reason, record.task_id = reading.status, reading.reason, reading.task_id
                 record.molecule_id, record.affinity_kcal = reading.molecule_id, reading.vina_kcal
-                record.physical_status = reading.physical_status
+                record.physical_status, record.run = reading.physical_status, reading.run
                 record.seconds_to_start, record.seconds_to_result = reading.seconds_to_start, reading.seconds_to_result
                 if reading.retried_for == "memoria":
                     self.outcome.notes.append(f"Molécula {record.index} ({record.name}): a Vina le faltó memoria del equipo; "

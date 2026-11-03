@@ -9,6 +9,7 @@ the PDF could not be written; nothing downstream pretends otherwise.
 """
 from __future__ import annotations
 
+import copy
 import io
 import json
 import os
@@ -49,8 +50,13 @@ def build_notebook(outcome: IterationOutcome, *, approved_at: str | None, finish
                      "reading": _OUTCOME.get(record.outcome or "", record.reason or ""), "reason": record.reason,
                      "task_id": record.task_id, "seconds": record.seconds,
                      "timing": {"waiting_case_s": record.seconds_waiting_case, "case_state_before": record.case_state_before,
-                                "to_start_s": record.seconds_to_start, "to_result_s": record.seconds_to_result}})
+                                "to_start_s": record.seconds_to_start, "to_result_s": record.seconds_to_result},
+                     "source": copy.deepcopy(record.source), "run": copy.deepcopy(record.run)})
     selected = next((r for r in outcome.records if r.index == outcome.selected), None)
+    runs = [row["run"] for row in rows if isinstance(row["run"], dict)]
+    vina = sorted({run["vina_version"] for run in runs if run.get("vina_version")})
+    if vina and not versions:
+        versions = {"vina": ", ".join(vina)}
     return {
         "schema": NOTEBOOK_SCHEMA, "iteration_schema": SCHEMA, "case": spec["case_name"], "receptor": spec["pdb_id"],
         "request": spec.get("original_request") or "", "approved_at": approved_at, "finished_at": finished_at,
@@ -64,14 +70,130 @@ def build_notebook(outcome: IterationOutcome, *, approved_at: str | None, finish
                                                    "physical_controls": selected.physical_status},
         "saved": outcome.saved, "video": outcome.video, "preparation": outcome.preparation,
         "deliverable": outcome.deliverable, "notes": list(outcome.notes), "limits": LIMITS,
-        "provenance": ("Las energías y los controles físicos los calculó MolDesign; MolChat ordenó las llamadas, "
-                       "anotó lo ocurrido y escribió este cuaderno sin intervención del modelo."),
+        "comparability": comparability(runs),
+        "provenance": ("Las energías, los controles físicos, el protocolo, los avisos y la especie acoplada los dio "
+                       "MolDesign; la identidad de cada molécula, la consulta de PubChem de esta conversación cuyo SMILES "
+                       "coincide literalmente. MolChat ordenó las llamadas, anotó lo ocurrido y escribió este cuaderno "
+                       "sin intervención del modelo."),
         "versions": versions or {}}
+
+
+_COMPARED = (("receptor_sha256", "receptor preparado"), ("vina_version", "versión de Vina"))
+_COMPARED_PROTOCOL = (("engine", "motor"), ("exhaustiveness", "exhaustividad"), ("num_poses", "poses"),
+                      ("seed", "semilla"), ("box_center", "centro de la caja"), ("box_size", "tamaño de la caja"))
+
+
+def comparability(runs: list[dict[str, Any]]) -> dict[str, Any]:
+    """Whether the evaluated molecules ran under the same conditions, field by field, from what each run recorded.
+
+    A field a run did not record is «not recorded», never assumed equal: comparing scores is only fair when the
+    receptor, the engine and the search were the same, and that is exactly what a reader cannot see in a table.
+    """
+    if not runs:
+        return {"runs": 0, "same": [], "different": [], "not_recorded": []}
+    fields = [(key, label, lambda run, key=key: run.get(key)) for key, label in _COMPARED]
+    fields += [(key, label, lambda run, key=key: (run.get("protocol") or {}).get(key)) for key, label in _COMPARED_PROTOCOL]
+    same, different, missing = [], [], []
+    for key, label, read in fields:
+        values = [read(run) for run in runs]
+        if any(value is None for value in values):
+            missing.append(label)
+            continue
+        distinct = list(dict.fromkeys(json.dumps(value, sort_keys=True) for value in values))  # in the molecules' order
+        if len(distinct) == 1:
+            same.append({"field": label, "value": values[0]})
+        else:
+            different.append({"field": label, "values": [json.loads(text) for text in distinct]})
+    return {"runs": len(runs), "same": same, "different": different, "not_recorded": missing}
 
 
 def _plan_lines(spec: dict[str, Any]) -> list[str]:
     from .iteration import IterationSpec
     return IterationSpec.from_dict(spec).card_lines()
+
+
+_MATCH = {"exact": "el SMILES coincide con el de PubChem",
+          "connectivity_only": "el SMILES coincide sólo con la conectividad de PubChem: se usó sin su estereoquímica"}
+
+
+def source_line(source: dict[str, Any] | None) -> str:
+    if not isinstance(source, dict):
+        return ("Procedencia: no registrada (el SMILES no coincide literalmente con ninguna consulta de PubChem de "
+                "esta conversación).")
+    if source.get("match") == "ambiguous":
+        return f"Procedencia: ambigua; el SMILES coincide con varios compuestos de PubChem (CID {', '.join(map(str, source['cids']))})."
+    query = f", búsqueda «{source['query']}»" if source.get("query") else ""
+    return (f"Procedencia: PubChem CID {source['cid']} («{source.get('name') or 'sin nombre'}»{query}); "
+            f"{_MATCH.get(source.get('match'), source.get('match') or '')}." + (f" {source['url']}" if source.get("url") else ""))
+
+
+def _n(count: Any, one: str, many: str) -> str:
+    return f"{count} {one if count == 1 else many}"
+
+
+def run_lines(run: dict[str, Any] | None) -> list[str]:
+    """What MolDesign recorded about one run, in plain lines; nothing derived, nothing added."""
+    if not isinstance(run, dict):
+        return []
+    out: list[str] = []
+    species = run.get("species") or {}
+    written, docked = species.get("input_smiles"), species.get("docked_smiles_3d")
+    if written or docked:
+        same = written is not None and written == docked
+        out.append(f"SMILES de entrada (canónico): {written or 'no registrado'}; especie acoplada (desde el 3D): "
+                   f"{docked or 'no registrada'}" + (" (la misma)." if same else "."))
+    proton, tauto, stereo = species.get("protonation") or {}, species.get("tautomer") or {}, species.get("stereo") or {}
+    if proton.get("applied") is True:
+        ph = proton.get("ph")
+        out.append("Protonación: " + (f"a pH {ph:g}" if isinstance(ph, (int, float)) else "aplicada")
+                   + (f", {_n(proton['alternatives'], 'alternativa', 'alternativas')}" if isinstance(proton.get("alternatives"), int) else "") + ".")
+    elif proton.get("applied") is False:
+        out.append("Protonación: no aplicada" + (f" ({proton['reason']})" if proton.get("reason") else "") + ".")
+    if tauto.get("applied") is not None:
+        out.append("Tautómero: " + ("canonicalizado" if tauto.get("applied") else "el de entrada")
+                   + (f", {_n(tauto['alternatives'], 'alternativa', 'alternativas')}" if isinstance(tauto.get("alternatives"), int) else "") + ".")
+    centers, doubles = stereo.get("unassigned_centers"), stereo.get("unassigned_double_bonds")
+    if isinstance(centers, int) or isinstance(doubles, int):
+        out.append(f"Estereoquímica sin asignar en la entrada: {centers if isinstance(centers, int) else '—'} centros y "
+                   f"{doubles if isinstance(doubles, int) else '—'} dobles enlaces.")
+    lost = stereo.get("lost_in_docked_species") or {}
+    if lost.get("centros") or lost.get("dobles"):
+        out.append("La especie acoplada perdió estereoquímica escrita: "
+                   f"{_n(lost.get('centros', 0), 'centro', 'centros')} y {_n(lost.get('dobles', 0), 'doble enlace', 'dobles enlaces')}.")
+    protocol = run.get("protocol") or {}
+    if protocol:
+        parts = [f"{protocol.get('engine') or 'motor no registrado'} {run.get('vina_version') or ''}".strip()]
+        for key, label in (("exhaustiveness", "exhaustividad"), ("num_poses", "poses"), ("seed", "semilla")):
+            parts.append(f"{label} {protocol[key]}" if protocol.get(key) is not None else f"{label} no registrada")
+        if protocol.get("box_center") and protocol.get("box_size"):
+            parts.append(f"caja centro {protocol['box_center']} tamaño {protocol['box_size']} Å")
+        out.append("Protocolo ejecutado: " + ", ".join(parts) + ".")
+        if protocol.get("requested"):
+            out.append(f"Se pidió otra cosa y MolDesign ejecutó la de arriba: {protocol['requested']}.")
+    warnings = run.get("warnings")
+    if warnings is None:
+        out.append("Avisos de la corrida: no registrados.")
+    elif not warnings:
+        out.append("Avisos de la corrida: ninguno.")
+    else:
+        out.append(f"Avisos de la corrida ({len(warnings)}):")
+        out += [f"  - [{w.get('severity') or 'sin severidad'}] {w['message']}" + (f" ({w['code']})" if w.get("code") else "")
+                for w in warnings]
+    return out
+
+
+def comparability_lines(c: dict[str, Any]) -> list[str]:
+    if not c.get("runs"):
+        return ["Ninguna molécula llegó a evaluarse: no hay condiciones que comparar."]
+    out = [f"Sobre las {c['runs']} corridas evaluadas:"]
+    if c["same"]:
+        out.append("- Iguales en todas: " + "; ".join(f"{item['field']} {item['value']}" for item in c["same"]) + ".")
+    for item in c["different"]:
+        out.append(f"- Distinto entre corridas: {item['field']} ({' / '.join(map(str, item['values']))}). "
+                   "Las energías no se comparan en las mismas condiciones.")
+    if c["not_recorded"]:
+        out.append("- Sin registrar en alguna corrida: " + ", ".join(c["not_recorded"]) + "; no se da por igual.")
+    return out
 
 
 def render_markdown(nb: dict[str, Any]) -> str:
@@ -99,7 +221,17 @@ def render_markdown(nb: dict[str, Any]) -> str:
             out.append(f"- Molécula {row['n']} ({row['name']}): espera del caso {_fmt(t['waiting_case_s'], ' s')} "
                        f"(«{t['case_state_before'] or 'sin respuesta'}»), arranque {_fmt(t['to_start_s'], ' s')}, "
                        f"resultado {_fmt(t['to_result_s'], ' s')}, total {_fmt(row['seconds'], ' s')}.")
-    out += ["", "## Lo que se hizo con la elegida", ""]
+    out += ["", "## Condiciones de las corridas", ""] + comparability_lines(nb.get("comparability") or {})
+    out += ["", "## Registro por molécula", "",
+            "Lo que MolDesign registró de cada corrida y de dónde salió cada SMILES, tal cual; nada se interpreta aquí.", ""]
+    for row in nb["molecules"]:
+        out.append(f"### {row['n']}. {row['name']}")
+        out += ["", f"- SMILES del plan: `{row['smiles']}`", f"- {source_line(row.get('source'))}"]
+        out += [f"- {line}" if not line.startswith("  ") else line for line in run_lines(row.get("run"))]
+        if row.get("task_id"):
+            out.append(f"- Tarea: {row['task_id']}")
+        out.append("")
+    out += ["## Lo que se hizo con la elegida", ""]
     sel = nb["selected"]
     out.append("Ninguna molécula quedó seleccionada." if sel is None else
                f"{sel['name']} (tarea {sel['task_id']}): Vina {_fmt(sel['vina_kcal_mol'], ' kcal/mol')}, "
@@ -210,6 +342,16 @@ def render_pdf(nb: dict[str, Any]) -> bytes | None:
     for row in nb["molecules"]:
         if row["reason"] and row["status"] != "evaluada":
             story.append(Paragraph(text(f"Molécula {row['n']} ({row['name']}): {row['reason']}"), small))
+    story.append(Paragraph("Condiciones de las corridas", h2))
+    story += [Paragraph(text(line), small) for line in comparability_lines(nb.get("comparability") or {})]
+    story.append(Paragraph("Registro por molécula", h2))
+    for row in nb["molecules"]:
+        story.append(Paragraph(text(f"{row['n']}. {row['name']}"), ParagraphStyle("h3", parent=body, fontName=bold)))
+        lines = [f"SMILES del plan: {row['smiles']}", source_line(row.get("source"))] + run_lines(row.get("run"))
+        if row.get("task_id"):
+            lines.append(f"Tarea: {row['task_id']}")
+        story += [Paragraph(text(line.strip()), small) for line in lines]
+        story.append(Spacer(1, 3))
     story.append(Paragraph("Lo que se hizo con la elegida", h2))
     sel = nb["selected"]
     story.append(Paragraph(text("Ninguna molécula quedó seleccionada." if sel is None else

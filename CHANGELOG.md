@@ -2,6 +2,17 @@
 
 ## No publicado
 
+- El cuaderno de la iteración ya no tira lo que MolDesign y PubChem dijeron (revisión de la entrega de 12 ligandos de VMAT2):
+  - **procedencia de cada SMILES**: cada consulta a PubChem borraba la anterior, así que un plan armado sobre doce consultas
+    sólo conservaba la última. Ahora la conversación guarda todas (sólo la identidad: CID, nombre, página y los dos SMILES)
+    y el plan enlaza cada molécula con la consulta cuyo SMILES coincide literalmente. Dice si coincide con la conectividad
+    pero no con la estereoquímica, si es ambigua o si no hay ninguna; nunca la adivina;
+  - **registro por molécula**: el protocolo ejecutado (motor, exhaustividad, poses, semilla, caja), los avisos científicos
+    de la corrida, la especie acoplada (protonación, tautómero, estereoquímica perdida) y el receptor, copiados del resultado
+    de `GET /evaluation/status` que antes sólo se leía para la energía;
+  - **condiciones de las corridas**: qué fue igual en todas, qué cambió y qué no se registró, para saber si las energías se
+    comparan en las mismas condiciones. Lo no registrado no se da por igual.
+
 - La interfaz informa al anfitrión de lo que está haciendo en una línea (`molchat-ui-status`): un plan esperando aprobación,
   «Evaluando 2 de 3 · última Vina −7.2», el vídeo en curso o el resultado. Con el panel minimizado, MolDesign lo enseña en
   una burbuja. El cuadro de escribir vuelve a quedar abajo (el commit anterior le quitó el alto a la sección del chat).

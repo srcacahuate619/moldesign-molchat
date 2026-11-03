@@ -44,6 +44,7 @@ from ..conversation.product_actions import (ACTIONS_GUIDANCE, Proposal, mask_unc
                                             molcy_video_tool, new_proposal, outcome_text, proposal_answer, run_proposal,
                                             save_to_moldex_tool, view as proposal_view)
 from ..workflows.notebook import now_iso
+from ..workflows.run_record import molecule_source
 from ..workflows.service import (HostRelay, PlatformHttp, WorkflowProposal, complete_video, execute as execute_workflow, new_workflow,
                                  video_pending,
                                  workflow_answer, workflow_outcome_text)
@@ -63,6 +64,7 @@ CONTRACT = "moldesign.molchat/1"
 
 MAX_JSON_BODY = 1_000_000
 MAX_CHAT_TEXT = 8000
+MAX_KEPT_LOOKUPS = 40  # PubChem lookups kept per turn in the conversation (a plan has at most 12 molecules)
 MAX_MESSAGES_PER_CONVERSATION = 200
 EXEC_SNAPSHOT_S = 0.5
 EXEC_SNAPSHOT_LIMIT = 720  # 6 minutes of snapshots, then the stream closes
@@ -1203,6 +1205,10 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         "No promete información que no llegó. Comunica los errores con claridad. Responde en español.") }]
     conv = state.memory.get_conversation(conv_id, owner)
     historical_refs: list[dict[str, Any]] = []
+    # Every PubChem lookup of this conversation (earlier turns first), so a plan can say where each SMILES came from.
+    turn_lookups: list[dict[str, Any]] = []
+    earlier_lookups = [lookup for message in (conv.messages if conv else [])
+                       for lookup in (message.get("pubchem_lookups") or []) if isinstance(lookup, dict)]
     if registro.content_granted(provider.id) and conv:
         recent = conv.messages[-12:]
         messages.extend({"role": m["role"], "content": m["content"]} for m in recent
@@ -1386,6 +1392,13 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             refs.clear()
             if result.get("status") == "ok":
                 refs.extend(result["matches"])
+                # ``refs`` is the last lookup (what the turn shows); the plan needs every lookup of the turn.
+                # Only identity is kept (CID, name, page, the two SMILES): it is what a plan cites, and it stays small.
+                turn_lookups.append({"query": str(args.get("name", ""))[:120], "matches": [
+                    {"cid": item.get("cid"), "name": item.get("name"), "source": item.get("source"),
+                     "properties": {key: (item.get("properties") or {}).get(key) for key in ("SMILES", "ConnectivitySMILES")
+                                    if (item.get("properties") or {}).get(key)}}
+                    for item in result["matches"] if isinstance(item, dict)]})
                 verified.update(float(item["cid"]) for item in refs)
                 for item in refs:
                     for key in ("MolecularWeight", "XLogP", "TPSA", "HBondDonorCount", "HBondAcceptorCount"):
@@ -1483,6 +1496,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             workflow = new_workflow(state.workflows, owner, conv_id, spec)
             if workflow is None:
                 return None
+            lookups = earlier_lookups + turn_lookups
+            workflow.sources = [molecule_source(molecule.smiles, lookups) for molecule in spec.molecules]
             new_workflows.append(workflow)
             # The host's own sentence quotes the list size and the threshold the person asked for.
             numbers = {float(len(spec.molecules)), float(spec.threshold_kcal), abs(float(spec.threshold_kcal))}
@@ -1656,7 +1671,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         state.memory.add_message(conv_id, owner, "user", text)
         state.memory.add_message(conv_id, owner, "assistant", answer, references=displayed_refs, evidence=evidence,
                                  comparison_cids=comparison_cids, suggested_actions=suggested_actions,
-                                 verified_numbers=sorted(turn_exact)[:2000])
+                                 verified_numbers=sorted(turn_exact)[:2000], pubchem_lookups=turn_lookups[-MAX_KEPT_LOOKUPS:])
         yield {"type": "result", "result": {"text": answer, "intent": "harness", "evidence": evidence,
                "references": displayed_refs, "comparison_cids": comparison_cids, "suggested_actions": suggested_actions,
                "action_proposals": [proposal_view(item) for item in new_proposals],

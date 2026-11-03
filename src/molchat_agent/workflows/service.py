@@ -244,6 +244,7 @@ class WorkflowProposal:
     prep_package: tuple[str, bytes] | None = None  # MolDesign's Preparación package, byte for byte
     video_file: tuple[str, bytes] | None = None  # the MP4, once the background render finished
     folder: Path | None = None  # where the files were written; the finished render rewrites them there
+    sources: list[dict[str, Any] | None] = field(default_factory=list)  # per molecule, from the conversation's PubChem lookups
 
     def view(self) -> dict[str, Any]:
         spec = self.spec
@@ -309,7 +310,7 @@ async def execute(proposal: WorkflowProposal, host: HostPort, platform: Platform
     rendering. ``complete_video`` follows the render afterwards and rewrites the delivery with the MP4 in it.
     """
     spec = proposal.spec
-    runner = IterationRunner(spec, host, platform, emit, **(runner_kwargs or {}))
+    runner = IterationRunner(spec, host, platform, emit, sources=proposal.sources, **(runner_kwargs or {}))
     outcome = await runner.run()
     selected = next((r for r in outcome.records if r.index == outcome.selected), None)
     if outcome.video and outcome.video.get("job_id"):
