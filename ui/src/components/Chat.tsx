@@ -410,6 +410,11 @@ export default function Chat({
               {status} <button onClick={stop}>{t("chat.stop")}</button>
             </li>
           )}
+                  {behind && (
+            <li className="jump-to-latest-row">
+              <button type="button" className="jump-to-latest" onClick={toBottom}>{t("chat.latest")}</button>
+            </li>
+          )}
         </ol>
         {error && (
           <p role="alert" className="error">
@@ -447,9 +452,6 @@ export default function Chat({
               </button>
             </p>
           </div>
-        )}
-        {behind && (
-          <button type="button" className="jump-to-latest" onClick={toBottom}>{t("chat.latest")}</button>
         )}
         <form
           className="chat-input"

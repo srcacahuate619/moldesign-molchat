@@ -467,6 +467,9 @@ class IterationRunner:
                 record.molecule_id, record.affinity_kcal = reading.molecule_id, reading.vina_kcal
                 record.physical_status = reading.physical_status
                 record.seconds_to_start, record.seconds_to_result = reading.seconds_to_start, reading.seconds_to_result
+                if reading.retried_for == "memoria":
+                    self.outcome.notes.append(f"Molécula {record.index} ({record.name}): a Vina le faltó memoria del equipo; "
+                                              "se repitió una vez" + (" y salió bien." if reading.status == "evaluated" else " y volvió a fallar."))
                 if reading.status == "evaluated":
                     record.outcome, record.reason = judge(self.spec, record.affinity_kcal, record.physical_status)
         except asyncio.CancelledError:

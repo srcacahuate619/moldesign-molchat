@@ -2,6 +2,10 @@
 
 ## No publicado
 
+- Cuarto ensayo en la app: una corrida fallida y rápida dejó que el editor volviera a la molécula anterior y se evaluó la
+  equivocada; y Vina se quedó sin memoria porque el equipo estaba saturado. Ahora Vina sin memoria se repite una vez tras
+  20 s (sólo ese fallo) y el anfitrión comprueba la molécula antes de pulsar. La sección del chat ya no tiene una segunda
+  barra de scroll: sólo se desplaza la lista de mensajes, y «Mensajes nuevos» va pegado abajo dentro de ella.
 - Tercer ensayo en la app, todo el flujo funcionó; ajustes:
   - el vídeo se puede personalizar desde el chat con todos los controles de Molcy (formato *prueba*, título, receptor,
     colores de receptor, residuos destacados y líneas, etiquetas, contactos, muestra anterior, movimiento del Ensamble);

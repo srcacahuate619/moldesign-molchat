@@ -67,6 +67,12 @@ Cada molécula es un intento aislado con su propio estado: `evaluated`, `failed`
   molécula, y sólo reintentaba `busy` al evaluar; tras la primera molécula, las demás fallaron en cascada. Las pruebas
   `test_the_loop_asks_the_window_and_waits_for_each_run_to_close_before_loading_the_next` y
   `test_an_older_window_without_case_status_still_works_by_retrying_busy_loads` lo cubren.
+- Si Vina termina con «insufficient memory» (el equipo no le dio memoria: otro programa la estaba usando), se espera
+  20 s y se repite esa molécula **una sola vez**; la corrida fallida no dejó nada que duplicar. Si vuelve a faltar, la
+  molécula falla con ese motivo y el cuaderno lo anota. Ningún otro fallo se repite.
+- MolDesign se asegura de evaluar la molécula pedida: si el editor ya no tiene la que cargó el chat (Ketcher puede emitir
+  tarde un dibujo anterior), el backend compara las dos como moléculas y, si son distintas, la pestaña vuelve a poner la
+  pedida antes de pulsar; si no la conserva, contesta «ocupado» con el motivo en vez de evaluar otra.
 - `unknown` (no se sabe si MolDesign llegó a hacer algo) **nunca se repite**: repetirlo podría duplicar una evaluación.
 - Si se agota el tope total, el estado final es `budget_exhausted`, con lo evaluado hasta ahí.
 - Si la ventana de MolDesign se cierra mientras corre, el plan se cancela.

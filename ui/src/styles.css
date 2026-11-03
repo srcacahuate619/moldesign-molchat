@@ -54,7 +54,8 @@ input, textarea { max-width: 100%; }
 .chat-side li button { width: 100%; text-align: left; overflow-wrap: anywhere; background: transparent; border-color: transparent; }
 .chat-side li button.active { color: var(--accent); background: var(--surface); }
 .history-empty { text-align: center; font-size: 12px; margin: 10px; }
-.chat-main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+/* Only the message list scrolls: the section around it never does (a second scrollbar appeared when the box grew). */
+.app > section.chat-main { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .messages { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; list-style: none; margin: 0; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 .chat-empty { flex: 1; min-height: 140px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; text-align: center; color: var(--muted); }
 .chat-empty strong { color: var(--ink); font-size: 15px; }
@@ -107,7 +108,8 @@ input, textarea { max-width: 100%; }
 .chat-input { flex: none; display: flex; align-items: flex-end; gap: 8px; padding: 12px 14px 14px; border-top: 1px solid var(--line); }
 .chat-input label { flex: 1; min-width: 0; display: flex; }
 .chat-input textarea { width: 100%; resize: none; overflow-y: auto; overscroll-behavior: contain; line-height: 1.4; max-height: 200px; }
-.jump-to-latest { align-self: center; margin: -36px auto 6px; position: relative; z-index: 1; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); padding: 4px 12px; font-size: 0.85em; cursor: pointer; }
+.jump-to-latest-row { position: sticky; bottom: 0; display: flex; justify-content: center; pointer-events: none; }
+.jump-to-latest { pointer-events: auto; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); padding: 4px 12px; font-size: 0.85em; cursor: pointer; box-shadow: 0 2px 8px rgb(0 0 0 / 0.25); }
 .voice-button, .send-button { width: 40px; height: 40px; padding: 0; flex: none; display: grid; place-items: center; }
 .voice-button.recording { color: var(--danger); border-color: var(--danger); }
 .send-button { color: white; background: var(--accent-fill); border-color: var(--accent-fill); }

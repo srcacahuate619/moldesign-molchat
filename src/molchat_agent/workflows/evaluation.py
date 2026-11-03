@@ -50,6 +50,7 @@ class EvaluationReading:
     reason: str | None = None
     seconds_to_start: float | None = None  # waiting for the case, loading and starting
     seconds_to_result: float | None = None  # from the start of the run to the backend's terminal state
+    retried_for: str | None = None  # why the run was repeated once (the machine ran out of memory), if it was
 
 
 @dataclass
@@ -58,6 +59,11 @@ class FreeReading:
     seconds: float
     run_state: str | None = None
     asked: int = 0
+
+
+def _out_of_memory(reason: str | None) -> bool:
+    """Vina's own words when the machine cannot give it memory («Error: insufficient memory!»)."""
+    return bool(reason) and "insufficient memory" in reason.lower()
 
 
 def _number(value: Any) -> float | None:
@@ -71,10 +77,11 @@ class EvaluationStep:
                  clock: Callable[[], float] = time.monotonic,
                  sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
                  poll_s: float = 3.0, busy_wait_s: float = 5.0, busy_budget_s: float = 240.0,
-                 on_wait: Callable[[str | None], None] | None = None) -> None:
+                 memory_wait_s: float = 20.0, on_wait: Callable[[str | None], None] | None = None) -> None:
         self.host, self.platform = host, platform
         self._clock, self._sleep = clock, sleep
         self._poll_s, self._busy_wait_s, self._busy_budget_s = poll_s, busy_wait_s, busy_budget_s
+        self._memory_wait_s = memory_wait_s
         self._on_wait = on_wait or (lambda _message: None)
 
     async def wait_until_free(self, case_name: str, budget_s: float | None = None) -> FreeReading:
@@ -117,6 +124,21 @@ class EvaluationStep:
             return EvaluationReading("failed", reason=(
                 f"MolDesign siguió ocupado {waited:.0f} s y no se cargó la molécula en el caso." if loaded.get("status") == "busy"
                 else f"No se cargó la molécula en el caso («{loaded.get('status')}»)."))
+        reading = await self._start_and_read(case_name, budget, timeout_s, began)
+        if reading.status == "failed" and _out_of_memory(reading.reason):
+            # Vina could not get memory from the machine (another program was using it). The failed run left nothing
+            # behind, so it is safe to wait for the case to be free and start it once more; a second failure stays.
+            first = reading.reason
+            await self._sleep(self._memory_wait_s)
+            await self.wait_until_free(case_name, budget)
+            reading = await self._start_and_read(case_name, budget, timeout_s, self._clock())
+            reading.retried_for = "memoria"
+            if reading.status == "failed" and _out_of_memory(reading.reason):
+                reading.reason = (f"{first} Se repitió una vez tras {self._memory_wait_s:g} s y volvió a faltar memoria: "
+                                  "el equipo no tenía memoria libre para Vina.")
+        return reading
+
+    async def _start_and_read(self, case_name: str, budget: float, timeout_s: float, began: float) -> EvaluationReading:
         started, waited = await self._until_not_busy(lambda: self.host.evaluate(case_name), budget)
         status, task_id = started.get("status"), started.get("task_id")
         if status == "unknown":

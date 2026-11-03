@@ -113,3 +113,47 @@ async def test_a_window_that_never_frees_gives_up_within_its_budget_and_an_unkno
     clock = Clock()
     free = await step(Host(states=["unknown"]), Backend(clock), clock).wait_until_free("caso")
     assert free.status == "unknown" and free.seconds == 0 and free.asked == 1
+
+
+class Jobs:
+    """Each started run ends with the next answer in the list."""
+
+    def __init__(self, *answers: dict[str, Any]) -> None:
+        self.answers, self.polls = list(answers), 0
+
+    async def job(self, task_id: str) -> dict[str, Any]:
+        self.polls += 1
+        return self.answers.pop(0) if len(self.answers) > 1 else self.answers[0]
+
+    async def top_pose(self, task_id: str) -> dict[str, Any]:
+        return {"physical_status": "passed"}
+
+
+OOM = {"status": "FAILURE", "error": "DockingFailed: Docking falló para molécula 'af42' contra target '8T69' (Vina exit code: 1): Error: insufficient memory!"}
+OK = {"status": "SUCCESS", "result": {"molecule_id": "m-1", "affinity_kcal": -9.566}}
+
+
+async def test_a_run_that_ran_out_of_memory_is_repeated_once_after_a_pause_and_kept_if_it_works() -> None:
+    clock = Clock()
+    host = Host()
+    reading = await step(host, Jobs(OOM, OK), clock).evaluate("caso", "CCO", timeout_s=60)
+    assert reading.status == "evaluated" and reading.vina_kcal == -9.566 and reading.retried_for == "memoria"
+    assert host.calls.count("evaluate") == 2 and host.calls.count("load") == 1
+    assert clock.now >= 20  # it waited before trying again
+
+
+async def test_running_out_of_memory_twice_fails_and_says_so() -> None:
+    clock = Clock()
+    host = Host()
+    reading = await step(host, Jobs(OOM, OOM), clock).evaluate("caso", "CCO", timeout_s=60)
+    assert reading.status == "failed" and host.calls.count("evaluate") == 2
+    assert "volvió a faltar memoria" in reading.reason
+
+
+async def test_any_other_failure_is_never_repeated() -> None:
+    clock = Clock()
+    host = Host()
+    other = {"status": "FAILURE", "error": "RDKit no pudo embeber la molécula"}
+    reading = await step(host, Jobs(other, OK), clock).evaluate("caso", "CCO", timeout_s=60)
+    assert reading.status == "failed" and host.calls.count("evaluate") == 1 and reading.retried_for is None
+
