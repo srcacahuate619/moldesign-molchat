@@ -1,5 +1,7 @@
 # La llave y la cerradura
 
+> Para añadir una herramienta, una acción de anfitrión o hacer tu propia cerradura, empieza por [Extender MolChat](../kit/es/EXTENDING.md) ([en inglés](../kit/en/EXTENDING.md)). Este documento fija la copia y la fijación que comprueba MolDesign.
+
 MolChat es la **llave**. MolDesign tiene la **cerradura**: el código que decide si la llave encaja, la arranca y la muestra en la aplicación. Este documento describe el contrato entre ambos desde el lado de MolChat. Lo que MolDesign comprueba antes de arrancar está en su ADR 100 (`docs/100_ADR_MOLCHAT_EXTERNO.md` del repositorio de MolDesign).
 
 ## Qué es cada cosa

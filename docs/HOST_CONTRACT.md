@@ -1,9 +1,10 @@
 # Contrato de acciones de host
 
-Qué tiene que implementar una plataforma para que MolChat opere sobre ella. Este documento existe porque el código
-del anfitrión de MolDesign (la «cerradura») no es público: sin él, un tercero no podría saber qué le pide MolChat ni qué
-tiene que contestar. Describe lo que **MolChat envía y acepta**, verificado contra su código y sus pruebas; no describe
-la ciencia de MolDesign.
+Qué tiene que implementar una plataforma para que MolChat opere sobre ella. Describe lo que **MolChat envía y acepta**,
+verificado contra su código y sus pruebas; no describe la ciencia de MolDesign. El anfitrión de MolDesign, la primera
+«cerradura», es público desde el 2026-10-31: [`MolChatHostMount.tsx`](https://github.com/srcacahuate619/moldesign-app/blob/main/frontend/components/ai-host/MolChatHostMount.tsx)
+en `moldesign-app`. Para añadir una acción o hacer otra cerradura, empieza por la guía
+[`kit/es/EXTENDING.md`](../kit/es/EXTENDING.md) ([en inglés](../kit/en/EXTENDING.md)).
 
 > Estado: estas acciones **no forman parte** de `moldesign.molchat/1` ni del kit de conformidad
 > ([`BASE_HARNESS_Y_PUENTE.md`](BASE_HARNESS_Y_PUENTE.md)). Son el contrato del modo alojado, con un anfitrión que
@@ -131,6 +132,25 @@ sólo lo manda cuando cambia; varias partes informan a la vez y gana la más imp
 pinta como texto en una burbuja junto a su botón cuando el panel está minimizado; minimizar no detiene nada, porque el
 iframe sigue vivo. Un estado mal formado apaga la burbuja.
 
+## Progreso del plan para el piloto automático (sin respuesta)
+
+Otro sobre propio: `{ type: "molchat-ui-progress", progress }`, sin más campos. Mientras un plan de iteración corre,
+`progress` es el plan en pocos campos; `null` dice que no hay plan y apaga la vista. Un anfitrión que no conoce este
+sobre lo ignora y sigue con `molchat-ui-status`.
+
+| Campo | Contenido |
+|---|---|
+| `title` | El título del plan, de 1 a 140 caracteres. |
+| `phase` | `running`, `rendering` (el plan terminó y espera el vídeo), `done` o `stopped`. |
+| `now` | Lo que hace en este momento, de 1 a 140 caracteres. |
+| `steps` | Hasta 10 pasos, cada uno con `label` (hasta 60 caracteres) y `state`. |
+| `molecules` | Hasta 12 moléculas, cada una con `name` (hasta 80 caracteres), `state`, `vina` (número o `null`) y `meets` (booleano: si cumple la regla). |
+
+`state` es `pending`, `running`, `done`, `failed` o `skipped`. Los textos no llevan caracteres de control. El anfitrión de
+MolDesign lo valida campo por campo, descarta el sobre entero si algo no encaja, y lo usa para mostrar que el plan, no la
+persona, maneja la aplicación: un marco, un cartel con `now` y el plan con el score de cada molécula en la burbuja. Lo pinta
+como texto, nunca como HTML.
+
 ## Acciones que sólo navegan (sin respuesta)
 
 | `kind` | Campos | Efecto esperado |
@@ -162,6 +182,6 @@ No hay respuesta: son enlaces, no operaciones.
 | Puente de Preparación (origen, forma, plazo) | `ui/src/lib/preparationHost.test.ts` |
 | Plataforma simulada que contesta lo anterior | `tests/conversation/fake_moldesign.py` |
 
-El anfitrión real de MolDesign (`MolChatHostMount`) tiene sus propias pruebas en el repositorio de MolDesign, que no
-se publica. Lo que esta tabla no demuestra es la integración viva con una ventana real de Tauri: se ensaya a mano y se
-declara en el vídeo.
+El anfitrión real de MolDesign (`MolChatHostMount`) tiene sus propias pruebas en `moldesign-app`
+(`frontend/components/ai-host/__tests__/`). Lo que esta tabla no demuestra es la integración viva con una ventana real de
+Tauri: se ensaya a mano y se ve en la [demo de 3 minutos](https://www.youtube.com/watch?v=luRIXlqWy6I).
