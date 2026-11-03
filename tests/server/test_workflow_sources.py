@@ -83,3 +83,34 @@ async def test_each_molecule_of_the_plan_keeps_the_cid_it_came_from(tmp_path, mo
     stored = [m for m in state.memory.get_conversation(conv_id, "owner").messages if m.get("pubchem_lookups")]
     assert [m["pubchem_lookups"][0]["query"] for m in stored] == ["etanol", "propanol"]
     assert set(stored[0]["pubchem_lookups"][0]["matches"][0]["properties"]) == {"SMILES"}
+
+
+@pytest.mark.asyncio
+async def test_a_failed_turn_says_why(tmp_path, monkeypatch):
+    """«No pude completar el turno» alone could not be diagnosed: the reason (ours, no key in it) goes with it."""
+    from molchat_agent.providers.base import ProviderError
+
+    state, registry, headers = state_for(tmp_path)
+    provider = registry.get("fake")
+
+    async def model(messages, tools):
+        raise ProviderError("El proveedor rechazó las herramientas (HTTP 400).")
+
+    monkeypatch.setattr(provider, "chat_with_tools", model, raising=False)
+
+    class Bridge:
+        def with_token(self, token):
+            return self
+
+    state.bridge = Bridge()
+
+    async def registry_for_turn(_token):
+        return registry
+
+    monkeypatch.setattr(state, "registro_de_turno", registry_for_turn)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(state, allowed_hosts=("testserver",))),
+                                 base_url="http://testserver") as client:
+        entries = events(await client.post("/v1/chat", headers=headers, json={"text": "evalúa esta lista"}))
+    text = next(e["result"]["text"] for e in entries if e["type"] == "result")
+    assert text.startswith("No pude completar el turno con el proveedor de herramientas "
+                           "(El proveedor rechazó las herramientas (HTTP 400).)")

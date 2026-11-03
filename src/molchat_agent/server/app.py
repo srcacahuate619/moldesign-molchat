@@ -1677,10 +1677,14 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
                "action_proposals": [proposal_view(item) for item in new_proposals],
                "workflow_proposals": [item.view() for item in new_workflows], "used_llm": True, "verified_values": sorted(verified),
                "latency_ms": int((time.monotonic() - started) * 1000)}}
-    except (ProviderError, ProviderDisabled, ValueError, RuntimeError):
+    except (ProviderError, ProviderDisabled, ValueError, RuntimeError) as exc:
         save_trace("failed")
         trace_finished = True
-        answer = (case_answer() if case_started else "No pude completar el turno con el proveedor de herramientas.")
+        # The reason is said, not swallowed: these messages are ours (an HTTP status, «resultado demasiado grande»...) and
+        # carry no key. Without it a failed turn could not be diagnosed: MolChat's output is not kept on disk.
+        reason = " ".join(str(exc).split())[:200] or type(exc).__name__
+        print(f"molchat: turno fallido: {type(exc).__name__}: {reason}", flush=True)
+        answer = (case_answer() if case_started else f"No pude completar el turno con el proveedor de herramientas ({reason}).")
         if smiles_result_data and smiles_result_data.get("status") == "applied":
             answer += f' MolDesign confirmó el SMILES en el campo del caso «{smiles_result_data.get("case_name", "")}»; no se confirmó el guardado ni el dibujo.'
         elif smiles_started:
