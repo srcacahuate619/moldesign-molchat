@@ -11,6 +11,12 @@ describe("strings", () => {
     }
   });
 
+  it("has no Spanish left in the English strings", () => {
+    // «Preparación» stayed in the English plan card and showed up in the demo recording.
+    const spanish = Object.entries(strings("en")).filter(([, value]) => /[áéíóúñ¿¡]/i.test(value));
+    expect(spanish).toEqual([]);
+  });
+
   it("declares the platform source rather than the retired demo dataset", () => {
     for (const locale of ["es", "en"] as const) {
       expect(strings(locale)["settings.dataNote"]).toContain("MolDesign");
