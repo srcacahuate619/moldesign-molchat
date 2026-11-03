@@ -1,7 +1,7 @@
-"""A screening the person approved once: a fixed list of molecules, a stop rule and a deterministic loop.
+"""An iteration the person approved once: a fixed list of molecules, a stop rule and a deterministic loop.
 
 The model never loops. It reads the request, extracts the parameters (case, receptor, molecules, threshold) and
-proposes a ``ScreeningSpec``; the host validates it, shows it on a card and runs it only after one click that is
+proposes a ``IterationSpec``; the host validates it, shows it on a card and runs it only after one click that is
 bound to the spec's digest. From then on nothing waits for a person: every molecule is its own attempt, a failure
 is recorded and the loop goes on, and the stop rule is written down before the first molecule is evaluated.
 
@@ -26,7 +26,7 @@ import unicodedata
 from collections.abc import Awaitable, Callable
 from typing import Any, Protocol
 
-SCHEMA = "moldesign.molchat.screening/1"
+SCHEMA = "moldesign.molchat.iteration/1"
 MAX_MOLECULES = 12
 MAX_NAME = 80
 MAX_SMILES = 500
@@ -42,7 +42,7 @@ _RECEPTOR_OK = frozenset({"applied", "already_selected"})
 
 
 class SpecError(ValueError):
-    """The proposed screening is not valid; the message says which field and why."""
+    """The proposed iteration is not valid; the message says which field and why."""
 
 
 def _clean(text: Any, field_name: str, maximum: int) -> str:
@@ -70,7 +70,7 @@ class VideoRequest:
 
 
 @dataclass(frozen=True)
-class ScreeningSpec:
+class IterationSpec:
     case_name: str
     pdb_id: str
     molecules: tuple[Molecule, ...]
@@ -86,9 +86,9 @@ class ScreeningSpec:
     budget_s: int = 2400
 
     @classmethod
-    def from_dict(cls, data: Any) -> "ScreeningSpec":
+    def from_dict(cls, data: Any) -> "IterationSpec":
         if not isinstance(data, dict):
-            raise SpecError("El cribado debe ser un objeto.")
+            raise SpecError("La iteración debe ser un objeto.")
         known = {"case_name", "pdb_id", "molecules", "threshold_kcal", "stop", "require_physical", "save", "video",
                  "preparation", "package", "original_request", "per_molecule_timeout_s", "budget_s"}
         if set(data) - known:
@@ -170,7 +170,7 @@ class ScreeningSpec:
         if self.require_physical:
             rule += " y controles físicos de la mejor pose superados"
         lines = [f"Caso «{self.case_name}» · receptor {self.pdb_id}",
-                 f"{len(self.molecules)} moléculas, una por una: " + ", ".join(m.name for m in self.molecules),
+                 f"{len(self.molecules)} moléculas, una tras otra en este mismo caso: " + ", ".join(m.name for m in self.molecules),
                  f"Se detiene {'en la primera que cumple' if self.stop == 'first' else 'al recorrer la lista entera'}: {rule}",
                  "Si una molécula falla, se anota y se sigue con la siguiente."]
         if self.save:
@@ -228,7 +228,7 @@ class MoleculeRecord:
 
 
 @dataclass
-class ScreeningOutcome:
+class IterationOutcome:
     spec: dict[str, Any]
     digest: str
     state: str = "running"  # completed | none_qualified | blocked | budget_exhausted
@@ -253,7 +253,7 @@ def _number(value: Any) -> float | None:
     return float(value)
 
 
-def judge(spec: ScreeningSpec, affinity: float | None, physical: str | None) -> tuple[str, str]:
+def judge(spec: IterationSpec, affinity: float | None, physical: str | None) -> tuple[str, str]:
     """``(outcome, reason)`` for one evaluated molecule, from numbers MolDesign returned."""
     if affinity is None:
         return "below_threshold", "MolDesign no devolvió la energía de Vina."
@@ -270,16 +270,17 @@ async def _noop_sleep(_: float) -> None:
     return None
 
 
-class ScreeningRunner:
-    def __init__(self, spec: ScreeningSpec, host: HostPort, platform: PlatformPort, emit: Emit | None = None, *,
+class IterationRunner:
+    def __init__(self, spec: IterationSpec, host: HostPort, platform: PlatformPort, emit: Emit | None = None, *,
                  clock: Callable[[], float] = time.monotonic,
                  sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
-                 poll_s: float = 3.0, busy_retries: int = 3, busy_wait_s: float = 5.0) -> None:
+                 poll_s: float = 3.0, busy_wait_s: float = 5.0, busy_budget_s: float = 240.0) -> None:
         self.spec, self.host, self.platform = spec, host, platform
         self._emit = emit or (lambda _event: None)
         self._clock, self._sleep = clock, sleep
-        self._poll_s, self._busy_retries, self._busy_wait_s = poll_s, busy_retries, busy_wait_s
-        self.outcome = ScreeningOutcome(spec.as_dict(), spec.digest,
+        self._poll_s, self._busy_wait_s, self._busy_budget_s = poll_s, busy_wait_s, busy_budget_s
+        self._plan_started = clock()
+        self.outcome = IterationOutcome(spec.as_dict(), spec.digest,
                                         records=[MoleculeRecord(i, m.name, m.smiles)
                                                  for i, m in enumerate(spec.molecules, start=1)])
 
@@ -289,9 +290,9 @@ class ScreeningRunner:
     def _record(self, index: int) -> MoleculeRecord:
         return self.outcome.records[index - 1]
 
-    async def run(self) -> ScreeningOutcome:
+    async def run(self) -> IterationOutcome:
         out, spec = self.outcome, self.spec
-        started = self._clock()
+        started = self._plan_started = self._clock()
         self.emit("started", digest=out.digest, molecules=len(spec.molecules))
         if not await self._prepare_case():
             out.state = "blocked"
@@ -308,7 +309,7 @@ class ScreeningRunner:
                 record.status, record.reason = "skipped", "Se agotó el tiempo total del plan."
                 out.state = "budget_exhausted"
                 continue
-            await self._screen_one(record)
+            await self._run_one(record)
             self.emit("molecule", record=record.as_dict())
             if record.outcome == "qualifies":
                 qualifiers.append(record)
@@ -330,7 +331,7 @@ class ScreeningRunner:
                                 ("asignar el receptor", lambda: self.host.assign_receptor(spec.case_name, spec.pdb_id),
                                  _RECEPTOR_OK)):
             try:
-                result = await call()
+                result, waited = await self._until_free(label, call)
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # noqa: BLE001 - the plan must end with an honest state, never hang
@@ -339,13 +340,39 @@ class ScreeningRunner:
             status = result.get("status") if isinstance(result, dict) else None
             self.emit("case_step", step=label, status=status)
             if status not in ok:
-                out.notes.append(f"No se pudo {label}: el host respondió «{status or 'sin respuesta'}».")
+                out.notes.append(f"No se pudo {label}: " + (f"MolDesign siguió ocupado {waited:.0f} s." if status == "busy"
+                                                          else f"el host respondió «{status or 'sin respuesta'}»."))
                 return False
             if status == "exists":
                 out.notes.append("El caso ya existía: se reutilizó con su nombre; sus inputs se reemplazan molécula a molécula.")
         return True
 
-    async def _screen_one(self, record: MoleculeRecord) -> None:
+    async def _until_free(self, label: str, call: Callable[[], Awaitable[dict[str, Any]]]) -> tuple[dict[str, Any], float]:
+        """One call to the host, repeated while MolDesign answers «busy». Returns the last answer and the seconds waited.
+
+        «busy» means the window is still closing something else: the interface keeps the case locked until the previous
+        run is fully closed, and in development that took about 45 s after Vina had already finished. Nothing was done,
+        so asking again is safe, and it is the only status that is ever repeated (``unknown`` may have done something).
+        The wait is bounded by ``busy_budget_s`` and by what is left of the plan's own time.
+        """
+        waited, announced = 0.0, False
+        while True:
+            result = await call()
+            if not isinstance(result, dict) or result.get("status") != "busy":
+                break
+            left = self.spec.budget_s - (self._clock() - self._plan_started)
+            if waited + self._busy_wait_s > self._busy_budget_s or self._busy_wait_s > left:
+                break
+            if not announced:
+                announced = True
+                self.emit("phase", message=f"MolDesign sigue cerrando la corrida anterior; espero a que esté libre para {label}.")
+            await self._sleep(self._busy_wait_s)
+            waited += self._busy_wait_s
+        if announced:
+            self.emit("phase", message=None)
+        return result, waited
+
+    async def _run_one(self, record: MoleculeRecord) -> None:
         began = self._clock()
         self.emit("molecule_started", index=record.index, name=record.name)
         try:
@@ -358,16 +385,14 @@ class ScreeningRunner:
 
     async def _evaluate(self, record: MoleculeRecord) -> None:
         spec = self.spec
-        loaded = await self.host.load_smiles(spec.case_name, record.smiles)
+        loaded, waited = await self._until_free(f"cargar «{record.name}»", lambda: self.host.load_smiles(spec.case_name, record.smiles))
         if loaded.get("status") != "applied":
-            record.status, record.reason = "failed", f"No se cargó la molécula en el caso («{loaded.get('status')}»)."
+            record.status = "failed"
+            record.reason = (f"MolDesign siguió ocupado {waited:.0f} s y no se cargó la molécula en el caso."
+                             if loaded.get("status") == "busy"
+                             else f"No se cargó la molécula en el caso («{loaded.get('status')}»).")
             return
-        started: dict[str, Any] = {}
-        for attempt in range(self._busy_retries + 1):
-            started = await self.host.evaluate(spec.case_name)
-            if started.get("status") != "busy" or attempt == self._busy_retries:
-                break
-            await self._sleep(self._busy_wait_s)
+        started, waited = await self._until_free(f"evaluar «{record.name}»", lambda: self.host.evaluate(spec.case_name))
         status = started.get("status")
         task_id = started.get("task_id")
         if status == "unknown":
@@ -377,7 +402,8 @@ class ScreeningRunner:
         if status not in {"started", "started_unregistered"} or not isinstance(task_id, str):
             reason = started.get("reason") if isinstance(started.get("reason"), str) else None
             record.status = "failed"
-            record.reason = f"MolDesign no inició la evaluación («{status}»)" + (f": {reason}" if reason else ".")
+            record.reason = (f"MolDesign siguió ocupado {waited:.0f} s y no inició la evaluación." if status == "busy"
+                             else f"MolDesign no inició la evaluación («{status}»)" + (f": {reason}" if reason else "."))
             return
         record.task_id = task_id
         job = await self._follow(task_id, spec.per_molecule_timeout_s)

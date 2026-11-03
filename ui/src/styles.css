@@ -87,11 +87,11 @@ input, textarea { max-width: 100%; }
 .action-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 8px 0; overflow-wrap: anywhere; }
 .action-card p { margin: 4px 0; }
 .action-card ul { margin: 6px 0; padding-left: 18px; }
-.screening-table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 0.9em; }
-.screening-table th, .screening-table td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line); }
-.screening-table tr[data-outcome="qualifies"] td { font-weight: 600; }
-.screening-table tr[data-outcome="failed"] td, .screening-table tr[data-outcome="timeout"] td, .screening-table tr[data-outcome="unknown"] td { opacity: 0.7; }
-.screening-summary { margin-top: 8px; }
+.iteration-table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 0.9em; }
+.iteration-table th, .iteration-table td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line); }
+.iteration-table tr[data-outcome="qualifies"] td { font-weight: 600; }
+.iteration-table tr[data-outcome="failed"] td, .iteration-table tr[data-outcome="timeout"] td, .iteration-table tr[data-outcome="unknown"] td { opacity: 0.7; }
+.iteration-summary { margin-top: 8px; }
 .action-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
 .action-result:not(.error) { color: inherit; }
 .pubchem-properties { margin: 8px 0; }

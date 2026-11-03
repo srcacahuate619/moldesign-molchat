@@ -49,10 +49,10 @@ export interface TurnResult {
   workflow_proposals?: unknown;
 }
 
-/** A screening the model proposed: one approval runs the whole plan. `digest` binds the click to exactly this plan. */
+/** An iteration the model proposed: one approval runs the whole plan. `digest` binds the click to exactly this plan. */
 export interface WorkflowProposal {
   id: string;
-  kind: "screening";
+  kind: "iteration";
   digest: string;
   title: string;
   lines: string[];
@@ -241,7 +241,7 @@ export const api = {
   revoke: (t: string) => postJson(t, "/v1/session/revoke", {}),
 };
 
-/** Approve a screening and follow it: the same event stream a chat turn uses, so the host's actions arrive on it. */
+/** Approve an iteration and follow it: the same event stream a chat turn uses, so the host's actions arrive on it. */
 export function runWorkflow(
   token: string,
   id: string,

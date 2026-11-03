@@ -10,17 +10,17 @@ import pytest
 
 from molchat_agent.workflows.deliverable import build_deliverable, verify_deliverable
 from molchat_agent.workflows.notebook import build_notebook, notebook_json, pdf_available, render_markdown, render_pdf
-from molchat_agent.workflows.screening import MoleculeRecord, ScreeningOutcome, ScreeningSpec
+from molchat_agent.workflows.iteration import MoleculeRecord, IterationOutcome, IterationSpec
 
 REQUEST = "molchat investiga esta lista y si alguna pasa el umbral de -9.5 kcal/mol la guardas en moldex"
 
 
-def outcome(selected: int | None = 2) -> ScreeningOutcome:
-    spec = ScreeningSpec.from_dict({
+def outcome(selected: int | None = 2) -> IterationOutcome:
+    spec = IterationSpec.from_dict({
         "case_name": "hipotesis-8T69", "pdb_id": "8T69", "threshold_kcal": -9.5, "original_request": REQUEST,
         "molecules": [{"name": "A", "smiles": "CCO"}, {"name": "B", "smiles": "CCN"}, {"name": "C", "smiles": "CCC"}],
         "video": {"scene": "busqueda", "format": "previsualizacion"}, "preparation": True, "package": True})
-    out = ScreeningOutcome(spec.as_dict(), spec.digest)
+    out = IterationOutcome(spec.as_dict(), spec.digest)
     out.records = [
         MoleculeRecord(1, "A", "CCO", "evaluated", "below_threshold", "t-1", "m-1", -7.1, "passed",
                        "Vina -7.1 kcal/mol no llega al umbral de -9.5.", 41.0),

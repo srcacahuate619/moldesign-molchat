@@ -2,7 +2,7 @@
 
 ## No publicado
 
-- Cribado automático con una sola aprobación (`propose_screening`, `docs/CRIBADO_AUTOMATICO.md`): el modelo propone un plan
+- Iteración automática con una sola aprobación (`propose_iteration`, `docs/ITERACION_DE_MOLECULAS.md`): el modelo propone un plan
   cerrado (caso, receptor, hasta 12 moléculas, umbral de Vina, qué guardar) y la persona lo aprueba con un clic ligado al
   hash SHA-256 del plan. A partir de ahí un bucle determinista evalúa cada molécula como un intento aislado —un fallo se
   registra y el bucle sigue; `busy` se reintenta y `unknown` nunca—, y una molécula cumple solo si la energía de Vina de su
@@ -12,6 +12,13 @@
   (paquete de Preparación intacto, `MANIFEST.json` con SHA-256 y lo ausente declarado en `missing`) los escribe el código,
   no el modelo. Rutas `/v1/workflows/{id}` (`run` exige el hash, `cancel`, `files/{name}`) y
   `/v1/preparation-requests/{id}/result`; `MOLCHAT_OUTPUT_DIR` fija la carpeta de salida.
+- La iteración espera a que la ventana de MolDesign cierre cada corrida: el primer ensayo en la app evaluó la primera molécula
+  y dio por fallidas las demás, porque la interfaz seguía bloqueando el caso (`busy`) y sólo se reintentaba al evaluar, no al
+  cargar la molécula. Ahora `busy` se espera en cada llamada al anfitrión (cada 5 s, hasta 240 s y sin pasar del tope del plan),
+  la tarjeta lo dice mientras espera y, si no se libera, la molécula falla con ese motivo en vez de como molécula inválida.
+  La tarjeta declara que las moléculas se evalúan una tras otra en el mismo caso. Sin el nombre «cribado», que en MolDesign es
+  el módulo de lotes: `propose_screening` pasa a `propose_iteration`, `workflows/screening.py` a `workflows/iteration.py` y
+  `docs/CRIBADO_AUTOMATICO.md` a `docs/ITERACION_DE_MOLECULAS.md`.
 - Acción de host `audit_case_preparation`: la ventana del anfitrión construye la proyección del caso y devuelve el estado que
   su auditoría dictó; el sidecar la audita y exporta con la sesión de la cuenta. Las acciones de host se documentan por
   primera vez en `docs/HOST_CONTRACT.md`.

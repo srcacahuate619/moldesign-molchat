@@ -29,18 +29,18 @@ interface Summary {
   notes: string[];
 }
 
-/** Keep only well-formed screenings: the card renders what the sidecar says, so it checks the shape first. */
+/** Keep only well-formed iterations: the card renders what the sidecar says, so it checks the shape first. */
 export function validWorkflows(value: unknown): WorkflowProposal[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item): WorkflowProposal[] => {
     if (typeof item !== "object" || item === null) return [];
     const p = item as Record<string, unknown>;
     if (typeof p["id"] !== "string" || !/^[a-f0-9]{32}$/.test(p["id"])) return [];
-    if (p["kind"] !== "screening" || typeof p["digest"] !== "string" || !/^sha256:[a-f0-9]{64}$/.test(p["digest"])) return [];
+    if (p["kind"] !== "iteration" || typeof p["digest"] !== "string" || !/^sha256:[a-f0-9]{64}$/.test(p["digest"])) return [];
     if (typeof p["title"] !== "string" || p["title"].length === 0 || p["title"].length > 120) return [];
     if (!Array.isArray(p["lines"]) || p["lines"].length > 16 || !p["lines"].every((l) => typeof l === "string" && l.length <= 500)) return [];
     if (!Array.isArray(p["molecules"]) || p["molecules"].length > 12 || !p["molecules"].every((m) => typeof m === "string" && m.length <= 80)) return [];
-    return [{ id: p["id"], kind: "screening", digest: p["digest"], title: p["title"], lines: p["lines"] as string[], molecules: p["molecules"] as string[] }];
+    return [{ id: p["id"], kind: "iteration", digest: p["digest"], title: p["title"], lines: p["lines"] as string[], molecules: p["molecules"] as string[] }];
   }).slice(0, 1);
 }
 
@@ -66,11 +66,11 @@ function summaryOf(value: unknown): Summary | null {
 }
 
 /**
- * The approval card of a screening. The model only proposes; the person's click binds the plan's digest and runs it.
+ * The approval card of an iteration. The model only proposes; the person's click binds the plan's digest and runs it.
  * From then on this card is the window the plan uses to act on MolDesign (create the case, load a molecule, start a
  * run), so it relays those requests exactly as a chat turn does, and shows each molecule as it is evaluated.
  */
-export default function ScreeningCard({
+export default function IterationCard({
   proposal, token, t, onSessionInvalid,
 }: {
   proposal: WorkflowProposal;
@@ -93,9 +93,9 @@ export default function ScreeningCard({
 
   const fail = useCallback((err: unknown) => {
     if (err instanceof ApiError && err.status === 401) onSessionInvalid();
-    else if (err instanceof ApiError && err.status === 404) setProblem(t("screening.expired"));
+    else if (err instanceof ApiError && err.status === 404) setProblem(t("iteration.expired"));
     else if (err instanceof ApiError) setProblem(err.message);
-    else setProblem(t("screening.unreachable"));
+    else setProblem(t("iteration.unreachable"));
     setPhase((current) => (current === "running" && !finished.current ? "interrupted" : "pending"));
   }, [onSessionInvalid, t]);
 
@@ -103,7 +103,7 @@ export default function ScreeningCard({
     const id = event["request_id"];
     if (typeof id !== "string") return;
     const name = event["case_name"];
-    const report = (promise: Promise<unknown>) => void promise.catch(() => setProblem(t("screening.unreachable")));
+    const report = (promise: Promise<unknown>) => void promise.catch(() => setProblem(t("iteration.unreachable")));
     if (event["type"] === "case_create" && typeof event["name"] === "string") {
       report(createCaseInHost(id, event["name"]).then((r) => api.reportCaseResult(token, id, r)));
     } else if (event["type"] === "case_smiles" && typeof name === "string" && typeof event["smiles"] === "string") {
@@ -163,18 +163,18 @@ export default function ScreeningCard({
       anchor.download = name;
       anchor.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 10000);
-    } catch { setProblem(t("screening.downloadFailed")); }
+    } catch { setProblem(t("iteration.downloadFailed")); }
   };
 
-  const label = (row: Row) => (row.outcome ? t(`screening.reading.${row.outcome}` as StringKey) : t(`screening.state.${row.status}` as StringKey));
+  const label = (row: Row) => (row.outcome ? t(`iteration.reading.${row.outcome}` as StringKey) : t(`iteration.state.${row.status}` as StringKey));
   const files = summary ? Object.keys(summary.files) : [];
   return (
-    <div className="action-card screening-card" role="group" aria-label={t("screening.group")} data-phase={phase}>
+    <div className="action-card iteration-card" role="group" aria-label={t("iteration.group")} data-phase={phase}>
       <p className="action-title"><strong>{proposal.title}</strong></p>
       {phase === "pending" && <ul>{proposal.lines.map((line, index) => <li key={index}>{line}</li>)}</ul>}
       {phase !== "pending" && phase !== "cancelled" && (
-        <table className="screening-table">
-          <thead><tr><th>{t("screening.colMolecule")}</th><th>{t("screening.colState")}</th><th>{t("screening.colVina")}</th><th>{t("screening.colControls")}</th></tr></thead>
+        <table className="iteration-table">
+          <thead><tr><th>{t("iteration.colMolecule")}</th><th>{t("iteration.colState")}</th><th>{t("iteration.colVina")}</th><th>{t("iteration.colControls")}</th></tr></thead>
           <tbody>
             {proposal.molecules.map((name, index) => (
               <tr key={index} data-outcome={rows[index].outcome ?? rows[index].status} title={rows[index].reason ?? undefined}>
@@ -187,34 +187,34 @@ export default function ScreeningCard({
       )}
       {phase === "pending" && (
         <>
-          <p className="muted">{t("screening.pending")}</p>
+          <p className="muted">{t("iteration.pending")}</p>
           <div className="action-buttons">
-            <button type="button" onClick={approve}>{t("screening.approve")}</button>
-            <button type="button" onClick={() => void cancel()}>{t("screening.cancel")}</button>
+            <button type="button" onClick={approve}>{t("iteration.approve")}</button>
+            <button type="button" onClick={() => void cancel()}>{t("iteration.cancel")}</button>
           </div>
         </>
       )}
-      {phase === "running" && <p role="status" className="muted">{message ?? t("screening.running")}</p>}
-      {phase === "cancelled" && <p className="muted">{t("screening.cancelled")}</p>}
-      {phase === "interrupted" && <p role="alert" className="error">{t("screening.interrupted")}</p>}
+      {phase === "running" && <p role="status" className="muted">{message ?? t("iteration.running")}</p>}
+      {phase === "cancelled" && <p className="muted">{t("iteration.cancelled")}</p>}
+      {phase === "interrupted" && <p role="alert" className="error">{t("iteration.interrupted")}</p>}
       {summary && (phase === "done" || phase === "interrupted") && (
-        <div className="screening-summary" role="status">
-          <p><strong>{t("screening.done")}</strong></p>
+        <div className="iteration-summary" role="status">
+          <p><strong>{t("iteration.done")}</strong></p>
           {summary.selected ? (
             <ul>
-              <li>{t("screening.selected")}: {summary.selected.name} · Vina {summary.selected.vina_kcal_mol ?? "—"} kcal/mol · {summary.selected.physical_status ?? "—"}</li>
-              {summary.saved && <li>{t("screening.saved")}: {summary.saved}</li>}
-              {summary.video && <li>{t("screening.video")}: {summary.video}</li>}
-              {summary.preparation && <li>{t("screening.preparation")}: {summary.preparation}</li>}
+              <li>{t("iteration.selected")}: {summary.selected.name} · Vina {summary.selected.vina_kcal_mol ?? "—"} kcal/mol · {summary.selected.physical_status ?? "—"}</li>
+              {summary.saved && <li>{t("iteration.saved")}: {summary.saved}</li>}
+              {summary.video && <li>{t("iteration.video")}: {summary.video}</li>}
+              {summary.preparation && <li>{t("iteration.preparation")}: {summary.preparation}</li>}
             </ul>
-          ) : summary.state !== "interrupted" && summary.state !== "failed" ? <p>{t("screening.noneQualified")}</p> : null}
+          ) : summary.state !== "interrupted" && summary.state !== "failed" ? <p>{t("iteration.noneQualified")}</p> : null}
           {summary.notes.length > 0 && <ul>{summary.notes.map((note, index) => <li key={index} className="muted">{note}</li>)}</ul>}
           <div className="action-buttons">
-            {files.includes("cuaderno.pdf") && <button type="button" onClick={() => void download("cuaderno.pdf")}>{t("screening.notebook")}</button>}
-            {files.includes("cuaderno.md") && !files.includes("cuaderno.pdf") && <button type="button" onClick={() => void download("cuaderno.md")}>{t("screening.notebookMd")}</button>}
-            {files.includes("entrega.zip") && <button type="button" onClick={() => void download("entrega.zip")}>{t("screening.deliverable")}</button>}
+            {files.includes("cuaderno.pdf") && <button type="button" onClick={() => void download("cuaderno.pdf")}>{t("iteration.notebook")}</button>}
+            {files.includes("cuaderno.md") && !files.includes("cuaderno.pdf") && <button type="button" onClick={() => void download("cuaderno.md")}>{t("iteration.notebookMd")}</button>}
+            {files.includes("entrega.zip") && <button type="button" onClick={() => void download("entrega.zip")}>{t("iteration.deliverable")}</button>}
           </div>
-          {summary.paths["entrega.zip"] && <p className="muted">{t("screening.savedAt")}: {summary.paths["entrega.zip"]}</p>}
+          {summary.paths["entrega.zip"] && <p className="muted">{t("iteration.savedAt")}: {summary.paths["entrega.zip"]}</p>}
         </div>
       )}
       {problem && <p role="alert" className="error">{problem}</p>}

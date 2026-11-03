@@ -1,4 +1,4 @@
-"""The screening loop: deterministic, tolerant of failures, and honest about what it did not do."""
+"""The iteration loop: deterministic, tolerant of failures, and honest about what it did not do."""
 from __future__ import annotations
 
 import asyncio
@@ -6,8 +6,8 @@ from typing import Any
 
 import pytest
 
-from molchat_agent.workflows.screening import (
-    Molecule, ScreeningRunner, ScreeningSpec, SpecError, VideoRequest, judge)
+from molchat_agent.workflows.iteration import (
+    Molecule, IterationRunner, IterationSpec, SpecError, VideoRequest, judge)
 
 
 def spec_dict(**over: Any) -> dict[str, Any]:
@@ -53,6 +53,8 @@ class FakeHost:
         self.calls.append(("load_smiles", smiles))
         self.current = smiles
         outcome = self.load_by.get(smiles, {"status": "applied"})
+        if isinstance(outcome, list):  # a sequence of answers: busy, busy, applied
+            outcome = outcome.pop(0) if len(outcome) > 1 else outcome[0]
         if isinstance(outcome, BaseException):
             raise outcome
         return outcome
@@ -102,10 +104,10 @@ class FakePlatform:
         return {"status": "ok", "job_state": "completo" if self.video_polls >= 2 else "en_curso"}
 
 
-def runner(spec: ScreeningSpec, host: FakeHost, platform: FakePlatform, clock: Clock | None = None,
-           events: list[dict[str, Any]] | None = None) -> ScreeningRunner:
+def runner(spec: IterationSpec, host: FakeHost, platform: FakePlatform, clock: Clock | None = None,
+           events: list[dict[str, Any]] | None = None) -> IterationRunner:
     clock = clock or Clock()
-    return ScreeningRunner(spec, host, platform, (events.append if events is not None else None),  # type: ignore[arg-type]
+    return IterationRunner(spec, host, platform, (events.append if events is not None else None),  # type: ignore[arg-type]
                            clock=clock, sleep=clock.sleep, poll_s=1.0, busy_wait_s=1.0)
 
 
@@ -113,7 +115,7 @@ SCORES = {"CCO": (-7.1, "passed"), "CCN": (-9.8, "passed"), "CCC": (-10.4, "pass
 
 
 async def test_stops_at_the_first_molecule_that_meets_the_rule() -> None:
-    spec = ScreeningSpec.from_dict(spec_dict(video={"scene": "busqueda", "format": "previsualizacion"}))
+    spec = IterationSpec.from_dict(spec_dict(video={"scene": "busqueda", "format": "previsualizacion"}))
     host, platform = FakeHost(), FakePlatform(SCORES)
     out = await runner(spec, host, platform).run()
     assert out.state == "completed" and out.selected == 2
@@ -125,7 +127,7 @@ async def test_stops_at_the_first_molecule_that_meets_the_rule() -> None:
 
 
 async def test_a_failing_molecule_is_recorded_and_the_loop_goes_on() -> None:
-    spec = ScreeningSpec.from_dict(spec_dict())
+    spec = IterationSpec.from_dict(spec_dict())
     host = FakeHost(load={"CCO": {"status": "failed"}}, evaluate={"CCN": {"status": "blocked", "reason": "preflight"}})
     out = await runner(spec, host, FakePlatform(SCORES)).run()
     assert [r.status for r in out.records[:3]] == ["failed", "failed", "evaluated"]
@@ -134,7 +136,7 @@ async def test_a_failing_molecule_is_recorded_and_the_loop_goes_on() -> None:
 
 
 async def test_an_unexpected_exception_in_one_molecule_does_not_stop_the_others() -> None:
-    spec = ScreeningSpec.from_dict(spec_dict())
+    spec = IterationSpec.from_dict(spec_dict())
     host = FakeHost(load={"CCO": RuntimeError("boom")})
     out = await runner(spec, host, FakePlatform(SCORES)).run()
     assert out.records[0].status == "failed" and "RuntimeError" in out.records[0].reason
@@ -142,7 +144,7 @@ async def test_an_unexpected_exception_in_one_molecule_does_not_stop_the_others(
 
 
 async def test_a_failed_job_and_a_timeout_are_each_recorded_without_stopping() -> None:
-    spec = ScreeningSpec.from_dict(spec_dict(per_molecule_timeout_s=30))
+    spec = IterationSpec.from_dict(spec_dict(per_molecule_timeout_s=30))
     platform = FakePlatform(SCORES, never={"CCO"}, failing={"CCN"})
     out = await runner(spec, FakeHost(), platform).run()
     assert out.records[0].status == "timeout" and out.records[1].status == "failed"
@@ -152,7 +154,7 @@ async def test_a_failed_job_and_a_timeout_are_each_recorded_without_stopping() -
 
 async def test_energy_alone_does_not_qualify_a_pose_the_physical_controls_reject() -> None:
     scores = {**SCORES, "CCN": (-11.0, "failed")}
-    spec = ScreeningSpec.from_dict(spec_dict())
+    spec = IterationSpec.from_dict(spec_dict())
     out = await runner(spec, FakeHost(), FakePlatform(scores)).run()
     assert out.records[1].outcome == "near" and "físicos" in out.records[1].reason
     assert out.selected == 3  # the loop went on to the next molecule
@@ -160,19 +162,19 @@ async def test_energy_alone_does_not_qualify_a_pose_the_physical_controls_reject
 
 async def test_physical_check_not_evaluated_is_not_a_pass() -> None:
     scores = {**SCORES, "CCN": (-11.0, None)}
-    out = await runner(ScreeningSpec.from_dict(spec_dict()), FakeHost(), FakePlatform(scores)).run()
+    out = await runner(IterationSpec.from_dict(spec_dict()), FakeHost(), FakePlatform(scores)).run()
     assert out.records[1].outcome == "near" and "no evaluados" in out.records[1].reason
 
 
 async def test_without_the_physical_requirement_energy_is_enough() -> None:
     scores = {**SCORES, "CCN": (-11.0, "failed")}
-    out = await runner(ScreeningSpec.from_dict(spec_dict(require_physical=False)), FakeHost(), FakePlatform(scores)).run()
+    out = await runner(IterationSpec.from_dict(spec_dict(require_physical=False)), FakeHost(), FakePlatform(scores)).run()
     assert out.selected == 2
 
 
 async def test_nobody_qualifies_means_nothing_is_saved_and_no_video() -> None:
     scores = {k: (-6.0, "passed") for k in SCORES}
-    spec = ScreeningSpec.from_dict(spec_dict(video={"scene": "busqueda", "format": "previsualizacion"}))
+    spec = IterationSpec.from_dict(spec_dict(video={"scene": "busqueda", "format": "previsualizacion"}))
     platform = FakePlatform(scores)
     out = await runner(spec, FakeHost(), platform).run()
     assert out.state == "none_qualified" and out.selected is None
@@ -182,7 +184,7 @@ async def test_nobody_qualifies_means_nothing_is_saved_and_no_video() -> None:
 
 
 async def test_stop_all_evaluates_the_whole_list_and_keeps_the_lowest_energy() -> None:
-    spec = ScreeningSpec.from_dict(spec_dict(stop="all"))
+    spec = IterationSpec.from_dict(spec_dict(stop="all"))
     host, platform = FakeHost(), FakePlatform(SCORES)
     out = await runner(spec, host, platform).run()
     assert host.evaluations == 4 and out.selected == 3  # CCC, -10.4, beats CCN, -9.8
@@ -190,7 +192,7 @@ async def test_stop_all_evaluates_the_whole_list_and_keeps_the_lowest_energy() -
 
 
 async def test_busy_is_retried_and_unknown_is_never_repeated() -> None:
-    spec = ScreeningSpec.from_dict(spec_dict())
+    spec = IterationSpec.from_dict(spec_dict())
     host = FakeHost(evaluate={"CCO": [{"status": "busy"}, {"status": "busy"}, {"status": "started", "task_id": "t-CCO"}],
                               "CCN": {"status": "unknown"}})
     out = await runner(spec, host, FakePlatform(SCORES)).run()
@@ -199,22 +201,103 @@ async def test_busy_is_retried_and_unknown_is_never_repeated() -> None:
     assert [c for c in host.calls if c == ("evaluate", "CCN")] == [("evaluate", "CCN")]
 
 
+class LockedAfterRun(FakeHost):
+    """What the real window does: after a run finishes it keeps the case locked while it closes the run (~45 s)."""
+
+    def __init__(self, clock: Clock, lock_s: float) -> None:
+        super().__init__()
+        self.clock, self.lock_s, self.free_at = clock, lock_s, 0.0
+
+    async def load_smiles(self, case_name: str, smiles: str) -> dict[str, Any]:
+        if self.clock.now < self.free_at:
+            self.calls.append(("load_smiles_busy", smiles))
+            return {"status": "busy"}
+        return await super().load_smiles(case_name, smiles)
+
+
+class LockingPlatform(FakePlatform):
+    def __init__(self, scores: dict[str, tuple[float | None, str | None]], host: LockedAfterRun) -> None:
+        super().__init__(scores)
+        self.host = host
+
+    async def job(self, task_id: str) -> dict[str, Any]:
+        self.host.free_at = self.host.clock.now + self.host.lock_s  # Vina is done; the window is still closing the run
+        return await super().job(task_id)
+
+
+async def test_the_loop_waits_for_the_window_to_close_each_run_and_goes_through_every_molecule() -> None:
+    """The failure seen in the app: molecule 1 was evaluated, the window was still closing its run, the load of
+    molecule 2 answered «busy» and was never retried, so 2, 3 and 4 were all reported as failed."""
+    clock = Clock()
+    host = LockedAfterRun(clock, lock_s=45.0)
+    platform = LockingPlatform(SCORES, host)
+    events: list[dict[str, Any]] = []
+    spec = IterationSpec.from_dict(spec_dict(stop="all"))
+    out = await runner(spec, host, platform, clock, events).run()
+    assert [r.status for r in out.records] == ["evaluated"] * 4
+    assert out.selected == 3 and out.state == "completed"  # CCC, -10.4
+    assert ("load_smiles_busy", "CCN") in host.calls  # it really was busy, and the loop asked again
+    phases = [e["message"] for e in events if e["event"] == "phase"]
+    assert any("sigue cerrando la corrida anterior" in (m or "") for m in phases)
+    assert phases[-1] is None  # the card goes back to its normal text once the wait is over
+
+
+async def test_a_window_that_never_frees_is_reported_as_busy_not_as_a_bad_molecule_and_the_loop_goes_on() -> None:
+    clock = Clock()
+    host = FakeHost(load={"CCN": {"status": "busy"}})
+    spec = IterationSpec.from_dict(spec_dict(stop="all"))
+    out = await runner(spec, host, FakePlatform(SCORES), clock).run()
+    second = out.records[1]
+    assert second.status == "failed" and "siguió ocupado 240 s" in second.reason
+    assert "cargó la molécula" in second.reason
+    assert [r.status for r in out.records] == ["evaluated", "failed", "evaluated", "evaluated"]
+    assert clock.now >= 240  # it waited the whole budget before giving up
+
+
+async def test_the_wait_never_outlasts_the_plans_own_time() -> None:
+    clock = Clock()
+    host = FakeHost(load={"CCN": {"status": "busy"}})
+    spec = IterationSpec.from_dict(spec_dict(budget_s=60, stop="all"))
+    out = await runner(spec, host, FakePlatform(SCORES), clock).run()
+    assert out.records[1].status == "failed" and clock.now < 120  # gave up with the plan's time, not after 240 s
+
+
+async def test_unknown_on_load_is_not_repeated() -> None:
+    host = FakeHost(load={"CCN": {"status": "unknown"}})
+    out = await runner(IterationSpec.from_dict(spec_dict()), host, FakePlatform(SCORES)).run()
+    assert [c for c in host.calls if c == ("load_smiles", "CCN")] == [("load_smiles", "CCN")]
+    assert out.records[1].status == "failed"
+
+
+async def test_a_busy_receptor_assignment_is_retried_before_the_plan_gives_up() -> None:
+    class Host(FakeHost):
+        answers = [{"status": "busy"}, {"status": "busy"}, {"status": "applied"}]
+
+        async def assign_receptor(self, case_name: str, pdb_id: str) -> dict[str, Any]:
+            self.calls.append(("assign_receptor", pdb_id))
+            return self.answers.pop(0)
+
+    host = Host()
+    out = await runner(IterationSpec.from_dict(spec_dict()), host, FakePlatform(SCORES)).run()
+    assert out.state == "completed" and [c for c in host.calls if c[0] == "assign_receptor"] == [("assign_receptor", "8T69")] * 3
+
+
 async def test_a_case_that_cannot_be_prepared_blocks_before_any_evaluation() -> None:
     host = FakeHost(receptor="receptor_not_found")
-    out = await runner(ScreeningSpec.from_dict(spec_dict()), host, FakePlatform(SCORES)).run()
+    out = await runner(IterationSpec.from_dict(spec_dict()), host, FakePlatform(SCORES)).run()
     assert out.state == "blocked" and host.evaluations == 0
     assert all(r.status == "skipped" for r in out.records)
     assert any("asignar el receptor" in n for n in out.notes)
 
 
 async def test_an_existing_case_is_reused_and_said() -> None:
-    out = await runner(ScreeningSpec.from_dict(spec_dict()), FakeHost(case="exists"), FakePlatform(SCORES)).run()
+    out = await runner(IterationSpec.from_dict(spec_dict()), FakeHost(case="exists"), FakePlatform(SCORES)).run()
     assert any("ya existía" in n for n in out.notes) and out.state == "completed"
 
 
 async def test_the_time_budget_skips_what_is_left_and_still_keeps_what_it_found() -> None:
     clock = Clock()
-    spec = ScreeningSpec.from_dict(spec_dict(budget_s=60, stop="all"))
+    spec = IterationSpec.from_dict(spec_dict(budget_s=60, stop="all"))
 
     class Slow(FakePlatform):
         async def job(self, task_id: str) -> dict[str, Any]:
@@ -231,7 +314,7 @@ async def test_the_time_budget_skips_what_is_left_and_still_keeps_what_it_found(
 async def test_cancellation_is_not_swallowed() -> None:
     host = FakeHost(load={"CCO": asyncio.CancelledError()})
     with pytest.raises(asyncio.CancelledError):
-        await runner(ScreeningSpec.from_dict(spec_dict()), host, FakePlatform(SCORES)).run()
+        await runner(IterationSpec.from_dict(spec_dict()), host, FakePlatform(SCORES)).run()
 
 
 async def test_a_video_is_not_requested_when_the_run_was_not_saved() -> None:
@@ -239,14 +322,14 @@ async def test_a_video_is_not_requested_when_the_run_was_not_saved() -> None:
         async def save(self, task_id: str, molecule_id: str, name: str | None) -> dict[str, Any]:
             return {"status": "rejected"}
 
-    spec = ScreeningSpec.from_dict(spec_dict(video={"scene": "busqueda", "format": "previsualizacion"}))
+    spec = IterationSpec.from_dict(spec_dict(video={"scene": "busqueda", "format": "previsualizacion"}))
     platform = NoSave(SCORES)
     out = await runner(spec, FakeHost(), platform).run()
     assert out.video["status"] == "not_requested" and platform.videos == []
 
 
 async def test_follow_video_waits_for_the_render_to_finish() -> None:
-    spec = ScreeningSpec.from_dict(spec_dict(video={"scene": "busqueda", "format": "previsualizacion"}))
+    spec = IterationSpec.from_dict(spec_dict(video={"scene": "busqueda", "format": "previsualizacion"}))
     platform = FakePlatform(SCORES)
     run = runner(spec, FakeHost(), platform)
     await run.run()
@@ -256,7 +339,7 @@ async def test_follow_video_waits_for_the_render_to_finish() -> None:
 
 async def test_events_carry_each_molecule_for_the_live_table() -> None:
     events: list[dict[str, Any]] = []
-    await runner(ScreeningSpec.from_dict(spec_dict()), FakeHost(), FakePlatform(SCORES), events=events).run()
+    await runner(IterationSpec.from_dict(spec_dict()), FakeHost(), FakePlatform(SCORES), events=events).run()
     kinds = [e["event"] for e in events]
     assert kinds[0] == "started" and kinds[-1] == "finished" and kinds.count("molecule") == 2
     assert all(e["type"] == "workflow" for e in events)
@@ -266,11 +349,11 @@ async def test_events_carry_each_molecule_for_the_live_table() -> None:
 
 
 def test_the_digest_binds_every_parameter() -> None:
-    base = ScreeningSpec.from_dict(spec_dict())
-    assert base.digest == ScreeningSpec.from_dict(spec_dict()).digest
+    base = IterationSpec.from_dict(spec_dict())
+    assert base.digest == IterationSpec.from_dict(spec_dict()).digest
     for change in ({"threshold_kcal": -9.0}, {"stop": "all"}, {"pdb_id": "7E2Y"}, {"require_physical": False},
                    {"molecules": [{"smiles": "CCO"}]}, {"package": True}):
-        assert ScreeningSpec.from_dict(spec_dict(**change)).digest != base.digest, change
+        assert IterationSpec.from_dict(spec_dict(**change)).digest != base.digest, change
 
 
 @pytest.mark.parametrize("change,fragment", [
@@ -284,12 +367,12 @@ def test_the_digest_binds_every_parameter() -> None:
     ({"budget_s": 5}, "budget_s"), ({"unknown": 1}, "desconocidos"), ({"package": "yes"}, "package")])
 def test_invalid_specs_say_which_field_failed(change: dict[str, Any], fragment: str) -> None:
     with pytest.raises(SpecError) as caught:
-        ScreeningSpec.from_dict(spec_dict(**change))
+        IterationSpec.from_dict(spec_dict(**change))
     assert fragment in str(caught.value)
 
 
 def test_a_video_turns_saving_on_and_the_card_says_everything_the_run_will_do() -> None:
-    spec = ScreeningSpec.from_dict(spec_dict(save=False, video={"scene": "busqueda", "format": "previsualizacion"},
+    spec = IterationSpec.from_dict(spec_dict(save=False, video={"scene": "busqueda", "format": "previsualizacion"},
                                              preparation=True, package=True))
     assert spec.save is True
     text = "\n".join(spec.card_lines())
@@ -298,7 +381,7 @@ def test_a_video_turns_saving_on_and_the_card_says_everything_the_run_will_do() 
 
 
 def test_judge_reads_numbers_but_never_invents_a_pass() -> None:
-    spec = ScreeningSpec.from_dict(spec_dict())
+    spec = IterationSpec.from_dict(spec_dict())
     assert judge(spec, -9.5, "passed")[0] == "qualifies"
     assert judge(spec, -9.4, "passed")[0] == "below_threshold"
     assert judge(spec, None, "passed")[0] == "below_threshold"

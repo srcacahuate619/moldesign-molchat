@@ -958,14 +958,14 @@ MolDesign es por API HTTP, no por copia de código.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/conversation/test_property_methods.py y tests/server/test_property_differences_chat.py
 
-### src/molchat_agent/workflows/__init__.py, src/molchat_agent/workflows/screening.py, tests/workflows/test_screening.py
+### src/molchat_agent/workflows/__init__.py, src/molchat_agent/workflows/iteration.py, tests/workflows/test_iteration.py
 
-- Origen: código nuevo en MolChat, escrito durante el hackathon (2026-11-02), para ejecutar un cribado de moléculas aprobado una sola vez: el plan cerrado (`ScreeningSpec`, `moldesign.molchat.screening/1`), la regla de parada y el bucle determinista (`ScreeningRunner`).
+- Origen: código nuevo en MolChat, escrito durante el hackathon (2026-11-02), para ejecutar una iteración de moléculas aprobada una sola vez: el plan cerrado (`IterationSpec`, `moldesign.molchat.iteration/1`), la regla de parada y el bucle determinista (`IterationRunner`).
 - Commit de MolDesign: N/A
 - Autoría: Johan Amezcua, con colaboración de un agente de código.
 - Transformación: el plan se valida antes de mostrarse y su huella SHA-256 liga la aprobación; una molécula cumple solo si la energía de Vina de su mejor pose está en el umbral y los controles físicos de esa pose están en `passed`, ambas leídas de MolDesign. Cada molécula es un intento aislado: un fallo se registra y el bucle sigue, `busy` se reintenta y `unknown` nunca. MolChat no calcula ninguna energía ni control.
 - Licencia resultante: GPL-3.0-or-later
-- Tests: tests/workflows/test_screening.py
+- Tests: tests/workflows/test_iteration.py
 
 ### src/molchat_agent/workflows/notebook.py, src/molchat_agent/workflows/deliverable.py, tests/workflows/test_notebook_and_deliverable.py
 
@@ -978,7 +978,7 @@ MolDesign es por API HTTP, no por copia de código.
 
 ### src/molchat_agent/workflows/service.py, src/molchat_agent/workflows/tool.py, tests/workflows/test_service.py, tests/server/test_workflow_chat.py, tests/server/test_workflow_preparation.py
 
-- Origen: código nuevo en MolChat (2026-11-02) para proponer el cribado desde el modelo (`propose_screening`), ejecutarlo contra MolDesign y relevar a la ventana del anfitrión las acciones que solo ella puede hacer (crear el caso, cargar un SMILES, asignar el receptor, evaluar y auditar en Preparación).
+- Origen: código nuevo en MolChat (2026-11-02) para proponer la iteración desde el modelo (`propose_iteration`), ejecutarlo contra MolDesign y relevar a la ventana del anfitrión las acciones que solo ella puede hacer (crear el caso, cargar un SMILES, asignar el receptor, evaluar y auditar en Preparación).
 - Commit de MolDesign: N/A; integración mediante mensajes del anfitrión (`docs/HOST_CONTRACT.md`) y los endpoints de MolDesign que el producto ya expone (historial, vídeo de Molcy, auditoría y paquete de Preparación).
 - Autoría: Johan Amezcua, con colaboración de un agente de código.
 - Transformación: el modelo solo extrae parámetros; el clic de la persona debe traer la huella del plan. La auditoría de Preparación llega con la proyección que construye la ventana, y el estado que se registra es el que dicta MolDesign, no el de la ventana; el paquete exportado se conserva intacto. Si la ventana desaparece, el plan se cancela.
@@ -994,11 +994,11 @@ MolDesign es por API HTTP, no por copia de código.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/conversation/test_tool_loop_number_boolean.py
 
-### ui/src/components/ScreeningCard.tsx, ui/src/components/ScreeningCard.test.tsx, ui/src/lib/preparationHost.ts, ui/src/lib/preparationHost.test.ts
+### ui/src/components/IterationCard.tsx, ui/src/components/IterationCard.test.tsx, ui/src/lib/preparationHost.ts, ui/src/lib/preparationHost.test.ts
 
-- Origen: código nuevo en MolChat (2026-11-02) para la tarjeta de aprobación del cribado y el puente de la acción de host `audit_case_preparation`.
+- Origen: código nuevo en MolChat (2026-11-02) para la tarjeta de aprobación de la iteración y el puente de la acción de host `audit_case_preparation`.
 - Commit de MolDesign: N/A
 - Autoría: Johan Amezcua, con colaboración de un agente de código.
-- Transformación: la tarjeta muestra todo el plan, envía la huella con el único clic y sigue el cribado en una tabla en vivo; relevan al anfitrión sus peticiones con el mismo apretón de origen que los demás puentes y rechazan respuestas de otro origen, de otra petición o con un estado fuera de contrato.
+- Transformación: la tarjeta muestra todo el plan, envía la huella con el único clic y sigue la iteración en una tabla en vivo; relevan al anfitrión sus peticiones con el mismo apretón de origen que los demás puentes y rechazan respuestas de otro origen, de otra petición o con un estado fuera de contrato.
 - Licencia resultante: GPL-3.0-or-later
-- Tests: ui/src/components/ScreeningCard.test.tsx y ui/src/lib/preparationHost.test.ts
+- Tests: ui/src/components/IterationCard.test.tsx y ui/src/lib/preparationHost.test.ts

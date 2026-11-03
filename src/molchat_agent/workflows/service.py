@@ -1,4 +1,4 @@
-"""Running an approved screening end to end: the loop, the render, Preparación, the notebook and the one ZIP.
+"""Running an approved iteration end to end: the loop, the render, Preparación, the notebook and the one ZIP.
 
 Three things live here and nothing else:
 
@@ -26,7 +26,7 @@ from ..conversation.harness_tools import fetch_job
 from ..conversation.product_actions import _UUID, _http, _moldex_entry, prepare_video, run_save, run_video
 from .deliverable import build_deliverable
 from .notebook import build_notebook, notebook_json, now_iso, render_markdown, render_pdf
-from .screening import Emit, HostPort, ScreeningOutcome, ScreeningRunner, ScreeningSpec, VideoRequest
+from .iteration import Emit, HostPort, IterationOutcome, IterationRunner, IterationSpec, VideoRequest
 
 PROPOSAL_TTL_S = 900
 MAX_PENDING = 5
@@ -218,22 +218,22 @@ class WorkflowProposal:
     id: str
     owner: str
     conv_id: str | None
-    spec: ScreeningSpec
+    spec: IterationSpec
     expires: float
     state: str = "pending"  # pending | running | done | cancelled
-    outcome: ScreeningOutcome | None = None
+    outcome: IterationOutcome | None = None
     approved_at: str | None = None
     files: dict[str, bytes] = field(default_factory=dict)
     saved_paths: dict[str, str] = field(default_factory=dict)
     summary: dict[str, Any] | None = None
 
     def view(self) -> dict[str, Any]:
-        return {"id": self.id, "kind": "screening", "digest": self.spec.digest, "title": "Cribado de moléculas",
+        return {"id": self.id, "kind": "iteration", "digest": self.spec.digest, "title": "Iteración de moléculas",
                 "lines": self.spec.card_lines(), "molecules": [m.name for m in self.spec.molecules]}
 
 
 def new_workflow(workflows: dict[str, WorkflowProposal], owner: str, conv_id: str | None,
-                 spec: ScreeningSpec) -> WorkflowProposal | None:
+                 spec: IterationSpec) -> WorkflowProposal | None:
     now = time.monotonic()
     for key in [key for key, item in workflows.items() if item.state == "pending" and item.expires < now]:
         del workflows[key]
@@ -247,7 +247,7 @@ def new_workflow(workflows: dict[str, WorkflowProposal], owner: str, conv_id: st
 def workflow_answer(proposal: WorkflowProposal) -> str:
     """What the turn says once it left a plan: written by the host, so it cannot claim a done deed."""
     spec = proposal.spec
-    return (f"Dejé preparado un cribado de {len(spec.molecules)} moléculas con el umbral de "
+    return (f"Dejé preparado una iteración de {len(spec.molecules)} moléculas con el umbral de "
             f"{spec.threshold_kcal:g} kcal/mol; el receptor y las reglas están en la tarjeta. Todavía no se evaluó nada: "
             "revísala y apruébala con un solo botón; después no necesitará más intervención. Si no la apruebas, caduca.")
 
@@ -257,7 +257,7 @@ def workflow_outcome_text(proposal: WorkflowProposal) -> str:
     summary = proposal.summary or {}
     counts = summary.get("counts") or {}
     done = counts.get("evaluated", 0)
-    parts = [f"Cribado «{proposal.spec.case_name}» terminado: {done} de {len(proposal.spec.molecules)} moléculas evaluadas."]
+    parts = [f"Iteración «{proposal.spec.case_name}» terminada: {done} de {len(proposal.spec.molecules)} moléculas evaluadas."]
     selected = summary.get("selected")
     if selected:
         energy = selected.get("vina_kcal_mol")
@@ -280,10 +280,10 @@ def _fname(text: str) -> str:
 
 async def execute(proposal: WorkflowProposal, host: HostPort, platform: PlatformHttp, emit: Emit, *,
                   preparation: PreparationPort | None = None, output_dir: Path | None = None,
-                  runner_kwargs: dict[str, Any] | None = None) -> ScreeningOutcome:
+                  runner_kwargs: dict[str, Any] | None = None) -> IterationOutcome:
     """Run an approved plan. It always ends with an honest record, whatever each phase managed to do."""
     spec = proposal.spec
-    runner = ScreeningRunner(spec, host, platform, emit, **(runner_kwargs or {}))
+    runner = IterationRunner(spec, host, platform, emit, **(runner_kwargs or {}))
     outcome = await runner.run()
     selected = next((r for r in outcome.records if r.index == outcome.selected), None)
 
@@ -352,7 +352,7 @@ async def execute(proposal: WorkflowProposal, host: HostPort, platform: Platform
     return outcome
 
 
-def _why_no_video(outcome: ScreeningOutcome) -> str:
+def _why_no_video(outcome: IterationOutcome) -> str:
     video = outcome.video
     if video is None:
         return "El plan no pidió vídeo, o ninguna molécula cumplió la regla." if outcome.selected is None else "El plan no pidió vídeo."
@@ -361,14 +361,14 @@ def _why_no_video(outcome: ScreeningOutcome) -> str:
     return f"El vídeo terminó en «{video.get('final') or 'sin estado'}»" + (f"; {video['file']}" if video.get("file") else ".")
 
 
-def _why_no_preparation(outcome: ScreeningOutcome) -> str:
+def _why_no_preparation(outcome: IterationOutcome) -> str:
     prep = outcome.preparation
     if prep is None:
         return "El plan no pidió auditar en Preparación."
     return str(prep.get("message") or f"Preparación terminó en «{prep.get('status')}».")
 
 
-def summarize(outcome: ScreeningOutcome, proposal: WorkflowProposal) -> dict[str, Any]:
+def summarize(outcome: IterationOutcome, proposal: WorkflowProposal) -> dict[str, Any]:
     """What the interface shows at the end. Plain facts from the record; no model text."""
     selected = next((r for r in outcome.records if r.index == outcome.selected), None)
     counts: dict[str, int] = {}

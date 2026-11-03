@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .screening import SCHEMA, ScreeningOutcome
+from .iteration import SCHEMA, IterationOutcome
 
 NOTEBOOK_SCHEMA = "moldesign.molchat.notebook/1"
 
@@ -29,7 +29,7 @@ _STATE = {"completed": "Terminó: hay una molécula que cumple la regla.",
           "blocked": "Se detuvo antes de evaluar: el caso no quedó preparado.",
           "budget_exhausted": "Se agotó el tiempo total del plan; lo no evaluado queda declarado."}
 LIMITS = ("La energía de Vina es la de la mejor pose según Vina: no es una energía libre, ni un Ki, ni una medida de "
-          "actividad. Un cribado de pocas moléculas no ordena fármacos. Los controles físicos son los de PoseBusters "
+          "actividad. Una iteración sobre pocas moléculas no ordena fármacos. Los controles físicos son los de PoseBusters "
           "tal como los declara MolDesign.")
 
 
@@ -37,7 +37,7 @@ def _fmt(value: Any, unit: str = "") -> str:
     return "—" if value is None else f"{value:g}{unit}"
 
 
-def build_notebook(outcome: ScreeningOutcome, *, approved_at: str | None, finished_at: str | None = None,
+def build_notebook(outcome: IterationOutcome, *, approved_at: str | None, finished_at: str | None = None,
                    versions: dict[str, str] | None = None) -> dict[str, Any]:
     """The notebook as data. Same input, same output: the timestamps are arguments, not read from the clock."""
     spec = outcome.spec
@@ -50,7 +50,7 @@ def build_notebook(outcome: ScreeningOutcome, *, approved_at: str | None, finish
                      "task_id": record.task_id, "seconds": record.seconds})
     selected = next((r for r in outcome.records if r.index == outcome.selected), None)
     return {
-        "schema": NOTEBOOK_SCHEMA, "screening_schema": SCHEMA, "case": spec["case_name"], "receptor": spec["pdb_id"],
+        "schema": NOTEBOOK_SCHEMA, "iteration_schema": SCHEMA, "case": spec["case_name"], "receptor": spec["pdb_id"],
         "request": spec.get("original_request") or "", "approved_at": approved_at, "finished_at": finished_at,
         "plan_digest": outcome.digest, "plan": _plan_lines(spec), "state": outcome.state,
         "state_text": _STATE.get(outcome.state, outcome.state),
@@ -68,8 +68,8 @@ def build_notebook(outcome: ScreeningOutcome, *, approved_at: str | None, finish
 
 
 def _plan_lines(spec: dict[str, Any]) -> list[str]:
-    from .screening import ScreeningSpec
-    return ScreeningSpec.from_dict(spec).card_lines()
+    from .iteration import IterationSpec
+    return IterationSpec.from_dict(spec).card_lines()
 
 
 def render_markdown(nb: dict[str, Any]) -> str:

@@ -9,20 +9,20 @@ from pathlib import Path
 from typing import Any
 
 from molchat_agent.workflows.deliverable import verify_deliverable
-from molchat_agent.workflows.screening import ScreeningSpec, VideoRequest
+from molchat_agent.workflows.iteration import IterationSpec, VideoRequest
 from molchat_agent.workflows.service import (
     HostRelay, WorkflowProposal, execute, new_workflow, summarize, workflow_answer)
 
 JOB = "a1b2c3d4-0000-4000-8000-000000000001"
 
 
-def spec(**over: Any) -> ScreeningSpec:
+def spec(**over: Any) -> IterationSpec:
     data = {"case_name": "hipotesis-8T69", "pdb_id": "8T69", "threshold_kcal": -9.5,
             "original_request": "investiga la lista y si pasa -9.5 guardala",
             "molecules": [{"name": "A", "smiles": "CCO"}, {"name": "B", "smiles": "CCN"}],
             "video": {"scene": "busqueda", "format": "previsualizacion"}, "preparation": True, "package": True}
     data.update(over)
-    return ScreeningSpec.from_dict(data)
+    return IterationSpec.from_dict(data)
 
 
 class Host:
@@ -81,7 +81,7 @@ class Preparation:
         return dict(self.result)
 
 
-def proposal(s: ScreeningSpec) -> WorkflowProposal:
+def proposal(s: IterationSpec) -> WorkflowProposal:
     return WorkflowProposal("w1", "user", None, s, 1e12, approved_at="2026-11-03T10:00:00+00:00")
 
 

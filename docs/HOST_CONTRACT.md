@@ -28,7 +28,7 @@ sidecar ◀──POST /v1/<tipo>-requests/{id}/result── iframe ◀───�
 1. El sidecar emite por SSE un evento con un `request_id` y los datos de la petición.
 2. La interfaz lo reenvía a la ventana padre como `molchat-host-message` con un `kind`.
 3. El anfitrión valida, ejecuta en su propia pantalla y contesta con `molchat-<tipo>-result`.
-4. La interfaz entrega esa respuesta al sidecar, que despierta a quien esperaba (el turno del modelo o el cribado).
+4. La interfaz entrega esa respuesta al sidecar, que despierta a quien esperaba (el turno del modelo o la iteración).
 
 El sidecar **sólo acepta la respuesta de la sesión que hizo la petición**, una sola vez, y rechaza lo que no encaja
 con el esquema cerrado de cada acción (campos de más, estados desconocidos, textos con caracteres de control).
@@ -76,7 +76,7 @@ Cada respuesta repite el `request_id` de su petición y lleva `status`. Además:
 
 Si una petición no recibe respuesta a tiempo, MolChat registra `unknown` y **no la repite**. El motivo es que el
 anfitrión pudo haber escrito antes de que se agotara la espera: reintentar duplicaría un caso o una evaluación. Un
-anfitrión que sabe que no hizo nada debe contestar `failed`; sólo lo que no se sabe es `unknown`. El cribado de
+anfitrión que sabe que no hizo nada debe contestar `failed`; sólo lo que no se sabe es `unknown`. La iteración de
 moléculas aplica la misma regla: un `unknown` queda declarado en el cuaderno y el bucle sigue con la molécula siguiente.
 
 ### Auditoría en Preparación (`audit_case_preparation`)
@@ -109,8 +109,8 @@ No hay respuesta: son enlaces, no operaciones.
 
 - **No decidir por la persona.** Una acción que requiere confirmación (guardar en Moldex, pedir un vídeo, acoplar con
   cómputo pesado) la confirma la persona en una tarjeta; el anfitrión sólo ejecuta lo que ya se confirmó. La única
-  excepción es el plan de cribado aprobado de una vez, cuyo clic queda ligado al hash SHA-256 del plan:
-  [`CRIBADO_AUTOMATICO.md`](CRIBADO_AUTOMATICO.md).
+  excepción es el plan de iteración aprobado de una vez, cuyo clic queda ligado al hash SHA-256 del plan:
+  [`ITERACION_DE_MOLECULAS.md`](ITERACION_DE_MOLECULAS.md).
 - **No contestar con más de lo que se pidió.** Los esquemas son cerrados a propósito: un campo desconocido en una
   respuesta es una respuesta rechazada.
 - **No devolver rutas, sesiones ni secretos** en ningún campo.
@@ -120,7 +120,7 @@ No hay respuesta: son enlaces, no operaciones.
 | Pieza | Prueba |
 |---|---|
 | Esquemas y estados de cada respuesta | `tests/server/test_case_host_action.py`, `tests/server/test_workflow_preparation.py` |
-| Relevo del cribado a la ventana | `ui/src/components/ScreeningCard.test.tsx` |
+| Relevo de la iteración a la ventana | `ui/src/components/IterationCard.test.tsx` |
 | Puente de Preparación (origen, forma, plazo) | `ui/src/lib/preparationHost.test.ts` |
 | Plataforma simulada que contesta lo anterior | `tests/conversation/fake_moldesign.py` |
 

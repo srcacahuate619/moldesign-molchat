@@ -45,7 +45,7 @@ Resumido:
 | Acciones sobre la plataforma | Crear un caso, cargar un SMILES, asignar un receptor, lanzar la evaluación y leer el editor, a través del anfitrión y con estados verificables ([`docs/HOST_CONTRACT.md`](docs/HOST_CONTRACT.md)). |
 | Lectura científica | `get_evaluation_status`, `explain_evaluation` y `compare_poses` (RMSD medido entre poses, controles físicos con nombre, contactos con átomos y ángulos), con un guardián que redacta cualquier cifra que ninguna herramienta devolvió. |
 | Acciones con confirmación | Guardar una corrida en Moldex y pedir un vídeo a Molcy, siempre propuestas que la persona confirma. |
-| **Cribado automático** | De un solo prompt, con **una** aprobación ligada al hash del plan: caso, receptor, bucle determinista sobre una lista de moléculas con regla de parada medida, guardado, vídeo, auditoría en Preparación, cuaderno del agente y un único ZIP. Ver [`docs/CRIBADO_AUTOMATICO.md`](docs/CRIBADO_AUTOMATICO.md). |
+| **Iteración automática** | De un solo prompt, con **una** aprobación ligada al hash del plan: caso, receptor, bucle determinista sobre una lista de moléculas con regla de parada medida, guardado, vídeo, auditoría en Preparación, cuaderno del agente y un único ZIP. Ver [`docs/ITERACION_DE_MOLECULAS.md`](docs/ITERACION_DE_MOLECULAS.md). |
 
 La distinción que importa: antes, MolChat **sugería y esperaba**; ahora un plan aprobado una vez **se ejecuta solo**, se
 recupera de los fallos de cada molécula, y declara lo que no pudo hacer. La ciencia, la identidad y las decisiones de
@@ -53,9 +53,9 @@ Preparación siguen siendo de MolDesign: MolChat no calcula ninguna energía ni 
 
 ## Qué existe en esta versión
 
-- Cribado automático de hasta 12 moléculas con una sola aprobación de plan; regla de parada explícita (energía de
+- Iteración automática de hasta 12 moléculas con una sola aprobación de plan; regla de parada explícita (energía de
   Vina y controles físicos superados), cuaderno y ZIP de entrega deterministas
-  ([`docs/CRIBADO_AUTOMATICO.md`](docs/CRIBADO_AUTOMATICO.md)).
+  ([`docs/ITERACION_DE_MOLECULAS.md`](docs/ITERACION_DE_MOLECULAS.md)).
 - Núcleo independiente de Python 3.11+, GPL-3.0-or-later, sin motores científicos
   duplicados.
 - Catálogo estricto de herramientas respaldadas por endpoints actuales de

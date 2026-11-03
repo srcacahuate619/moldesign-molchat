@@ -1,4 +1,4 @@
-"""A screening through the hosted chat: the model proposes, one click approves, the plan runs by itself."""
+"""An iteration through the hosted chat: the model proposes, one click approves, the plan runs by itself."""
 import asyncio
 import io
 import json
@@ -11,7 +11,7 @@ from tests.server.test_product_actions_chat import Chat, call, events
 
 REQUEST = ("molchat investiga esta lista de moléculas y si alguna pasa el umbral de -9.0 kcal/mol la guardas en moldex, "
            "generas un vídeo de búsqueda, le haces la auditoría en preparación y al final me preparas todo en un único archivo")
-SCREENING = {"case_name": "hipotesis-8T69", "pdb_id": "8T69", "threshold_kcal": -9.0, "save": True,
+ITERATION = {"case_name": "hipotesis-8T69", "pdb_id": "8T69", "threshold_kcal": -9.0, "save": True,
              "molecules": [{"name": "Rota", "smiles": "C1CC"}, {"name": "Buena", "smiles": "CCN"}, {"name": "Nunca", "smiles": "CCO"}],
              "video": {"scene": "busqueda"}, "preparation": True, "package": True}
 REGISTRIES = (("case_requests", "case-requests"), ("smiles_requests", "smiles-requests"),
@@ -56,8 +56,8 @@ class Window:
             await asyncio.sleep(0.005)
 
 
-async def propose(chat, text=REQUEST, args=SCREENING):
-    return await chat.say(text, [call("propose_screening", args)], final="Listo, ya evalué todo y guardé el vídeo.")
+async def propose(chat, text=REQUEST, args=ITERATION):
+    return await chat.say(text, [call("propose_iteration", args)], final="Listo, ya evalué todo y guardé el vídeo.")
 
 
 async def approve(chat, card, window):
@@ -75,13 +75,13 @@ async def test_asking_for_a_chain_leaves_one_card_and_runs_nothing(tmp_path, mon
     md = fake()
     async with Chat(tmp_path, monkeypatch, md) as chat:
         result = await propose(chat)
-        assert "propose_screening" in chat.seen_tools and "Nunca digas que se evaluó" in chat.seen_system
+        assert "propose_iteration" in chat.seen_tools and "Nunca digas que se evaluó" in chat.seen_system
         workflow = next(iter(chat.state.workflows.values()))
     (card,) = result["workflow_proposals"]
-    assert card["kind"] == "screening" and card["digest"] == workflow.spec.digest
+    assert card["kind"] == "iteration" and card["digest"] == workflow.spec.digest
     text = "\n".join(card["lines"])
     assert "Moldex" in text and "Molcy" in text and "Preparación" in text and "único ZIP" in text and "se sigue" in text
-    assert result["text"].startswith("Dejé preparado un cribado de 3 moléculas con el umbral de -9 kcal/mol")
+    assert result["text"].startswith("Dejé preparado una iteración de 3 moléculas con el umbral de -9 kcal/mol")
     assert "ya evalué" not in result["text"] and "[dato no verificado]" not in result["text"]
     assert md.writes() == [] and workflow.state == "pending"
     # the person's own words travel with the plan; the model cannot rewrite what was asked
@@ -91,12 +91,12 @@ async def test_asking_for_a_chain_leaves_one_card_and_runs_nothing(tmp_path, mon
 @pytest.mark.asyncio
 async def test_an_invalid_plan_is_refused_to_the_model_and_no_card_exists(tmp_path, monkeypatch):
     async with Chat(tmp_path, monkeypatch, fake()) as chat:
-        result = await propose(chat, args={**SCREENING, "threshold_kcal": 0})
+        result = await propose(chat, args={**ITERATION, "threshold_kcal": 0})
         (shown,) = chat.tool_results
         assert shown["status"] == "invalid" and "negativo" in shown["message"]
         assert not result.get("workflow_proposals") and chat.state.workflows == {}
         # outside the schema's own range the model never reaches the spec at all
-        await propose(chat, args={**SCREENING, "threshold_kcal": 5})
+        await propose(chat, args={**ITERATION, "threshold_kcal": 5})
         assert "error" in chat.tool_results[0] and chat.state.workflows == {}
 
 
@@ -140,7 +140,7 @@ async def test_a_wrong_digest_does_not_run_and_the_click_runs_the_whole_plan_onc
 
         # the conversation keeps what really happened, with numbers the next turn may quote
         last = (await chat.messages())[-1]
-        assert last["role"] == "assistant" and "Cribado «hipotesis-8T69» terminado: 1 de 3 moléculas evaluadas" in last["content"]
+        assert last["role"] == "assistant" and "Iteración «hipotesis-8T69» terminada: 1 de 3 moléculas evaluadas" in last["content"]
 
         # a second click reports the outcome, it does not run the plan again
         again = await chat.client.post(f"/v1/workflows/{card['id']}/run", headers=chat.headers, json={"digest": card["digest"]})

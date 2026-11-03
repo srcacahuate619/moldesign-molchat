@@ -46,7 +46,7 @@ from ..conversation.product_actions import (ACTIONS_GUIDANCE, Proposal, mask_unc
 from ..workflows.notebook import now_iso
 from ..workflows.service import (HostRelay, PlatformHttp, WorkflowProposal, execute as execute_workflow, new_workflow,
                                  workflow_answer, workflow_outcome_text)
-from ..workflows.tool import SCREENING_GUIDANCE, propose_screening_tool
+from ..workflows.tool import ITERATION_GUIDANCE, propose_iteration_tool
 from ..conversation.tools import PlatformBackend
 from ..plan import Plan
 from ..providers.base import ProviderDisabled, ProviderError
@@ -450,7 +450,7 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
             record_outcome(proposal)
         return JSONResponse({"id": proposal.id, "state": proposal.state, "outcome": proposal.outcome})
 
-    # ── Screenings: one approval, then the plan runs by itself ──────────────────────────────────────
+    # ── Iterations: one approval, then the plan runs by itself ──────────────────────────────────────
     workflow_tasks: dict[str, asyncio.Task[None]] = {}
 
     def find_workflow(request: Request, session: Session) -> WorkflowProposal | None:
@@ -474,7 +474,7 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
             numbers = [r.affinity_kcal for r in workflow.outcome.records if r.affinity_kcal is not None]
             numbers += [float(workflow.spec.threshold_kcal), abs(float(workflow.spec.threshold_kcal)), float(len(workflow.spec.molecules))]
         text = workflow_outcome_text(workflow) if workflow.summary and workflow.summary.get("counts") is not None else (
-            "Cribado interrumpido: no se pudo confirmar todo lo que ocurrió; revisa MolDesign antes de repetirlo.")
+            "Iteración interrumpida: no se pudo confirmar todo lo que ocurrió; revisa MolDesign antes de repetirlo.")
         try:
             state.memory.add_message(workflow.conv_id, workflow.owner, "assistant", text, verified_numbers=sorted(numbers)[:200])
         except (ConversationNotFound, PersistenciaFallida):
@@ -957,7 +957,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
     comparison_facts: list[dict[str, Any]] = []
     #: Proposals this turn left for the person to confirm (nothing is executed until then).
     new_proposals: list[Proposal] = []
-    #: Screenings this turn proposed (one card; the person's single approval runs the whole plan).
+    #: Iterations this turn proposed (one card; the person's single approval runs the whole plan).
     new_workflows: list[WorkflowProposal] = []
     events: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
     case_status: dict[str, Any] | None = None
@@ -1115,7 +1115,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         "La aceptación de una tarea no es un resultado ni indica que el cálculo haya terminado. No reintentes un resultado desconocido. "
         "Si el usuario pregunta por el estado o el resultado de una tarea aceptada, usa get_evaluation_status con su task_id; "
         "informa task_status tal cual y, solo si es SUCCESS, la afinidad de Vina como energía de la mejor pose, nunca como actividad ni Ki. "
-        + EXPLAIN_GUIDANCE + COMPARE_GUIDANCE + ACTIONS_GUIDANCE + SCREENING_GUIDANCE +
+        + EXPLAIN_GUIDANCE + COMPARE_GUIDANCE + ACTIONS_GUIDANCE + ITERATION_GUIDANCE +
         "Si el usuario no indicó un PDB ID exacto busca en el catálogo y asigna únicamente si el resultado es inequívoco; si hay varias opciones pregunta. "
         "Si el usuario pidió expresamente un receptor aleatorio o al azar, usa pick_random_receptor y asigna el receptor devuelto; "
         "conserva su sección y disponibilidad, sin sustituirlo por uno verificado salvo que el usuario haya pedido ese filtro. "
@@ -1446,7 +1446,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             turn_exact.update(numbers)
             return workflow.view()
 
-        tools.append(propose_screening_tool(text, propose_workflow))
+        tools.append(propose_iteration_tool(text, propose_workflow))
     if not registro.content_granted(provider.id):
         tools = []
     task = asyncio.create_task(run_tool_loop(provider, messages, tools, max_steps=10, observe=observe_tool))

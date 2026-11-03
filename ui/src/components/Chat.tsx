@@ -13,7 +13,7 @@ import {
 } from "../lib/api";
 import type { StringKey } from "../lib/i18n";
 import ActionProposalCard, { validProposals } from "./ActionProposalCard";
-import ScreeningCard, { validWorkflows } from "./ScreeningCard";
+import IterationCard, { validWorkflows } from "./IterationCard";
 import EvidenceBlock from "./EvidenceBlock";
 import MessageText from "./MessageText";
 import PropertyComparison from "./PropertyComparison";
@@ -36,7 +36,7 @@ interface Message {
   suggestedActions?: SuggestedAction[];
   /** Live only: a proposal lives in the sidecar's memory for minutes, so a reloaded conversation shows none. */
   proposals?: ActionProposal[];
-  /** Live only, like proposals: a screening waits for its one approval in the sidecar's memory. */
+  /** Live only, like proposals: an iteration waits for its one approval in the sidecar's memory. */
   workflows?: WorkflowProposal[];
 }
 
@@ -361,7 +361,7 @@ export default function Chat({
                 <ActionProposalCard key={proposal.id} proposal={proposal} token={token} t={t} onSessionInvalid={onSessionInvalid} />
               ))}
               {message.role === "assistant" && (message.workflows ?? []).map((workflow) => (
-                <ScreeningCard key={workflow.id} proposal={workflow} token={token} t={t} onSessionInvalid={onSessionInvalid} />
+                <IterationCard key={workflow.id} proposal={workflow} token={token} t={t} onSessionInvalid={onSessionInvalid} />
               ))}
               {message.role === "assistant" && index === messages.length - 1 && !message.selectable && actions.length > 0 && (
                 <div className="context-actions" role="group" aria-label={t("chat.actions")}>

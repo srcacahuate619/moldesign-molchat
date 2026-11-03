@@ -1,8 +1,10 @@
-# Cribado automático con una sola aprobación
+# Iteración automática con una sola aprobación
 
 Una persona escribe una petición; el modelo la convierte en un **plan**; la persona lo aprueba **con un clic** y a partir
-de ahí nada espera a nadie hasta que termina. Es la parte del agente que se construyó durante el hackathon
-(27 oct – 4 nov 2026) sobre las acciones de host de [`HOST_CONTRACT.md`](HOST_CONTRACT.md).
+de ahí nada espera a nadie hasta que termina. El agente **itera dentro de un mismo caso**: carga la primera molécula en el
+editor, la evalúa, lee el resultado, carga la siguiente en ese mismo caso, y así hasta que se cumple la regla de parada o
+se acaba la lista. No es el módulo de lotes de MolDesign: no crea un caso por molécula ni evalúa en paralelo; usa las
+acciones de host de [`HOST_CONTRACT.md`](HOST_CONTRACT.md) igual que lo haría la persona, una tras otra.
 
 Ejemplo de petición:
 
@@ -13,14 +15,14 @@ Ejemplo de petición:
 
 | Quién | Hace | No hace |
 |---|---|---|
-| **El modelo** | Lee la petición y propone los parámetros (`propose_screening`): caso, receptor, moléculas, umbral, qué guardar. | No itera, no decide cuándo parar, no calcula, no escribe el cuaderno. |
+| **El modelo** | Lee la petición y propone los parámetros (`propose_iteration`): caso, receptor, moléculas, umbral, qué guardar. | No itera, no decide cuándo parar, no calcula, no escribe el cuaderno. |
 | **MolChat (código)** | Valida el plan, lo muestra, ejecuta el bucle determinista, guarda el registro y escribe el cuaderno y el ZIP. | No calcula ninguna energía ni control: los lee de MolDesign. |
 | **La persona** | Aprueba el plan una vez. Puede cancelar antes. | No necesita intervenir después. |
 | **MolDesign** | Crea el caso, acopla con Vina, valida la pose (PoseBusters), guarda en Moldex, renderiza con Molcy, audita en Preparación. | — |
 
 ## El plan es un objeto cerrado
 
-`ScreeningSpec` (`moldesign.molchat.screening/1`) se valida antes de mostrarse: entre 1 y 12 moléculas, umbral entre −30 y
+`IterationSpec` (`moldesign.molchat.iteration/1`) se valida antes de mostrarse: entre 1 y 12 moléculas, umbral entre −30 y
 0 kcal/mol, escenas y formatos de vídeo de una lista fija, tope por molécula (30–1800 s) y tope total (60–7200 s). Un
 parámetro fuera de rango no se corrige: el plan se rechaza.
 
@@ -50,7 +52,14 @@ una molécula cumpla no significa que sea activa.
 Cada molécula es un intento aislado con su propio estado: `evaluated`, `failed`, `timeout`, `unknown` o `skipped`.
 
 - Un fallo se registra con su motivo y el bucle sigue con la siguiente.
-- `busy` (MolDesign está ocupado) se reintenta con espera acotada.
+- `busy` (MolDesign está ocupado) se espera y se repite en **cada** llamada al anfitrión (asignar el receptor, cargar la
+  molécula, evaluar): cada 5 s, hasta 240 s por llamada y sin pasar del tope total del plan. Es necesario porque la
+  interfaz mantiene el caso bloqueado mientras cierra la corrida anterior —en desarrollo, unos 45 s después de que Vina ya
+  hubiera terminado— y `busy` significa que no se hizo nada, así que repetir es seguro. La tarjeta lo dice mientras
+  espera. Si el bloqueo no se libera, la molécula se anota como fallida con ese motivo («MolDesign siguió ocupado N s»),
+  no como una molécula inválida, y el bucle sigue con la siguiente. Es la primera versión que se probó en la app:
+  reintentaba `busy` sólo al evaluar y no al cargar, así que tras la primera molécula las demás fallaban en cascada;
+  la prueba `test_the_loop_waits_for_the_window_to_close_each_run_and_goes_through_every_molecule` lo reproduce.
 - `unknown` (no se sabe si MolDesign llegó a hacer algo) **nunca se repite**: repetirlo podría duplicar una evaluación.
 - Si se agota el tope total, el estado final es `budget_exhausted`, con lo evaluado hasta ahí.
 - Si la ventana de MolDesign se cierra mientras corre, el plan se cancela.
@@ -84,7 +93,7 @@ Siempre, en una carpeta de salida (`MOLCHAT_OUTPUT_DIR`; por defecto `~/MolDesig
 
 ## Qué no es
 
-- No es un cribado virtual a escala: son hasta 12 moléculas, una a una, con Vina y los tiempos que declara la tarjeta.
+- No es una iteración virtual a escala: son hasta 12 moléculas, una a una, con Vina y los tiempos que declara la tarjeta.
 - No predice actividad biológica ni da consejo médico.
 - No hace que un archivo «parezca listo»: lo que Preparación bloquea o pide revisar se conserva así.
 - No es independiente de MolDesign: la ciencia, la identidad y el cómputo viven allí
@@ -94,11 +103,11 @@ Siempre, en una carpeta de salida (`MOLCHAT_OUTPUT_DIR`; por defecto `~/MolDesig
 
 | Pieza | Código | Pruebas |
 |---|---|---|
-| Plan, regla y bucle | `src/molchat_agent/workflows/screening.py` | `tests/workflows/test_screening.py` |
+| Plan, regla y bucle | `src/molchat_agent/workflows/iteration.py` | `tests/workflows/test_iteration.py` |
 | Cuaderno y ZIP | `workflows/notebook.py`, `workflows/deliverable.py` | `tests/workflows/test_notebook_and_deliverable.py` |
 | Ejecución con la plataforma y la ventana | `workflows/service.py` | `tests/workflows/test_service.py`, `tests/server/test_workflow_chat.py`, `tests/server/test_workflow_preparation.py` |
 | Herramienta del modelo | `workflows/tool.py` | `tests/server/test_harness_chat.py` |
-| Tarjeta de aprobación y relevo al anfitrión | `ui/src/components/ScreeningCard.tsx`, `ui/src/lib/preparationHost.ts` | `ScreeningCard.test.tsx`, `preparationHost.test.ts` |
+| Tarjeta de aprobación y relevo al anfitrión | `ui/src/components/IterationCard.tsx`, `ui/src/lib/preparationHost.ts` | `IterationCard.test.tsx`, `preparationHost.test.ts` |
 
 Las pruebas usan una plataforma simulada que responde como MolDesign (`tests/conversation/fake_moldesign.py`). **No
 sustituyen** un ensayo con la plataforma real: ese ensayo, con el modelo real, se registra en el cuaderno de la demo y no en

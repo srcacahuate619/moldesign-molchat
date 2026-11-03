@@ -48,7 +48,7 @@ class ServerState:
     preparation_requests: dict[str, tuple[str, asyncio.Future[dict[str, Any]]]] = field(default_factory=dict)
     #: Actions the model proposed and the person has not confirmed (save in Moldex, Molcy video).
     proposals: dict[str, Proposal] = field(default_factory=dict)
-    #: Screenings the model proposed. One approval click runs the whole plan (see ``workflows``).
+    #: Iterations the model proposed. One approval click runs the whole plan (see ``workflows``).
     workflows: dict[str, Any] = field(default_factory=dict)
     #: Where a finished plan writes its notebook and ZIP; ``None`` keeps them in memory only (tests).
     output_dir: Path | None = None

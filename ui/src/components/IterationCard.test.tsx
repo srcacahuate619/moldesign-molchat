@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import ScreeningCard, { validWorkflows } from "./ScreeningCard";
+import IterationCard, { validWorkflows } from "./IterationCard";
 import { strings } from "../lib/i18n";
 
 afterEach(cleanup);
@@ -30,7 +30,7 @@ vi.mock("../lib/api", async (importOriginal) => {
 
 const t = (key: keyof ReturnType<typeof strings>) => strings("es")[key];
 const proposal = {
-  id: "a".repeat(32), kind: "screening" as const, digest: "sha256:" + "b".repeat(64), title: "Cribado de moléculas",
+  id: "a".repeat(32), kind: "iteration" as const, digest: "sha256:" + "b".repeat(64), title: "Iteración de moléculas",
   lines: ["Caso «hipotesis» · receptor 8T69", "3 moléculas, una por una: A, B, C"], molecules: ["A", "B", "C"],
 };
 
@@ -44,9 +44,9 @@ beforeEach(() => {
   for (const fn of [m.reportCase, m.reportSmiles, m.reportReceptor, m.reportEvaluation]) fn.mockResolvedValue({});
 });
 
-const renderCard = () => render(<ScreeningCard proposal={proposal} token="test-session" t={t} onSessionInvalid={() => {}} />);
+const renderCard = () => render(<IterationCard proposal={proposal} token="test-session" t={t} onSessionInvalid={() => {}} />);
 
-describe("ScreeningCard", () => {
+describe("IterationCard", () => {
   it("shows everything the plan will do and runs nothing until the one approval", () => {
     renderCard();
     expect(screen.getByText("3 moléculas, una por una: A, B, C")).toBeInTheDocument();
@@ -152,7 +152,7 @@ describe("ScreeningCard", () => {
 
 describe("validWorkflows", () => {
   const good = { ...proposal };
-  it("keeps a well-formed screening and drops malformed ones", () => {
+  it("keeps a well-formed iteration and drops malformed ones", () => {
     expect(validWorkflows([good])).toEqual([good]);
     expect(validWorkflows("x")).toEqual([]);
     for (const bad of [{ ...good, id: "../x" }, { ...good, kind: "other" }, { ...good, digest: "nope" },
