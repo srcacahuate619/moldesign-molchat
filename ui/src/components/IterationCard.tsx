@@ -250,7 +250,7 @@ export default function IterationCard({
         if (!next.videoPending) {
           const added = next.files["entrega.zip"] !== undefined && next.video === "completo";
           setVideoAdded(added);
-          if (added) notifyHost(newNoticeId(), "video_ready", "entrega.zip");
+          if (added) notifyHost(newNoticeId(), "video_ready", t("iteration.file.entrega.zip"));
         }
       }).catch(() => {});
     }, 8000);
@@ -295,18 +295,20 @@ export default function IterationCard({
   };
 
   const download = async (name: string) => {
+    // Saved under the plan's language («delivery.zip»), as the sidecar writes it on disk; it is served by its own name.
+    const saveAs = t(`iteration.file.${name}` as StringKey);
     const notice = newNoticeId();
-    notifyHost(notice, "started", name);
+    notifyHost(notice, "started", saveAs);
     try {
       const blob = await api.workflowFile(token, proposal.id, name);
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = name;
+      anchor.download = saveAs;
       anchor.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 10000);
-      notifyHost(notice, "done", name);
-    } catch { notifyHost(notice, "failed", name); setProblem(t("iteration.downloadFailed")); }
+      notifyHost(notice, "done", saveAs);
+    } catch { notifyHost(notice, "failed", saveAs); setProblem(t("iteration.downloadFailed")); }
   };
 
   // One line for the host's bubble: what the plan is doing now, so it can be followed with the panel minimised.
