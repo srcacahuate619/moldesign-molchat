@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 UI = ROOT / "ui"
 DIST = UI / "dist"
 INDEX = DIST / "index.html"
-SOURCES = ("src", "index.html", "package.json", "vite.config.ts", "tsconfig.json")
+SOURCES = ("src", "index.html", "package.json", "package-lock.json", "vite.config.ts", "tsconfig.json")
 
 
 def main() -> int:
@@ -26,7 +26,7 @@ def main() -> int:
     except (AttributeError, OSError, ValueError):
         pass
     if not INDEX.is_file():
-        print("check_ui_build: MISSING ui/dist (cd ui && npm install && npm run build)")
+        print("check_ui_build: MISSING ui/dist (cd ui && npm ci && npm run build)")
         return 1
     built_at = INDEX.stat().st_mtime
     stale: list[str] = []

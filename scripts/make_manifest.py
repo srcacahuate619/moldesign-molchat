@@ -79,7 +79,7 @@ INCLUIR_CARPETAS = ("src/molchat_agent/",)
 #: Build output that ships from disk (git-ignored): verified fresh, never stale.
 UI_DIST = "ui/dist/"
 #: UI sources: must be committed AND older than the bundle, or nothing ships.
-UI_FUENTES = ("src", "index.html", "package.json", "vite.config.ts", "tsconfig.json")
+UI_FUENTES = ("src", "index.html", "package.json", "package-lock.json", "vite.config.ts", "tsconfig.json")
 #: What the MolDesign host requires to launch and mount the sidecar.
 INDISPENSABLES = (
     "LICENSE", "NOTICE.md", "pyproject.toml",

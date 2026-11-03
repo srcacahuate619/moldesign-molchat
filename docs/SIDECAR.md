@@ -5,13 +5,16 @@ loopback que sirve la API (`/v1/*`) y la UI construida (`ui/dist`), contra
 un MolDesign local sin tocar su frontend (modo standalone, el modo demo
 del hackathon) o acuñado por el host (modo integrado, Fase 6).
 
-## Arranque en un comando (demo, sin claves)
+## Arranque de la demo sin claves
 
 ```bash
 python -m pip install -e '.[server]'
-cd ui && npm install && npm run build && cd ..
+npm --prefix ui ci
+npm --prefix ui run build
 MOLCHAT_PROVIDER=fake molchat-agent serve
 ```
+
+Para PowerShell, consulta el [arranque desde el README](../README.md#build-and-open-the-ui).
 
 Salida (la sesión se imprime **una sola vez**):
 
