@@ -92,7 +92,10 @@ export default function Chat({
     const el = box.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+    // scrollHeight leaves out the border; without it the box is two pixels short and shows a scrollbar on one line.
+    const needed = el.scrollHeight + el.offsetHeight - el.clientHeight;
+    el.style.height = `${Math.min(needed, 200)}px`;
+    el.style.overflowY = needed > 200 ? "auto" : "hidden";
   }, []);
   const restored = useRef(false);
   const streaming = status !== null;
