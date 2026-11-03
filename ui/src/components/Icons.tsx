@@ -8,4 +8,10 @@ export function HistoryIcon() { return <Icon><path d="M3 12a9 9 0 1 0 3-6.7L3 8"
 export function PlusIcon() { return <Icon><path d="M12 5v14M5 12h14"/></Icon>; }
 export function SendIcon() { return <Icon><path d="m3 11 18-8-8 18-2-8-8-2ZM11 13 21 3"/></Icon>; }
 export function MicIcon() { return <Icon><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3m-4 0h8"/></Icon>; }
+/** Marks of the plan's timeline, drawn like the rest so no step is a text glyph. */
+export function StepPendingIcon() { return <Icon><circle cx="12" cy="12" r="7"/></Icon>; }
+export function StepRunningIcon() { return <Icon><circle cx="12" cy="12" r="7"/><path d="M12 5a7 7 0 0 1 0 14Z" fill="currentColor"/></Icon>; }
+export function StepDoneIcon() { return <Icon><path d="m5 12.5 4.5 4.5L19 7.5"/></Icon>; }
+export function StepFailedIcon() { return <Icon><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></Icon>; }
+export function StepSkippedIcon() { return <Icon><path d="M7 12h10"/></Icon>; }
 export function StopIcon() { return <Icon><rect x="6" y="6" width="12" height="12" rx="2"/></Icon>; }

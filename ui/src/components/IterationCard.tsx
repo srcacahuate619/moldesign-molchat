@@ -10,6 +10,7 @@ import { loadSmilesInHost } from "../lib/smilesHost";
 import { renderVideoInHost } from "../lib/molcyHost";
 import { newNoticeId, notifyHost } from "../lib/hostNotify";
 import { reportStatus, type BubbleStatus } from "../lib/hostStatus";
+import { StepDoneIcon, StepFailedIcon, StepPendingIcon, StepRunningIcon, StepSkippedIcon } from "./Icons";
 
 type Phase = "pending" | "running" | "done" | "cancelled" | "interrupted";
 
@@ -35,7 +36,8 @@ interface Summary {
   notes: string[];
 }
 
-const MARKS: Record<StepState, string> = { pending: "○", running: "◐", done: "✓", failed: "✕", skipped: "–" };
+const MARKS: Record<StepState, typeof StepDoneIcon> = { pending: StepPendingIcon, running: StepRunningIcon, done: StepDoneIcon,
+  failed: StepFailedIcon, skipped: StepSkippedIcon };
 const STEPS: TimelineStep[] = ["case", "receptor", "molecules", "moldex", "video", "preparation", "deliverable"];
 type StepState = "pending" | "running" | "done" | "failed" | "skipped";
 interface StepView { state: StepState; detail: string | null }
@@ -305,7 +307,7 @@ export default function IterationCard({
             const view = timeline[step] ?? { state: "pending" as StepState, detail: null };
             return (
               <li key={step} data-state={view.state}>
-                <span className="timeline-mark" aria-hidden="true">{MARKS[view.state]}</span>
+                <span className="timeline-mark" aria-hidden="true">{(() => { const Mark = MARKS[view.state]; return <Mark />; })()}</span>
                 <span>{t(`iteration.timeline.${step}` as StringKey)}</span>
                 {view.detail && <span className="muted"> · {view.detail}</span>}
                 <span className="visually-hidden"> ({t(`iteration.timeline.state.${view.state}` as StringKey)})</span>
