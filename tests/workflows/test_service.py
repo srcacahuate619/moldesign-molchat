@@ -11,7 +11,7 @@ from typing import Any
 from molchat_agent.workflows.deliverable import verify_deliverable
 from molchat_agent.workflows.iteration import IterationSpec, VideoRequest
 from molchat_agent.workflows.service import (
-    HostRelay, WorkflowProposal, execute, new_workflow, summarize, workflow_answer)
+    HostRelay, WorkflowProposal, complete_video, execute, new_workflow, summarize, workflow_answer)
 
 JOB = "a1b2c3d4-0000-4000-8000-000000000001"
 
@@ -93,12 +93,24 @@ READY = {"status": "exported", "readiness": "REVIEW", "message": "Dos puntos pid
          "package": ("caso_t-CCN.zip", b"PK-moldesign-package")}
 
 
-async def test_the_whole_plan_ends_in_one_verifiable_zip_with_the_three_pieces() -> None:
+async def test_the_plan_does_not_wait_for_the_render_and_the_delivery_is_completed_when_it_ends(tmp_path) -> None:
+    """Preparación runs while Molcy renders; the delivery is written without the video, declared as still rendering,
+    and the background follower rewrites it with the MP4 in the same folder."""
     events: list[dict[str, Any]] = []
     prep = Preparation(READY)
     p = proposal(spec())
-    out = await execute(p, Host(), Platform(), events.append, preparation=prep, runner_kwargs=FAST)  # type: ignore[arg-type]
+    platform = Platform()
+    out = await execute(p, Host(), platform, events.append, preparation=prep, runner_kwargs=FAST, output_dir=tmp_path)  # type: ignore[arg-type]
     assert out.state == "completed" and out.selected == 2 and prep.calls == [("hipotesis-8T69", "t-CCN", "m-CCN")]
+    assert platform.polls == 0  # nothing waited for the render before Preparación and the delivery
+    assert events[-1]["event"] == "done" and events[-1]["summary"]["video_pending"] is True
+    with zipfile.ZipFile(io.BytesIO(p.files["entrega.zip"])) as archive:
+        missing = json.loads(archive.read("MANIFEST.json"))["missing"]
+        assert archive.read("preparacion/caso_t-CCN.zip") == b"PK-moldesign-package"
+    assert [m["item"] for m in missing] == ["video/"] and "segundo plano" in missing[0]["reason"]
+    first_folder = p.folder
+
+    await complete_video(p, platform, output_dir=tmp_path, poll_s=0.0, sleep=lambda _s: asyncio.sleep(0))  # type: ignore[arg-type]
     blob = p.files["entrega.zip"]
     assert verify_deliverable(blob) == []
     with zipfile.ZipFile(io.BytesIO(blob)) as archive:
@@ -106,7 +118,8 @@ async def test_the_whole_plan_ends_in_one_verifiable_zip_with_the_three_pieces()
         assert {"cuaderno/cuaderno.pdf", "preparacion/caso_t-CCN.zip", "video/molcy_a1b2c3d4.mp4", "MANIFEST.json"} <= names
         assert archive.read("preparacion/caso_t-CCN.zip") == b"PK-moldesign-package"
         assert json.loads(archive.read("MANIFEST.json"))["missing"] == []
-    assert events[-1]["event"] == "done" and events[-1]["summary"]["preparation"] == "REVIEW"
+    assert p.folder == first_folder and (first_folder / "entrega.zip").read_bytes() == blob  # same folder, rewritten
+    assert p.summary["video_pending"] is False and p.summary["video"] == "completo"
     assert "package" not in out.preparation  # the bytes never reach the notebook or the record
 
 
@@ -119,8 +132,9 @@ async def test_review_is_declared_in_the_notebook_not_decided() -> None:
 
 async def test_a_render_that_failed_is_missing_in_the_zip_with_its_reason_and_the_rest_still_ships() -> None:
     p = proposal(spec())
-    await execute(p, Host(), Platform(video_final="fallido", mp4=None), lambda _e: None,
-                  preparation=Preparation(READY), runner_kwargs=FAST)  # type: ignore[arg-type]
+    platform = Platform(video_final="fallido", mp4=None)
+    await execute(p, Host(), platform, lambda _e: None, preparation=Preparation(READY), runner_kwargs=FAST)  # type: ignore[arg-type]
+    await complete_video(p, platform, poll_s=0.0, sleep=lambda _s: asyncio.sleep(0))  # type: ignore[arg-type]
     with zipfile.ZipFile(io.BytesIO(p.files["entrega.zip"])) as archive:
         manifest = json.loads(archive.read("MANIFEST.json"))
     assert [m["item"] for m in manifest["missing"]] == ["video/"] and "fallido" in manifest["missing"][0]["reason"]

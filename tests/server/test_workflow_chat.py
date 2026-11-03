@@ -16,7 +16,8 @@ ITERATION = {"case_name": "hipotesis-8T69", "pdb_id": "8T69", "threshold_kcal": 
              "video": {"scene": "busqueda"}, "preparation": True, "package": True}
 REGISTRIES = (("case_requests", "case-requests"), ("smiles_requests", "smiles-requests"),
               ("receptor_requests", "receptor-requests"), ("evaluation_requests", "evaluation-requests"),
-              ("preparation_requests", "preparation-requests"), ("case_status_requests", "case-status-requests"))
+              ("preparation_requests", "preparation-requests"), ("case_status_requests", "case-status-requests"),
+              ("molcy_requests", "molcy-requests"))
 PROJECTION = {"projection_version": 1, "case_id": "c-1", "name": "hipotesis-8T69"}
 
 
@@ -42,6 +43,8 @@ class Window:
             return self.preparation
         if kind == "case-status-requests":
             return {"status": "idle"}
+        if kind == "molcy-requests":
+            return {"status": "started", "job_id": VIDEO_JOB}
         if kind == "smiles-requests":
             return {"status": self.smiles.pop(0) if len(self.smiles) > 1 else self.smiles[0]}
         return {"status": "started", "task_id": TASK}
@@ -123,7 +126,9 @@ async def test_a_wrong_digest_does_not_run_and_the_click_runs_the_whole_plan_onc
         statuses = [(r.name, r.status) for r in workflow.outcome.records]
         assert statuses == [("Rota", "failed"), ("Buena", "evaluated"), ("Nunca", "skipped")]
         assert window.seen.count("smiles-requests") == 2 and window.seen.count("evaluation-requests") == 1
-        assert [c.path for c in md.writes()] == [f"/history/save/{md.job()['result']['molecule_id']}", "/molcy/trabajos"]
+        # the video is launched by the Molcy tab in view, not by MolChat behind the window
+        assert [c.path for c in md.writes()] == [f"/history/save/{md.job()['result']['molecule_id']}"]
+        assert window.seen.count("molcy-requests") == 1
         assert {c.auth for c in md.calls} == {chat.headers["Authorization"]}
 
         kinds = [e.get("event") for e in stream if e["type"] == "workflow"]
@@ -146,7 +151,7 @@ async def test_a_wrong_digest_does_not_run_and_the_click_runs_the_whole_plan_onc
 
         # a second click reports the outcome, it does not run the plan again
         again = await chat.client.post(f"/v1/workflows/{card['id']}/run", headers=chat.headers, json={"digest": card["digest"]})
-        assert again.json()["state"] == "done" and len(md.writes()) == 2
+        assert again.json()["state"] == "done" and len(md.writes()) == 1  # only the Moldex save; the video went through the tab
 
         served = await chat.client.get(f"/v1/workflows/{card['id']}/files/entrega.zip", headers=chat.headers)
         assert served.status_code == 200 and served.content == blob

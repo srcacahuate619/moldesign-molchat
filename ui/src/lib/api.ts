@@ -176,6 +176,8 @@ export const api = {
     postJson(t, `/v1/receptor-requests/${encodeURIComponent(id)}/result`, { status }),
   reportEvaluationResult: (t: string, id: string, result: import("./evaluationHost").EvaluationResult) =>
     postJson(t, `/v1/evaluation-requests/${encodeURIComponent(id)}/result`, result),
+  reportMolcyResult: (t: string, id: string, result: import("./molcyHost").MolcyResult) =>
+    postJson(t, `/v1/molcy-requests/${encodeURIComponent(id)}/result`, result),
   reportCaseStatusResult: (t: string, id: string, result: import("./caseStatusHost").CaseStatusResult) =>
     postJson(t, `/v1/case-status-requests/${encodeURIComponent(id)}/result`, result),
   reportPreparationResult: (t: string, id: string, result: import("./preparationHost").PreparationResult) =>
@@ -230,6 +232,9 @@ export const api = {
     })) as { text: string };
     return payload.text;
   },
+  /** The plan's current state: after it ends, the summary keeps changing while Molcy renders in the background. */
+  getWorkflow: (t: string, id: string) =>
+    request(t, `/v1/workflows/${encodeURIComponent(id)}`) as Promise<{ id: string; state: string; summary: unknown }>,
   cancelWorkflow: (t: string, id: string) =>
     postJson(t, `/v1/workflows/${encodeURIComponent(id)}/cancel`, {}) as Promise<{ id: string; state: string }>,
   /** A file the finished plan produced (notebook, ZIP), as a Blob: the session travels in the header, never in a URL. */

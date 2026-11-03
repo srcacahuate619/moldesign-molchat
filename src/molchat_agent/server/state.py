@@ -48,6 +48,8 @@ class ServerState:
     preparation_requests: dict[str, tuple[str, asyncio.Future[dict[str, Any]]]] = field(default_factory=dict)
     #: Read-only questions to the window: can this case take another molecule? (``case_status``).
     case_status_requests: dict[str, tuple[str, asyncio.Future[dict[str, Any]]]] = field(default_factory=dict)
+    #: The Molcy tab preparing a video in view (``molcy_render``).
+    molcy_requests: dict[str, tuple[str, asyncio.Future[dict[str, Any]]]] = field(default_factory=dict)
     #: Actions the model proposed and the person has not confirmed (save in Moldex, Molcy video).
     proposals: dict[str, Proposal] = field(default_factory=dict)
     #: Iterations the model proposed. One approval click runs the whole plan (see ``workflows``).

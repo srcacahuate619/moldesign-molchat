@@ -62,6 +62,7 @@ que `request_id` sean 32 caracteres hexadecimales y que `case_name` y `name` no 
 | `evaluate_case` | `case_name` | `molchat-evaluation-result` | `started`, `started_unregistered`, `case_not_found`, `case_ambiguous`, `busy`, `blocked`, `needs_review`, `failed`, `unknown` |
 | `audit_case_preparation` | `case_name`, `task_id` | `molchat-preparation-result` | `audited`, `case_not_found`, `case_mismatch`, `not_auditable`, `audit_failed`, `busy`, `failed`, `unknown` |
 | `case_status` | `case_name` | `molchat-case-status-result` | `idle`, `busy`, `not_found`, `ambiguous`, `failed`, `unknown` |
+| `molcy_render` | `task_id`, `scene`, `format` | `molchat-molcy-result` | `started` (con `job_id`), `not_found`, `unavailable`, `busy`, `failed`, `unknown` |
 | `read_editor` | `case_name`, `operation`, `revision` | `molchat-editor-result` | `ok`, `not_ready`, `not_found`, `ambiguous`, `changed`, `too_large`, `read_limit`, `failed`, `unknown` |
 
 Cada respuesta repite el `request_id` de su petición y lleva `status`. Además:
@@ -86,6 +87,15 @@ Pregunta de **sólo lectura**: ¿puede este caso recibir otra molécula ahora? `
 la corrida anterior (o atendiendo otra petición del chat); `idle`, que se puede cargar. Puede añadir `run_state` (el estado
 de la última corrida del caso, `^[a-z_]{1,32}$`) y su `task_id`. No navega ni cambia nada. Un anfitrión sin espacio de
 casos montado contesta `unknown`, nunca `idle`; con `unknown`, MolChat recurre a reintentar la carga mientras diga `busy`.
+
+### Vídeo de Molcy (`molcy_render`)
+
+El anfitrión lleva a la persona a la pestaña de Molcy, que **prepara el vídeo a la vista**: elige la corrida guardada en
+Moldex (`task_id`), la escena y el formato, un paso tras otro, y pulsa su propio botón «Generar video» con sus propias
+comprobaciones (GPU, Blender, espacio en disco). Devuelve el `job_id` que empezó o, si no pudo, por qué
+(`not_found`: la corrida no está guardada; `unavailable`: falta GPU, Blender o espacio, con el motivo que enseña la
+pestaña). MolChat no lanza el vídeo por detrás de la ventana cuando el anfitrión tiene esta acción, y un `unknown` no se
+repite: la pestaña pudo empezar un render.
 
 ### Auditoría en Preparación (`audit_case_preparation`)
 

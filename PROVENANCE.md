@@ -1012,3 +1012,12 @@ MolDesign es por API HTTP, no por copia de código.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/workflows/test_evaluation.py, tests/workflows/test_iteration.py y ui/src/lib/caseStatusHost.test.ts
 
+### ui/src/lib/molcyHost.ts, ui/src/lib/molcyHost.test.ts
+
+- Origen: código nuevo en MolChat (2026-11-03) tras el segundo ensayo en la app: el puente de la acción de host `molcy_render`, para que el vídeo lo prepare la pestaña de Molcy a la vista.
+- Commit de MolDesign: N/A; la pestaña de Molcy elige la corrida, la escena y el formato y pulsa su propio botón (`docs/HOST_CONTRACT.md`).
+- Autoría: Johan Amezcua, con colaboración de un agente de código.
+- Transformación: sólo viaja el `job_id` que empezó la pestaña o el motivo por el que no pudo; una respuesta de otro origen, de otra petición o fuera de contrato se ignora, y el silencio es «unknown», que nunca se repite.
+- Licencia resultante: GPL-3.0-or-later
+- Tests: ui/src/lib/molcyHost.test.ts, ui/src/components/IterationCard.test.tsx y tests/workflows/test_iteration.py
+

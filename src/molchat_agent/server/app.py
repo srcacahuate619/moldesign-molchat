@@ -44,7 +44,8 @@ from ..conversation.product_actions import (ACTIONS_GUIDANCE, Proposal, mask_unc
                                             molcy_video_tool, new_proposal, outcome_text, proposal_answer, run_proposal,
                                             save_to_moldex_tool, view as proposal_view)
 from ..workflows.notebook import now_iso
-from ..workflows.service import (HostRelay, PlatformHttp, WorkflowProposal, execute as execute_workflow, new_workflow,
+from ..workflows.service import (HostRelay, PlatformHttp, WorkflowProposal, complete_video, execute as execute_workflow, new_workflow,
+                                 video_pending,
                                  workflow_answer, workflow_outcome_text)
 from ..workflows.tool import ITERATION_GUIDANCE, propose_iteration_tool
 from ..conversation.tools import PlatformBackend
@@ -394,6 +395,26 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
         pending[1].set_result(payload)
         return JSONResponse({"accepted": True})
 
+    async def molcy_result(request: Request) -> JSONResponse:
+        """The Molcy tab's answer: the job it started from its own button, or why it could not."""
+        session = await need_chat(request)
+        pending = state.molcy_requests.get(request.path_params["request_id"])
+        if pending is None or pending[0] != session.sub or pending[1].done():
+            return _error(404, "solicitud no encontrada")
+        payload = await read_json(request)
+        if not isinstance(payload, dict) or payload.get("status") not in {"started", "not_found", "unavailable", "busy", "failed", "unknown"}:
+            return _error(400, "resultado no válido")
+        if payload["status"] == "started":
+            if set(payload) != {"status", "job_id"} or not (isinstance(payload["job_id"], str) and re.fullmatch(r"[A-Za-z0-9-]{8,64}", payload["job_id"])):
+                return _error(400, "resultado no válido")
+        else:
+            reason = payload.get("reason")
+            if set(payload) - {"status", "reason"} or (reason is not None and (
+                    not isinstance(reason, str) or len(reason) > 300 or any(ord(ch) < 32 for ch in reason))):
+                return _error(400, "resultado no válido")
+        pending[1].set_result(payload)
+        return JSONResponse({"accepted": True})
+
     async def editor_result(request: Request) -> JSONResponse:
         session = await need_chat(request)
         pending = state.editor_requests.get(request.path_params["request_id"])
@@ -467,6 +488,7 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
 
     # ── Iterations: one approval, then the plan runs by itself ──────────────────────────────────────
     workflow_tasks: dict[str, asyncio.Task[None]] = {}
+    video_tasks: set[asyncio.Task[None]] = set()  # renders followed after the plan ended; kept so they are not collected
 
     def find_workflow(request: Request, session: Session) -> WorkflowProposal | None:
         workflow = state.workflows.get(request.path_params["workflow_id"])
@@ -503,6 +525,12 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
         try:
             preparation = state.preparation(platform, relay) if callable(state.preparation) else None
             await execute_workflow(workflow, relay, platform, emit, preparation=preparation, output_dir=state.output_dir)
+            if video_pending(workflow.outcome):
+                # The render goes on in Molcy; the plan does not wait for it. This follows it and rewrites the delivery
+                # with the MP4 when it ends. It needs no window: only MolDesign's backend, with the account's session.
+                follow = asyncio.create_task(complete_video(workflow, platform, output_dir=state.output_dir))
+                video_tasks.add(follow)
+                follow.add_done_callback(video_tasks.discard)
         except asyncio.CancelledError:
             workflow.state = "cancelled"
             workflow.summary = {"state": "interrupted", "counts": None, "notes": ["Se interrumpió antes de terminar."]}
@@ -837,6 +865,7 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
             Route("/v1/editor-requests/{request_id}/result", editor_result, methods=["POST"]),
             Route("/v1/preparation-requests/{request_id}/result", preparation_result, methods=["POST"]),
             Route("/v1/case-status-requests/{request_id}/result", case_status_result, methods=["POST"]),
+            Route("/v1/molcy-requests/{request_id}/result", molcy_result, methods=["POST"]),
             Route("/v1/actions/{action_id}/confirm", action_confirm, methods=["POST"]),
             Route("/v1/actions/{action_id}/cancel", action_cancel, methods=["POST"]),
             Route("/v1/workflows/{workflow_id}", workflow_get, methods=["GET"]),

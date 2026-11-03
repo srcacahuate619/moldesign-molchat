@@ -136,3 +136,22 @@ async def test_the_case_status_endpoint_takes_only_the_read_only_answer(tmp_path
             assert await post(bad) == (400, False), bad
         missing = await chat.client.post("/v1/case-status-requests/nope/result", headers=chat.headers, json={"status": "idle"})
         assert missing.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_the_molcy_endpoint_takes_a_job_or_a_reason_and_nothing_else(tmp_path, monkeypatch):
+    async with Chat(tmp_path, monkeypatch, fake()) as chat:
+        loop = asyncio.get_running_loop()
+
+        async def post(payload):
+            future = loop.create_future()
+            chat.state.molcy_requests["v1"] = ("owner", future)
+            response = await chat.client.post("/v1/molcy-requests/v1/result", headers=chat.headers, json=payload)
+            return response.status_code, future.done()
+
+        assert await post({"status": "started", "job_id": "d2b13faf-3185-4aa1-95a2-228163cd8a74"}) == (200, True)
+        assert await post({"status": "unavailable", "reason": "sin GPU"}) == (200, True)
+        for bad in ({"status": "started"}, {"status": "started", "job_id": "../x"}, {"status": "started", "job_id": "abcdefgh", "reason": "x"},
+                    {"status": "ok"}, {"status": "failed", "job_id": "abcdefgh"}, {"status": "failed", "reason": "a\u0000b"}):
+            assert await post(bad) == (400, False), bad
+

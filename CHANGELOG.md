@@ -2,6 +2,12 @@
 
 ## No publicado
 
+- Segundo ensayo en la app: el bucle funcionó (tres moléculas, parada en la que cumplía, guardado y vídeo encolado), pero
+  Preparación respondió «la ventana no pudo atender» y el plan se quedó esperando al render. Cambios:
+  - el vídeo se renderiza **en segundo plano**: Preparación, el cuaderno y el ZIP no lo esperan; `complete_video` sigue el
+    render y rehace la entrega con el MP4 en la misma carpeta, y la tarjeta lo dice mientras espera;
+  - el vídeo lo prepara **la pestaña de Molcy a la vista** (nueva acción de host `molcy_render`,
+    `/v1/molcy-requests/{id}/result`): elige corrida, escena y formato y pulsa su propio botón; si no puede, dice por qué.
 - La evaluación de cada molécula es una pieza propia (`workflows/evaluation.py`) con dos señales explícitas: el
   **backend** dice cuándo terminó la corrida y cuánto dio Vina (por `task_id`), y la iteración decide con ese número en el
   acto; la **ventana** dice si el caso puede recibir otra molécula con la nueva acción de host de sólo lectura

@@ -415,9 +415,30 @@ class IterationRunner:
             if out.saved is None or out.saved.get("status") not in {"saved", "already_saved"}:
                 out.video = {"status": "not_requested", "message": "No se pidió el vídeo porque la corrida no quedó guardada en Moldex."}
             else:
-                out.video = await self._guarded("pedir el vídeo", self.platform.request_video(best.task_id, best.molecule_id, spec.video))
+                out.video = await self._guarded("pedir el vídeo", self._request_video(best))
             self.emit("video", result=out.video)
         # Preparation and the package are added by the callers that own those ports (see runner_extras).
+
+    async def _request_video(self, best: MoleculeRecord) -> dict[str, Any]:
+        """The video is asked to the Molcy tab, which chooses the run, the scene and the format in view and presses its
+        own button (``molcy_render``), so the person sees what the agent does. A host without that action falls back
+        to asking MolDesign's backend directly. «unknown» is never retried: the tab may have started a render."""
+        video = self.spec.video
+        assert video is not None and best.task_id and best.molecule_id
+        render = getattr(self.host, "render_video", None)
+        if render is None:
+            return await self.platform.request_video(best.task_id, best.molecule_id, video)
+        self.emit("phase", message="Preparando el vídeo en la pestaña de Molcy.")
+        answer = await render(best.task_id, video.scene, video.format)
+        status = answer.get("status") if isinstance(answer, dict) else None
+        if status == "started" and isinstance(answer.get("job_id"), str):
+            return {"status": "started", "job_id": answer["job_id"], "message": "Vídeo en cola en Molcy (lanzado desde su pestaña)."}
+        reason = answer.get("reason") if isinstance(answer, dict) and isinstance(answer.get("reason"), str) else None
+        messages = {"not_found": "La corrida no aparece entre las guardadas en Moldex.",
+                    "unavailable": "Molcy no puede generar el vídeo ahora.", "busy": "Molcy está ocupado con otro trabajo.",
+                    "unknown": "No se pudo confirmar si Molcy empezó el vídeo; no se repitió."}
+        return {"status": status or "failed", "message": (messages.get(status or "", "Molcy no empezó el vídeo.")
+                                                          + (f" {reason}" if reason else ""))}
 
     async def _guarded(self, what: str, call: Awaitable[dict[str, Any]]) -> dict[str, Any]:
         try:

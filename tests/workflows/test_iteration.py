@@ -419,3 +419,35 @@ def test_judge_reads_numbers_but_never_invents_a_pass() -> None:
     assert judge(spec, None, "passed")[0] == "below_threshold"
     assert judge(spec, -12.0, "failed")[0] == "near"
     assert Molecule("a", "C").smiles == "C"
+
+
+class MolcyTabHost(FakeHost):
+    def __init__(self, answer: dict[str, Any]) -> None:
+        super().__init__()
+        self.answer, self.renders = answer, []
+
+    async def render_video(self, task_id: str, scene: str, format: str) -> dict[str, Any]:
+        self.renders.append((task_id, scene, format))
+        return self.answer
+
+
+async def test_the_video_is_launched_by_the_molcy_tab_in_view_not_behind_the_window() -> None:
+    spec = IterationSpec.from_dict(spec_dict(video={"scene": "busqueda", "format": "horizontal"}))
+    host, platform = MolcyTabHost({"status": "started", "job_id": "job-from-tab"}), FakePlatform(SCORES)
+    out = await runner(spec, host, platform).run()
+    assert host.renders == [("t-CCN", "busqueda", "horizontal")]
+    assert platform.videos == []  # MolChat did not ask the backend by itself
+    assert out.video["status"] == "started" and out.video["job_id"] == "job-from-tab"
+
+
+async def test_a_tab_that_cannot_render_is_declared_with_its_reason_and_never_retried_behind_its_back() -> None:
+    spec = IterationSpec.from_dict(spec_dict(video={"scene": "busqueda", "format": "horizontal"}))
+    host = MolcyTabHost({"status": "unavailable", "reason": "Esta máquina no tiene una GPU compatible"})
+    platform = FakePlatform(SCORES)
+    out = await runner(spec, host, platform).run()
+    assert out.video["status"] == "unavailable" and "GPU compatible" in out.video["message"]
+    assert platform.videos == [] and len(host.renders) == 1
+    unknown = MolcyTabHost({"status": "unknown"})
+    out = await runner(spec, unknown, platform).run()
+    assert out.video["status"] == "unknown" and "no se repitió" in out.video["message"] and len(unknown.renders) == 1
+

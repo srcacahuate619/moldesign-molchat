@@ -9,10 +9,11 @@ afterEach(cleanup);
 const m = vi.hoisted(() => ({
   run: vi.fn(), cancel: vi.fn(), file: vi.fn(), createCase: vi.fn(), loadSmiles: vi.fn(), receptor: vi.fn(), evaluate: vi.fn(),
   reportCase: vi.fn(), reportSmiles: vi.fn(), reportReceptor: vi.fn(), reportEvaluation: vi.fn(),
-  audit: vi.fn(), reportPreparation: vi.fn(), caseStatus: vi.fn(), reportCaseStatus: vi.fn(),
+  audit: vi.fn(), reportPreparation: vi.fn(), caseStatus: vi.fn(), reportCaseStatus: vi.fn(), getWorkflow: vi.fn(), molcy: vi.fn(), reportMolcy: vi.fn(),
 }));
 
 vi.mock("../lib/caseStatusHost", () => ({ caseStatusInHost: m.caseStatus }));
+vi.mock("../lib/molcyHost", () => ({ renderVideoInHost: m.molcy }));
 
 vi.mock("../lib/preparationHost", () => ({ auditPreparationInHost: m.audit }));
 
@@ -26,7 +27,7 @@ vi.mock("../lib/api", async (importOriginal) => {
     ...original, runWorkflow: m.run,
     api: { ...original.api, cancelWorkflow: m.cancel, workflowFile: m.file, reportCaseResult: m.reportCase,
       reportSmilesResult: m.reportSmiles, reportReceptorResult: m.reportReceptor, reportEvaluationResult: m.reportEvaluation,
-      reportPreparationResult: m.reportPreparation, reportCaseStatusResult: m.reportCaseStatus },
+      reportPreparationResult: m.reportPreparation, reportCaseStatusResult: m.reportCaseStatus, getWorkflow: m.getWorkflow, reportMolcyResult: m.reportMolcy },
   };
 });
 
@@ -97,6 +98,16 @@ describe("IterationCard", () => {
     expect(m.audit).toHaveBeenCalledWith("p1", "hipotesis", "t-2");
   });
 
+  it("relays the video request to the Molcy tab and its answer to the sidecar", async () => {
+    m.molcy.mockResolvedValue({ status: "started", job_id: "job-1abcdef" });
+    m.reportMolcy.mockResolvedValue({});
+    renderCard();
+    fireEvent.click(screen.getByText("Aprobar y ejecutar"));
+    act(() => emit({ type: "case_molcy", request_id: "v1", task_id: "t-2", scene: "busqueda", format: "horizontal" }));
+    await waitFor(() => expect(m.reportMolcy).toHaveBeenCalledWith("test-session", "v1", { status: "started", job_id: "job-1abcdef" }));
+    expect(m.molcy).toHaveBeenCalledWith("v1", "t-2", "busqueda", "horizontal");
+  });
+
   it("relays the read-only case question to the host and its answer to the sidecar", async () => {
     m.caseStatus.mockResolvedValue({ status: "busy", run_state: "running" });
     m.reportCaseStatus.mockResolvedValue({});
@@ -134,6 +145,23 @@ describe("IterationCard", () => {
     expect(screen.getByText("El caso ya existía")).toBeInTheDocument();
     fireEvent.click(screen.getByText("Descargar la entrega (ZIP)"));
     await waitFor(() => expect(m.file).toHaveBeenCalledWith("test-session", proposal.id, "entrega.zip"));
+  });
+
+  it("says the video is still rendering and shows the delivery once the background render is in it", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const base = { state: "completed", counts: { evaluated: 3 }, selected: { name: "B", task_id: "t-2", vina_kcal_mol: -9.6, physical_status: "passed" },
+        saved: "saved", preparation: "REVISION", files: { "entrega.zip": 9 }, paths: {}, notes: [] };
+      m.getWorkflow.mockResolvedValue({ id: proposal.id, state: "done", summary: { ...base, video: "completo", video_pending: false } });
+      renderCard();
+      fireEvent.click(screen.getByText("Aprobar y ejecutar"));
+      act(() => emit({ type: "workflow", event: "done", summary: { ...base, video: "started", video_pending: true } }));
+      expect(screen.getByText(/sigue renderizando el vídeo en segundo plano/)).toBeInTheDocument();
+      await act(async () => { vi.advanceTimersByTime(8100); });
+      await waitFor(() => expect(screen.getByText("El vídeo terminó y ya está dentro de la entrega.")).toBeInTheDocument());
+      expect(m.getWorkflow).toHaveBeenCalledWith("test-session", proposal.id);
+      expect(screen.queryByText(/sigue renderizando/)).not.toBeInTheDocument();
+    } finally { vi.useRealTimers(); }
   });
 
   it("says nothing was saved when no molecule met the rule", () => {

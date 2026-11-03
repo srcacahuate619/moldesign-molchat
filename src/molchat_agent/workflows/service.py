@@ -12,6 +12,7 @@ Three things live here and nothing else:
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 import re
@@ -158,6 +159,11 @@ class HostRelay:
         """Read-only: can the case take another molecule? The window answers idle or busy (closing the last run)."""
         return await self._ask(self.state.case_status_requests, "case_status", {"case_name": case_name}, 20)
 
+    async def render_video(self, task_id: str, scene: str, format: str) -> dict[str, Any]:
+        """The Molcy tab prepares the video in view and presses its own button; it answers with the job it started."""
+        return await self._ask(self.state.molcy_requests, "case_molcy",
+                               {"task_id": task_id, "scene": scene, "format": format}, 100)
+
     async def audit_preparation(self, case_name: str, task_id: str) -> dict[str, Any]:
         """Preparación audits the run in the person's window and hands back the case projection it built."""
         return await self._ask(self.state.preparation_requests, "case_preparation",
@@ -230,6 +236,9 @@ class WorkflowProposal:
     files: dict[str, bytes] = field(default_factory=dict)
     saved_paths: dict[str, str] = field(default_factory=dict)
     summary: dict[str, Any] | None = None
+    prep_package: tuple[str, bytes] | None = None  # MolDesign's Preparación package, byte for byte
+    video_file: tuple[str, bytes] | None = None  # the MP4, once the background render finished
+    folder: Path | None = None  # where the files were written; the finished render rewrites them there
 
     def view(self) -> dict[str, Any]:
         return {"id": self.id, "kind": "iteration", "digest": self.spec.digest, "title": "Iteración de moléculas",
@@ -285,75 +294,117 @@ def _fname(text: str) -> str:
 async def execute(proposal: WorkflowProposal, host: HostPort, platform: PlatformHttp, emit: Emit, *,
                   preparation: PreparationPort | None = None, output_dir: Path | None = None,
                   runner_kwargs: dict[str, Any] | None = None) -> IterationOutcome:
-    """Run an approved plan. It always ends with an honest record, whatever each phase managed to do."""
+    """Run an approved plan. It always ends with an honest record, whatever each phase managed to do.
+
+    The video is not waited for: Molcy renders it in the background (minutes, on the GPU) while Preparación audits the
+    run, and the notebook and the ZIP are written as soon as Preparación is done, with the video declared as still
+    rendering. ``complete_video`` follows the render afterwards and rewrites the delivery with the MP4 in it.
+    """
     spec = proposal.spec
     runner = IterationRunner(spec, host, platform, emit, **(runner_kwargs or {}))
     outcome = await runner.run()
     selected = next((r for r in outcome.records if r.index == outcome.selected), None)
+    if outcome.video and outcome.video.get("job_id"):
+        outcome.video["final"] = None
+        emit({"type": "workflow", "event": "phase", "phase": "video",
+              "message": "Molcy renderiza el vídeo en segundo plano; mientras tanto sigue el plan."})
 
-    async def wait_video() -> None:
-        if outcome.video and outcome.video.get("job_id"):
-            emit({"type": "workflow", "event": "phase", "phase": "video", "message": "Esperando el render de Molcy."})
-            await runner.follow_video()
-
-    async def wait_preparation() -> None:
-        if not spec.preparation:
-            return
+    if spec.preparation:
         if selected is None or not selected.task_id or not selected.molecule_id:
             outcome.preparation = {"status": "not_run", "message": "Ninguna molécula quedó seleccionada: no hay corrida que auditar."}
-            return
-        if preparation is None:
+        elif preparation is None:
             outcome.preparation = {"status": "unavailable",
                                    "message": "Esta versión de MolDesign no permite auditar en Preparación desde el chat."}
-            return
-        emit({"type": "workflow", "event": "phase", "phase": "preparation", "message": "Auditando la corrida en Preparación."})
-        try:
-            outcome.preparation = await preparation.audit_and_export(spec.case_name, selected.task_id, selected.molecule_id)
-        except asyncio.CancelledError:
-            raise
-        except Exception as exc:  # noqa: BLE001
-            outcome.preparation = {"status": "failed", "message": f"La auditoría falló ({type(exc).__name__})."}
-
-    await asyncio.gather(wait_video(), wait_preparation())
+        else:
+            emit({"type": "workflow", "event": "phase", "phase": "preparation", "message": "Auditando la corrida en Preparación."})
+            try:
+                outcome.preparation = await preparation.audit_and_export(spec.case_name, selected.task_id, selected.molecule_id)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:  # noqa: BLE001
+                outcome.preparation = {"status": "failed", "message": f"La auditoría falló ({type(exc).__name__})."}
 
     prep_zip = outcome.preparation.pop("package", None) if isinstance(outcome.preparation, dict) else None
-    video_file: tuple[str, bytes] | None = None
-    if outcome.video and outcome.video.get("final") == "completo":
-        video_file = await platform.fetch_video(outcome.video["job_id"])
-        if video_file is None:
-            outcome.video["file"] = "no se pudo descargar el MP4"
-        else:
-            outcome.video["file"] = video_file[0]
+    proposal.prep_package = prep_zip if isinstance(prep_zip, tuple) and len(prep_zip) == 2 else None
+    proposal.outcome = outcome
+    _write_outputs(proposal, output_dir)
+    emit({"type": "workflow", "event": "done", "summary": proposal.summary})
+    return outcome
+
+
+def video_pending(outcome: IterationOutcome | None) -> bool:
+    video = outcome.video if outcome is not None else None
+    return isinstance(video, dict) and isinstance(video.get("job_id"), str) and not video.get("final")
+
+
+def _write_outputs(proposal: WorkflowProposal, output_dir: Path | None) -> None:
+    """Notebook and delivery from what the plan has now. Called again when the background render finishes."""
+    outcome, spec = proposal.outcome, proposal.spec
+    assert outcome is not None
     finished = now_iso()
     if spec.package:
         outcome.deliverable = {"status": "building", "message": "Este cuaderno forma parte de la entrega."}
     notebook = build_notebook(outcome, approved_at=proposal.approved_at, finished_at=finished)
     pdf = render_pdf(notebook)
     md, js = render_markdown(notebook).encode("utf-8"), notebook_json(notebook)
-    proposal.files = {"cuaderno.md": md, "cuaderno.json": js}
+    files = {"cuaderno.md": md, "cuaderno.json": js}
     if pdf is not None:
-        proposal.files["cuaderno.pdf"] = pdf
+        files["cuaderno.pdf"] = pdf
     if spec.package:
         missing: dict[str, str] = {}
-        if video_file is None:
+        if proposal.video_file is None:
             missing["video/"] = _why_no_video(outcome)
-        if not (isinstance(prep_zip, tuple) and len(prep_zip) == 2):
+        if proposal.prep_package is None:
             missing["preparacion/"] = _why_no_preparation(outcome)
         blob, manifest = build_deliverable(spec.case_name, outcome.digest, notebook_pdf=pdf, notebook_md=md, notebook_json=js,
-                                           preparation=prep_zip if isinstance(prep_zip, tuple) else None, video=video_file,
-                                           missing=missing)
-        proposal.files["entrega.zip"] = blob
+                                           preparation=proposal.prep_package, video=proposal.video_file, missing=missing)
+        files["entrega.zip"] = blob
         outcome.deliverable = {"status": "ready", "pieces": len(manifest["pieces"]), "missing": len(manifest["missing"])}
+    proposal.files = files
     if output_dir is not None:
-        folder = output_dir / f"{_fname(spec.case_name)}-{finished.replace(':', '').replace('-', '')[:15]}"
-        folder.mkdir(parents=True, exist_ok=True)
-        for name, data in proposal.files.items():
-            (folder / name).write_bytes(data)
-            proposal.saved_paths[name] = str(folder / name)
-    proposal.outcome = outcome
+        if proposal.folder is None:
+            proposal.folder = output_dir / f"{_fname(spec.case_name)}-{finished.replace(':', '').replace('-', '')[:15]}"
+        proposal.folder.mkdir(parents=True, exist_ok=True)
+        for name, data in files.items():
+            (proposal.folder / name).write_bytes(data)
+            proposal.saved_paths[name] = str(proposal.folder / name)
     proposal.summary = summarize(outcome, proposal)
-    emit({"type": "workflow", "event": "done", "summary": proposal.summary})
-    return outcome
+
+
+async def complete_video(proposal: WorkflowProposal, platform: PlatformHttp, *, output_dir: Path | None = None,
+                         poll_s: float = 6.0, timeout_s: float = 3600.0,
+                         clock: Callable[[], float] = time.monotonic,
+                         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep) -> None:
+    """Follow the background render and, when it ends, rewrite the notebook and the delivery with what came out."""
+    outcome = proposal.outcome
+    if outcome is None or not video_pending(outcome):
+        return
+    video = outcome.video
+    deadline = clock() + timeout_s
+    while True:
+        try:
+            status = await platform.video_status(video["job_id"])
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # noqa: BLE001 - a lost poll is retried until the deadline
+            status = {}
+        status = status if isinstance(status, dict) else {}
+        video.update({"job_state": status.get("job_state"), "phase": status.get("phase"), "progress": status.get("progress")})
+        if status.get("job_state") in {"completo", "fallido", "cancelado"} or status.get("status") in {"not_found", "invalid"}:
+            video["final"] = status.get("job_state") or status.get("status")
+            break
+        if clock() >= deadline:
+            video["final"] = "timeout"
+            break
+        proposal.summary = summarize(outcome, proposal)
+        await sleep(poll_s)
+    if video["final"] == "completo":
+        fetched = await platform.fetch_video(video["job_id"])
+        if fetched is None:
+            video["file"] = "no se pudo descargar el MP4"
+        else:
+            proposal.video_file, video["file"] = fetched, fetched[0]
+    _write_outputs(proposal, output_dir)
 
 
 def _why_no_video(outcome: IterationOutcome) -> str:
@@ -362,6 +413,9 @@ def _why_no_video(outcome: IterationOutcome) -> str:
         return "El plan no pidió vídeo, o ninguna molécula cumplió la regla." if outcome.selected is None else "El plan no pidió vídeo."
     if video.get("status") != "started":
         return f"No se pidió el vídeo: {video.get('message') or video.get('status')}"
+    if not video.get("final"):
+        return ("Molcy sigue renderizando el vídeo en segundo plano; cuando termine, esta entrega se rehace con el MP4 "
+                "en la misma carpeta.")
     return f"El vídeo terminó en «{video.get('final') or 'sin estado'}»" + (f"; {video['file']}" if video.get("file") else ".")
 
 
@@ -384,5 +438,6 @@ def summarize(outcome: IterationOutcome, proposal: WorkflowProposal) -> dict[str
                                                        "physical_status": selected.physical_status},
             "saved": (outcome.saved or {}).get("status"), "video": (outcome.video or {}).get("final") or (outcome.video or {}).get("status"),
             "preparation": (outcome.preparation or {}).get("readiness") or (outcome.preparation or {}).get("status"),
+            "video_pending": video_pending(outcome), "video_progress": (outcome.video or {}).get("progress"),
             "files": {name: len(data) for name, data in proposal.files.items()}, "paths": dict(proposal.saved_paths),
             "notes": list(outcome.notes)}

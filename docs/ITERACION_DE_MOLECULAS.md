@@ -74,8 +74,13 @@ Cada molécula es un intento aislado con su propio estado: `evaluated`, `failed`
 ## Lo que ocurre después de elegir
 
 Cuando una molécula cumple, MolChat pide a MolDesign —con el plan ya aprobado— guardarla en Moldex y, si el plan lo
-incluye, un vídeo de búsqueda. El vídeo lo renderiza Molcy y **siempre lleva su cierre de MolDesign**; MolChat sólo lo
-pide y lo sigue. Mientras el vídeo se renderiza, en paralelo, se audita la corrida en Preparación.
+incluye, el vídeo. El vídeo lo prepara **la pestaña de Molcy a la vista** (acción `molcy_render`): elige la corrida, la
+escena y el formato y pulsa su propio botón; lo renderiza Molcy y **siempre lleva su cierre de MolDesign**.
+
+**El render no bloquea el plan.** Molcy tarda minutos en la GPU; mientras tanto se audita la corrida en Preparación (que
+también se ve, en su pestaña) y se escriben el cuaderno y el ZIP, con el vídeo declarado «en segundo plano». MolChat sigue
+el render aparte y, cuando termina, **rehace la entrega con el MP4 en la misma carpeta**; la tarjeta lo dice mientras
+espera y avisa cuando el vídeo ya está dentro. Si el render falla o se cancela, la entrega lo declara en `missing`.
 
 ### Preparación: se declara, no se decide
 

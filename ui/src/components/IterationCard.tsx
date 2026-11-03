@@ -7,6 +7,7 @@ import type { StringKey } from "../lib/i18n";
 import { auditPreparationInHost } from "../lib/preparationHost";
 import { assignReceptorInHost } from "../lib/receptorHost";
 import { loadSmilesInHost } from "../lib/smilesHost";
+import { renderVideoInHost } from "../lib/molcyHost";
 
 type Phase = "pending" | "running" | "done" | "cancelled" | "interrupted";
 
@@ -25,6 +26,7 @@ interface Summary {
   saved: string | null;
   video: string | null;
   preparation: string | null;
+  videoPending: boolean;
   files: Record<string, number>;
   paths: Record<string, string>;
   notes: string[];
@@ -59,7 +61,7 @@ function summaryOf(value: unknown): Summary | null {
     selected: selected && typeof selected === "object"
       ? { name: text(selected["name"]) ?? "", task_id: text(selected["task_id"]) ?? "", vina_kcal_mol: num(selected["vina_kcal_mol"]),
           physical_status: text(selected["physical_status"]) } : null,
-    saved: text(s["saved"]), video: text(s["video"]), preparation: text(s["preparation"]),
+    saved: text(s["saved"]), video: text(s["video"]), preparation: text(s["preparation"]), videoPending: s["video_pending"] === true,
     files: typeof s["files"] === "object" && s["files"] ? (s["files"] as Record<string, number>) : {},
     paths: typeof s["paths"] === "object" && s["paths"] ? (s["paths"] as Record<string, string>) : {},
     notes: Array.isArray(s["notes"]) ? s["notes"].filter((n): n is string => typeof n === "string") : [],
@@ -113,6 +115,9 @@ export default function IterationCard({
       report(assignReceptorInHost(id, name, event["pdb_id"]).then((r) => api.reportReceptorResult(token, id, r)));
     } else if (event["type"] === "case_evaluation" && typeof name === "string") {
       report(evaluateCaseInHost(id, name).then((r) => api.reportEvaluationResult(token, id, r)));
+    } else if (event["type"] === "case_molcy" && typeof event["task_id"] === "string" && typeof event["scene"] === "string"
+        && typeof event["format"] === "string") {
+      report(renderVideoInHost(id, event["task_id"], event["scene"], event["format"]).then((r) => api.reportMolcyResult(token, id, r)));
     } else if (event["type"] === "case_status" && typeof name === "string") {
       report(caseStatusInHost(id, name).then((r) => api.reportCaseStatusResult(token, id, r)));
     } else if (event["type"] === "case_preparation" && typeof name === "string" && typeof event["task_id"] === "string") {
@@ -141,6 +146,22 @@ export default function IterationCard({
       setPhase(result && (result.state === "interrupted" || result.state === "failed") ? "interrupted" : "done");
     }
   }, [relay]);
+
+  // The plan ends before the render does: follow the summary until the background video is in the delivery.
+  const [videoAdded, setVideoAdded] = useState(false);
+  const pending = phase === "done" && summary?.videoPending === true;
+  useEffect(() => {
+    if (!pending) return;
+    const timer = window.setInterval(() => {
+      void api.getWorkflow(token, proposal.id).then((state) => {
+        const next = summaryOf(state.summary);
+        if (!next) return;
+        setSummary(next);
+        if (!next.videoPending) setVideoAdded(next.files["entrega.zip"] !== undefined && next.video === "completo");
+      }).catch(() => {});
+    }, 8000);
+    return () => window.clearInterval(timer);
+  }, [pending, token, proposal.id]);
 
   const approve = () => {
     setProblem(null);
@@ -208,6 +229,8 @@ export default function IterationCard({
               <li>{t("iteration.selected")}: {summary.selected.name} · Vina {summary.selected.vina_kcal_mol ?? "—"} kcal/mol · {summary.selected.physical_status ?? "—"}</li>
               {summary.saved && <li>{t("iteration.saved")}: {summary.saved}</li>}
               {summary.video && <li>{t("iteration.video")}: {summary.video}</li>}
+              {summary.videoPending && <li role="status">{t("iteration.videoRendering")}</li>}
+              {videoAdded && <li>{t("iteration.videoAdded")}</li>}
               {summary.preparation && <li>{t("iteration.preparation")}: {summary.preparation}</li>}
             </ul>
           ) : summary.state !== "interrupted" && summary.state !== "failed" ? <p>{t("iteration.noneQualified")}</p> : null}
