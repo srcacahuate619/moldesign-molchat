@@ -1,2 +1,5 @@
 # Vite incorpora este HTML al artefacto; fijar LF evita builds mixtos en Windows.
 ui/index.html text eol=lf
+
+# The delivery from the recorded demo run is published byte for byte: its hashes must hold on every checkout.
+kit/vmat2-run/** -text

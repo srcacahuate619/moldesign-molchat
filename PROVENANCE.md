@@ -1048,3 +1048,12 @@ MolDesign es por API HTTP, no por copia de código.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/workflows/test_english.py
 
+
+### tests/workflows/test_recorded_delivery.py
+
+- Origen: código nuevo en MolChat (2026-11-03) para publicar en `kit/vmat2-run/` la entrega real de la corrida grabada en el vídeo de la demo y vigilar que siga siendo la misma.
+- Commit de MolDesign: N/A; la entrega la escribió MolChat y su paquete de Preparación lo exportó MolDesign, y los dos van intactos.
+- Autoría: Johan Amezcua, con colaboración de un agente de código.
+- Transformación: comprueba que el ZIP tiene el SHA-256 que citan los documentos, que cada pieza coincide con su manifiesto (`verify_deliverable`), que las copias del cuaderno y del manifiesto junto al ZIP son sus mismos bytes y que el cuaderno dice lo que los documentos cuentan de la corrida.
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/workflows/test_recorded_delivery.py
