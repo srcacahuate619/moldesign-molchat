@@ -70,7 +70,7 @@ This is the request from the [3-minute demo](https://www.youtube.com/watch?v=luR
 
 MolChat answers with a plan card. Read it before you approve: the receptor, the molecules in order, the stopping rule, the time limit and what happens afterwards. One click on **Approve and run** starts the plan. Keep the MolDesign window open: the plan's actions run from it. While it drives MolDesign, a violet frame and a "MolChat" cursor show that the agent, not you, is at the controls. You can minimize the panel: the bubble keeps the plan and each molecule's Vina score.
 
-On the machine above, the plan docked five molecules, stopped at ketanserin (−11.2 kcal/mol, physical checks passed) and never docked valbenazine. These numbers are Vina scores on one receptor, not evidence that a molecule is a better drug.
+On the machine above, the plan docked five molecules, stopped at ketanserin (−11.2 kcal/mol, physical checks passed) and never docked valbenazine. These numbers are Vina scores on one receptor, not evidence that a molecule is a better drug. The ZIP that run produced is in [`kit/vmat2-run/`](../vmat2-run/), byte for byte.
 
 ## 8. Get the results
 

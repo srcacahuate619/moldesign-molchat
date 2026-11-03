@@ -12,6 +12,7 @@ Todo lo que necesita alguien nuevo, en un solo sitio: la demo, lo que se constru
 | Run MolDesign with MolChat / Usar MolDesign con MolChat | [GETTING_STARTED.md](en/GETTING_STARTED.md) | [GETTING_STARTED.md](es/GETTING_STARTED.md) |
 | Extend MolChat: the key and the lock / Extender MolChat: la llave y la cerradura | [EXTENDING.md](en/EXTENDING.md) | [EXTENDING.md](es/EXTENDING.md) |
 | Overview / Presentación | [README](../README.md) | [README.md](es/README.md) |
+| The real ZIP from the demo run / El ZIP real de la corrida de la demo | [vmat2-run/](vmat2-run/) | [vmat2-run/](vmat2-run/) |
 
 **Keeping the kit current.** Change the English file first, then its Spanish twin, and update the date at the top of the Spanish file. The getting-started guide also keeps a table of the versions it was checked against and a list of changes at the end.
 

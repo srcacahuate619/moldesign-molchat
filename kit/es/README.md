@@ -37,9 +37,13 @@ Las pruebas conducen el chat con un modelo guionizado y un MolDesign simulado. C
 
 También puedes [abrir la interfaz local](../../README.md#build-and-open-the-ui) con el proveedor determinista y pedir «Lista los receptores» en la pestaña de planes.
 
+## La corrida del vídeo
+
+El ZIP real que produjo MolChat en la corrida del vídeo está en [`kit/vmat2-run/`](../vmat2-run/), byte a byte, con su cuaderno a la vista y la forma de comprobar cada huella.
+
 ## Qué es nuevo y qué es previo
 
-Todo este repositorio se escribió durante el evento, y también la parte de MolDesign que arranca a MolChat, las acciones de anfitrión y la vista del piloto automático. MolDesign, con el docking, Moldex, Molcy y Preparación, es anterior, igual que el código que se trajo de él, declarado archivo por archivo en [`PROVENANCE.md`](../../PROVENANCE.md). Las fechas están en [El hackathon](HACKATHON.md#qué-se-construyó-durante-el-evento-y-qué-no).
+La contribución del hackathon es la integración del agente y el flujo que convierte una petición en una corrida aprobada, ejecutada y trazable, junto con la parte de MolDesign de esa integración (arrancar MolChat, sus acciones de anfitrión y la vista del piloto automático). El docking, Moldex, Molcy y Preparación de MolDesign ya existían, igual que el código reutilizado que declara [`PROVENANCE.md`](../../PROVENANCE.md), como la consulta original a PubChem. Los commits fechados están en [El hackathon](HACKATHON.md#qué-se-construyó-durante-el-evento-y-qué-no).
 
 ## Documentación técnica
 

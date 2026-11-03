@@ -30,6 +30,20 @@ jobs:
       - run: python -m pytest -q
         env:
           PYTHONPATH: src:.
+      - name: Reproduce the keyless workflow demo
+        if: matrix.python == '3.12'
+        run: |
+          mkdir -p reports
+          python -m pytest -q --basetemp=reports/judge-demo tests/server/test_workflow_chat.py
+      - name: Upload the synthetic demo delivery
+        if: matrix.python == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: molchat-keyless-demo-synthetic
+          path: |
+            reports/judge-demo/*/salida/**/entrega.zip
+            !reports/judge-demo/*current/**
+          if-no-files-found: error
       - run: python -m conformance.runner
         env:
           PYTHONPATH: src:.

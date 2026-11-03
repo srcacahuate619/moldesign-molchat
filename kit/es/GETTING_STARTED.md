@@ -72,7 +72,7 @@ Es la petición de la [demo de 3 minutos](https://www.youtube.com/watch?v=luRIXl
 
 MolChat contesta con una tarjeta del plan. Léela antes de aprobar: el receptor, las moléculas en orden, la regla de parada, el límite de tiempo y lo que viene después. Un clic en **Aprobar y ejecutar** arranca el plan. Deja abierta la ventana de MolDesign: las acciones del plan se ejecutan desde ella. Mientras maneja MolDesign, un marco violeta y un cursor «MolChat» indican que el agente, y no tú, lleva los controles. Puedes minimizar el panel: la burbuja conserva el plan y el score de Vina de cada molécula.
 
-En el equipo de arriba, el plan acopló cinco moléculas, se detuvo en la ketanserina (−11,2 kcal/mol, controles físicos superados) y nunca acopló la valbenazina. Esas cifras son scores de Vina sobre un receptor, no prueban que una molécula sea mejor fármaco.
+En el equipo de arriba, el plan acopló cinco moléculas, se detuvo en la ketanserina (−11,2 kcal/mol, controles físicos superados) y nunca acopló la valbenazina. Esas cifras son scores de Vina sobre un receptor, no prueban que una molécula sea mejor fármaco. El ZIP que produjo esa corrida está en [`kit/vmat2-run/`](../vmat2-run/), byte a byte.
 
 ## 8. Obtener los resultados
 

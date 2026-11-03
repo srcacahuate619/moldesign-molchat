@@ -1,8 +1,10 @@
 # MolChat Agent
 
-**An agent that drives a computational chemistry app for you, and shows its work.** Describe a hypothesis about a list of molecules in text or by voice, review the plan MolChat proposes, and approve it once. MolChat then runs the plan in [MolDesign](https://github.com/srcacahuate619/moldesign-app) and delivers a lab notebook and a ZIP that record what ran, what was selected, and what is missing.
+**One approval takes a hypothesis about a few molecules from a prompt to an auditable lab notebook.** MolChat helps computational chemistry researchers run a short list of candidate molecules against one target without manually starting each run, checking when to stop, and assembling the evidence for a colleague.
 
-**▶ [Watch the 3-minute demo](https://www.youtube.com/watch?v=luRIXlqWy6I)** · [English kit](kit/en/HACKATHON.md) · [Kit en español](kit/es/README.md) · [Architecture](docs/ARQUITECTURA.md) · [CI](https://github.com/srcacahuate619/moldesign-molchat/actions/workflows/ci.yml)
+**▶ [Watch the 3-minute demo](https://www.youtube.com/watch?v=luRIXlqWy6I)** · [Judge's guide](kit/en/HACKATHON.md) · [Kit en español](kit/es/README.md) · [Architecture](docs/ARQUITECTURA.md) · [CI](https://github.com/srcacahuate619/moldesign-molchat/actions/workflows/ci.yml)
+
+**In the recorded VMAT2 run**, Muse Spark Open turned a six-candidate request into a reviewable plan. With one approval, MolChat coordinated five docking runs, stopped when ketanserin met the score and pose checks, and skipped the sixth candidate. It recorded the outcome in a notebook and delivery ZIP. [The real ZIP, byte for byte](kit/vmat2-run/) · [Run conditions and exact prompt](kit/en/GETTING_STARTED.md#7-try-the-demo-prompt)
 
 ## Start here
 
@@ -18,9 +20,9 @@
 
 **Muse Spark turns a request into structured tool calls.** In the demo, Muse Spark Open (served by Baseten) looks each molecule up in PubChem and fills in the plan. MolChat validates every argument, shows the molecules, the stopping rule and the follow-up actions on a card, and binds the approval to the plan's SHA-256 digest.
 
-**MolChat runs the approved plan.** It evaluates up to 12 molecules in one case, one at a time, and stops when the rule is met; a typical rule combines a Vina score threshold with passing physical pose checks. It records failed attempts and the candidates it skipped. Depending on the plan, it asks MolDesign to save the selected run to Moldex, render a video in Molcy, and audit it in Preparation. The ZIP's manifest records a SHA-256 hash for every file, the provenance of each number, and every missing piece. A docking score is exploratory evidence; it doesn't establish biological activity. [Workflow and file formats](docs/ITERACION_DE_MOLECULAS.md)
+**MolChat runs the approved plan.** It coordinates up to 12 sequential evaluations in [MolDesign](https://github.com/srcacahuate619/moldesign-app), applies the approved stopping rule, and records failures and skipped candidates. Depending on the plan, it saves the selected run to Moldex, requests a video in Molcy, and collects a Preparation audit. The notebook records the source of the results. The ZIP manifest lists each deliverable component with its SHA-256 and records missing components. A docking score ranks exploratory hypotheses. [Workflow and file formats](docs/ITERACION_DE_MOLECULAS.md)
 
-**Project boundary.** This whole repository was written during the event, and so was MolDesign's side of the integration (launching MolChat, the host actions, the autopilot view). MolDesign itself, with docking, Moldex, Molcy and Preparation, predates the event, as does the code carried over from it, which [`PROVENANCE.md`](PROVENANCE.md) declares file by file. [The full line, with dates](kit/en/HACKATHON.md#what-was-built-during-the-event-and-what-wasnt)
+**Project boundary.** The hackathon contribution is the agent integration and workflow that turns a request into an approved, executed, traceable run, together with MolDesign's side of that integration (launching MolChat, its host actions and the autopilot view). MolDesign's docking, Moldex, Molcy, and Preparation were already available. The ledger documents reused code, including the original PubChem lookup. [Dated contributions](kit/en/HACKATHON.md#what-was-built-during-the-event-and-what-wasnt) · [Provenance](PROVENANCE.md)
 
 ## Run the keyless workflow demo
 
@@ -43,6 +45,8 @@ python -m pytest -q --basetemp=reports/judge-demo tests/server/test_workflow_cha
 The tests drive the hosted chat API with a scripted model response and a simulated MolDesign host. They check that a wrong digest is rejected, that a valid approval runs the workflow only once, that a failed molecule is recorded, and that the run stops before the third candidate. Look under `reports/judge-demo/` for `salida/**/entrega.zip` (this scenario runs in Spanish, so the names are Spanish). Open `cuaderno/cuaderno.md` for the plan and each candidate's outcome, and `MANIFEST.json` for the hashes and the reason the Preparation package is absent. The numbers are synthetic, and a placeholder MP4 exercises the packaging. [Demo source](tests/server/test_workflow_chat.py)
 
 Pytest recreates `reports/judge-demo` on each run. The full local suite is `python -m pytest -q`. The HTTP adapter contract can also be exercised against a local synthetic backend: [Extending MolChat](kit/en/EXTENDING.md#4-build-your-own-lock).
+
+GitHub Actions publishes the synthetic ZIP as `molchat-keyless-demo-synthetic` on runs that include the demo upload step. Signed-in GitHub users can download it from the run's **Artifacts** section. [CI runs](https://github.com/srcacahuate619/moldesign-molchat/actions/workflows/ci.yml)
 
 ## Build and open the UI
 
