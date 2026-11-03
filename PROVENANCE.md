@@ -1030,3 +1030,21 @@ MolDesign es por API HTTP, no por copia de código.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/workflows/test_video_presentation.py y ui/src/lib/hostNotify.test.ts
 
+### src/molchat_agent/workflows/run_record.py, tests/workflows/test_run_record.py, tests/server/test_workflow_sources.py
+
+- Origen: código nuevo en MolChat (2026-11-03) para que el cuaderno conserve lo que MolDesign dijo de cada corrida (protocolo ejecutado, avisos científicos, especie acoplada y receptor) y de qué consulta de PubChem salió cada SMILES, en vez de tirarlo tras leer el número.
+- Commit de MolDesign: N/A; los campos se leen del resultado de la corrida que devuelve el backend de MolDesign por `task_id`.
+- Autoría: Johan Amezcua, con colaboración de un agente de código.
+- Transformación: nada se calcula ni se interpreta; los campos se copian acotados, un campo enorme se sustituye por su tamaño y su hash, y lo que la corrida no guardó queda «no registrado». Cada molécula del plan se liga a la consulta de PubChem cuyo SMILES coincide literalmente; dos compuestos con el mismo SMILES se declaran ambiguos.
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/workflows/test_run_record.py y tests/server/test_workflow_sources.py
+
+### src/molchat_agent/lang.py, tests/workflows/test_english.py
+
+- Origen: código nuevo en MolChat (2026-11-03) para que un plan propuesto en inglés se ejecute, se escriba y se entregue en inglés: el idioma del turno (`lang.py`, una variable de contexto) y las pruebas de todo lo que lo usa.
+- Commit de MolDesign: N/A; MolChat pide a MolDesign sus avisos en el idioma del chat con la cabecera `Accept-Language`, y la traducción la hace MolDesign.
+- Autoría: Johan Amezcua, con colaboración de un agente de código.
+- Transformación: comprueba el idioma del turno y del plan, el cuaderno y su PDF sin castellano propio, los nombres de la entrega, la severidad de los avisos, el estado de Preparación como lo nombra MolDesign y la escena de Molcy como la nombra su pestaña.
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/workflows/test_english.py
+

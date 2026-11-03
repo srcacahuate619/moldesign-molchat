@@ -125,7 +125,7 @@ def test_saving_to_moldex_is_reported_in_english() -> None:
 
     async def save() -> dict:
         async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", transport=httpx.MockTransport(handle)) as client:
-            bridge = MolDesignBridge(require_contract=False, token="t", client=client)
+            bridge = MolDesignBridge(require_contract=False, token="test-token", client=client)
             with using("en"):
                 return await run_save(bridge, {"task_id": "t-1", "molecule_id": "m-1"})
 
