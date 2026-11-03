@@ -2,6 +2,16 @@
 
 ## No publicado
 
+- Tercer ensayo en la app, todo el flujo funcionó; ajustes:
+  - el vídeo se puede personalizar desde el chat con todos los controles de Molcy (formato *prueba*, título, receptor,
+    colores de receptor, residuos destacados y líneas, etiquetas, contactos, muestra anterior, movimiento del Ensamble);
+    la tarjeta lo enseña y la pestaña de Molcy lo aplica a la vista;
+  - la tarjeta muestra la línea de tiempo del plan (caso, receptor, moléculas, Moldex, vídeo con su avance, Preparación,
+    entrega);
+  - mientras el vídeo sigue, el botón dice «Descargar ahora (sin el vídeo)» y avisa; las descargas y «el vídeo ya está en
+    la entrega» llegan al panel de actividad de MolDesign (acción `notify_download`);
+  - el cuadro de texto crece con lo escrito (Enter envía, Shift+Enter salta de línea), la conversación sigue al último
+    mensaje salvo si se está leyendo más arriba (con un botón «Mensajes nuevos») y su scroll no arrastra la página.
 - Segundo ensayo en la app: el bucle funcionó (tres moléculas, parada en la que cumplía, guardado y vídeo encolado), pero
   Preparación respondió «la ventana no pudo atender» y el plan se quedó esperando al render. Cambios:
   - el vídeo se renderiza **en segundo plano**: Preparación, el cuaderno y el ZIP no lo esperan; `complete_video` sigue el

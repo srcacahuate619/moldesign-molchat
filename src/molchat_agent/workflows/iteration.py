@@ -63,11 +63,87 @@ class Molecule:
     smiles: str
 
 
+_HEX = re.compile(r"#[0-9A-Fa-f]{6}")
+RECEPTOR_VIEWS = ("automatico", "visible", "oculto")
+ENSEMBLE_VARIANTS = ("lenta", "detallada", "referencia")
+# Every presentation control Molcy's tab offers, with the name the model uses and the one Molcy's schema uses.
+_COLORS = (("receptor_color", "color del receptor"), ("residue_color", "color de los residuos destacados"),
+           ("polar_color", "color de las líneas polares"), ("apolar_color", "color de las líneas apolares"))
+_SWITCHES = (("labels", "etiquetas"), ("contacts", "contactos"), ("previous_sample", "muestra anterior"))
+VIDEO_FIELDS = {"scene", "format", "title", "receptor", "ensemble_variant"} | {k for k, _ in _COLORS} | {k for k, _ in _SWITCHES}
+
+
 @dataclass(frozen=True)
 class VideoRequest:
     scene: str
     format: str
     title: str | None = None
+    receptor: str = "automatico"  # automatico | visible | oculto
+    receptor_color: str | None = None  # None = Molcy's automatic colour
+    residue_color: str | None = None
+    polar_color: str | None = None
+    apolar_color: str | None = None
+    labels: bool = True
+    contacts: bool = True
+    previous_sample: bool = True  # only in the search scene
+    ensemble_variant: str = "lenta"  # only in the ensemble scene
+
+    def presentation(self) -> dict[str, Any]:
+        """Molcy's own presentation schema, as its tab stores it with the job."""
+        return {"schema": "moldesign.presentacion/1", "titulo": self.title, "color_receptor": self.receptor_color,
+                "color_residuos": self.residue_color, "colores_lineas": {"polar": self.polar_color, "apolar": self.apolar_color},
+                "receptor": self.receptor, "muestra_anterior": self.previous_sample, "etiquetas": self.labels,
+                "contactos": self.contacts}
+
+    def as_dict(self) -> dict[str, Any]:
+        return {"scene": self.scene, "format": self.format, "title": self.title, "receptor": self.receptor,
+                "receptor_color": self.receptor_color, "residue_color": self.residue_color, "polar_color": self.polar_color,
+                "apolar_color": self.apolar_color, "labels": self.labels, "contacts": self.contacts,
+                "previous_sample": self.previous_sample, "ensemble_variant": self.ensemble_variant}
+
+    def customized(self) -> list[str]:
+        """What differs from Molcy's automatic presentation, in words for the card."""
+        out = []
+        if self.title:
+            out.append(f"título «{self.title}»")
+        if self.receptor != "automatico":
+            out.append("receptor " + ("visible" if self.receptor == "visible" else "oculto"))
+        out += [f"{label} {value}" for (key, label), value in zip(_COLORS, (self.receptor_color, self.residue_color,
+                                                                             self.polar_color, self.apolar_color)) if value]
+        out += [f"sin {label}" for (key, label) in _SWITCHES if not getattr(self, key)
+                and (key != "previous_sample" or self.scene == "busqueda")]
+        if self.scene == "ensamble" and self.ensemble_variant != "lenta":
+            out.append(f"movimiento del ensamble: {self.ensemble_variant}")
+        return out
+
+    @classmethod
+    def from_dict(cls, raw: Any) -> "VideoRequest":
+        if not isinstance(raw, dict) or set(raw) - VIDEO_FIELDS:
+            raise SpecError(f"video admite {', '.join(sorted(VIDEO_FIELDS))}.")
+        if raw.get("scene") not in SCENES or raw.get("format", "horizontal") not in FORMATS:
+            raise SpecError("video necesita una escena y un formato válidos.")
+        title = _clean(raw["title"], "title del vídeo", 80) if raw.get("title") is not None else None
+        receptor = raw.get("receptor", "automatico")
+        if receptor not in RECEPTOR_VIEWS:
+            raise SpecError("video.receptor debe ser automatico, visible u oculto.")
+        colors = {}
+        for key, label in _COLORS:
+            value = raw.get(key)
+            if value is not None and not (isinstance(value, str) and _HEX.fullmatch(value)):
+                raise SpecError(f"video.{key} ({label}) debe ser un color #RRGGBB.")
+            colors[key] = value.upper() if isinstance(value, str) else None
+        switches = {}
+        for key, label in _SWITCHES:
+            value = raw.get(key, True)
+            if not isinstance(value, bool):
+                raise SpecError(f"video.{key} ({label}) debe ser verdadero o falso.")
+            switches[key] = value
+        variant = raw.get("ensemble_variant", "lenta")
+        if variant not in ENSEMBLE_VARIANTS:
+            raise SpecError("video.ensemble_variant debe ser lenta, detallada o referencia.")
+        return cls(raw["scene"], raw.get("format", "horizontal"), title, receptor, colors["receptor_color"],
+                   colors["residue_color"], colors["polar_color"], colors["apolar_color"], switches["labels"],
+                   switches["contacts"], switches["previous_sample"], variant)
 
 
 @dataclass(frozen=True)
@@ -126,15 +202,7 @@ class IterationSpec:
         for key in ("require_physical", "save", "preparation", "package"):
             if key in data and not isinstance(data[key], bool):
                 raise SpecError(f"{key} debe ser verdadero o falso.")
-        video = None
-        if data.get("video") is not None:
-            raw_video = data["video"]
-            if not isinstance(raw_video, dict) or set(raw_video) - {"scene", "format", "title"}:
-                raise SpecError("video admite scene, format y title.")
-            if raw_video.get("scene") not in SCENES or raw_video.get("format") not in FORMATS:
-                raise SpecError("video necesita una escena y un formato válidos.")
-            title = _clean(raw_video["title"], "title del vídeo", 80) if raw_video.get("title") is not None else None
-            video = VideoRequest(raw_video["scene"], raw_video["format"], title)
+        video = VideoRequest.from_dict(data["video"]) if data.get("video") is not None else None
         save = data.get("save", True)
         if video is not None and not save:
             save = True  # a video can only come from a run saved in Moldex: say it on the card, not silently
@@ -154,8 +222,7 @@ class IterationSpec:
                 "molecules": [{"name": m.name, "smiles": m.smiles} for m in self.molecules],
                 "threshold_kcal": self.threshold_kcal, "stop": self.stop, "require_physical": self.require_physical,
                 "save": self.save,
-                "video": None if self.video is None else {"scene": self.video.scene, "format": self.video.format,
-                                                          "title": self.video.title},
+                "video": None if self.video is None else self.video.as_dict(),
                 "preparation": self.preparation, "package": self.package, "original_request": self.original_request,
                 "per_molecule_timeout_s": self.per_molecule_timeout_s, "budget_s": self.budget_s}
 
@@ -177,8 +244,11 @@ class IterationSpec:
         if self.save:
             lines.append("La que cumpla se guarda en Moldex.")
         if self.video is not None:
-            lines.append(f"Vídeo de Molcy (solo GPU): escena {self.video.scene}, formato {self.video.format}; "
+            shown = {"previsualizacion": "prueba (vista previa corta)"}.get(self.video.format, self.video.format)
+            lines.append(f"Vídeo de Molcy (solo GPU): escena {self.video.scene}, formato {shown}; "
                          "el cierre de MolDesign se añade siempre.")
+            custom = self.video.customized()
+            lines.append("Presentación: " + ("; ".join(custom) if custom else "la automática de Molcy") + ".")
         if self.preparation:
             lines.append("Se audita la corrida en Preparación; si queda en revisión, se declara, no se decide.")
         if self.package:
@@ -427,9 +497,14 @@ class IterationRunner:
         assert video is not None and best.task_id and best.molecule_id
         render = getattr(self.host, "render_video", None)
         if render is None:
-            return await self.platform.request_video(best.task_id, best.molecule_id, video)
+            result = await self.platform.request_video(best.task_id, best.molecule_id, video)
+            dropped = [item for item in video.customized() if not item.startswith("título")]
+            if dropped and isinstance(result, dict):
+                result = {**result, "message": f"{result.get('message') or ''} Esta vía no aplica la presentación pedida "
+                                               f"({'; '.join(dropped)}): el vídeo sale con la automática.".strip()}
+            return result
         self.emit("phase", message="Preparando el vídeo en la pestaña de Molcy.")
-        answer = await render(best.task_id, video.scene, video.format)
+        answer = await render(best.task_id, video.scene, video.format, video)
         status = answer.get("status") if isinstance(answer, dict) else None
         if status == "started" and isinstance(answer.get("job_id"), str):
             return {"status": "started", "job_id": answer["job_id"], "message": "Vídeo en cola en Molcy (lanzado desde su pestaña)."}

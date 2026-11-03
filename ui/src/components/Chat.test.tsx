@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Chat from "./Chat";
 import { strings } from "../lib/i18n";
@@ -400,5 +400,62 @@ describe("Chat error turn with idempotent retry", () => {
     // The failed user text is resent verbatim, not duplicated in the input.
     const echoes = screen.getAllByText("hola");
     expect(echoes.length).toBe(2); // one message per attempt, both visible
+  });
+});
+
+describe("Chat composer and following the conversation", () => {
+  beforeEach(() => { mockList.mockReset(); mockGet.mockReset(); mockStream.mockReset(); mockList.mockResolvedValue([]); });
+  const answer = (text: string) => mockStream.mockImplementation((_t: string, _b: unknown, onEvent: (e: Record<string, unknown>) => void) => {
+    queueMicrotask(() => onEvent({ type: "result", result: { text, used_llm: true, latency_ms: 1, verified_values: [], evidence: [] } }));
+    return () => {};
+  });
+
+  it("Enter sends, Shift+Enter writes a new line, and the box is a multi-line field", async () => {
+    answer("listo");
+    renderChat();
+    const box = screen.getByPlaceholderText(/pregunta/i);
+    expect(box.tagName).toBe("TEXTAREA");
+    fireEvent.change(box, { target: { value: "primera línea" } });
+    fireEvent.keyDown(box, { key: "Enter", shiftKey: true });
+    expect(mockStream).not.toHaveBeenCalled();
+    fireEvent.keyDown(box, { key: "Enter" });
+    await screen.findByText("listo");
+    expect(mockStream).toHaveBeenCalledTimes(1);
+  });
+
+  it("follows new messages at the bottom, but not while the person reads something higher up", async () => {
+    answer("primera respuesta");
+    renderChat();
+    const list = document.querySelector("ol.messages") as HTMLOListElement;
+    let top = 0;
+    Object.defineProperty(list, "scrollHeight", { configurable: true, get: () => 1000 });
+    Object.defineProperty(list, "clientHeight", { configurable: true, get: () => 300 });
+    Object.defineProperty(list, "scrollTop", { configurable: true, get: () => top, set: (v: number) => { top = v; } });
+    const box = screen.getByPlaceholderText(/pregunta/i);
+    fireEvent.change(box, { target: { value: "hola" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+    await screen.findByText("primera respuesta");
+    expect(top).toBe(1000); // followed to the newest message
+    top = 100; fireEvent.scroll(list); // the person scrolls up to read
+    answer("segunda respuesta");
+    fireEvent.change(box, { target: { value: "otra" } });
+    fireEvent.click(screen.getByText("Enviar")); // sending is a deliberate return to the bottom
+    await screen.findByText("segunda respuesta");
+    expect(top).toBe(1000);
+    // an answer that arrives while the person reads higher up does not pull the view down; a button offers to go there
+    let deliver: () => void = () => {};
+    mockStream.mockImplementation((_t: string, _b: unknown, onEvent: (e: Record<string, unknown>) => void) => {
+      deliver = () => onEvent({ type: "result", result: { text: "tercera", used_llm: true, latency_ms: 1, verified_values: [], evidence: [] } });
+      return () => {};
+    });
+    fireEvent.change(box, { target: { value: "y otra" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+    top = 100; fireEvent.scroll(list);
+    act(() => deliver());
+    await screen.findByText("tercera");
+    expect(top).toBe(100);
+    fireEvent.click(screen.getByText("↓ Mensajes nuevos"));
+    expect(top).toBe(1000);
+    expect(screen.queryByText("↓ Mensajes nuevos")).not.toBeInTheDocument();
   });
 });

@@ -12,6 +12,7 @@ Three things live here and nothing else:
 from __future__ import annotations
 
 import asyncio
+import json
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -159,10 +160,14 @@ class HostRelay:
         """Read-only: can the case take another molecule? The window answers idle or busy (closing the last run)."""
         return await self._ask(self.state.case_status_requests, "case_status", {"case_name": case_name}, 20)
 
-    async def render_video(self, task_id: str, scene: str, format: str) -> dict[str, Any]:
-        """The Molcy tab prepares the video in view and presses its own button; it answers with the job it started."""
-        return await self._ask(self.state.molcy_requests, "case_molcy",
-                               {"task_id": task_id, "scene": scene, "format": format}, 100)
+    async def render_video(self, task_id: str, scene: str, format: str, video: VideoRequest | None = None) -> dict[str, Any]:
+        """The Molcy tab prepares the video in view (run, scene, format and the presentation the plan approved) and
+        presses its own button; it answers with the job it started."""
+        chosen = video or VideoRequest(scene, format)
+        payload: dict[str, Any] = {"task_id": task_id, "scene": scene, "format": format,
+                                   "presentation": json.dumps({**chosen.presentation(), "ensamble_variante": chosen.ensemble_variant},
+                                                              ensure_ascii=False, separators=(",", ":"), sort_keys=True)}
+        return await self._ask(self.state.molcy_requests, "case_molcy", payload, 100)
 
     async def audit_preparation(self, case_name: str, task_id: str) -> dict[str, Any]:
         """Preparación audits the run in the person's window and hands back the case projection it built."""
@@ -241,8 +246,11 @@ class WorkflowProposal:
     folder: Path | None = None  # where the files were written; the finished render rewrites them there
 
     def view(self) -> dict[str, Any]:
-        return {"id": self.id, "kind": "iteration", "digest": self.spec.digest, "title": "Iteración de moléculas",
-                "lines": self.spec.card_lines(), "molecules": [m.name for m in self.spec.molecules]}
+        spec = self.spec
+        steps = ["case", "receptor", "molecules"] + (["moldex"] if spec.save else []) + (["video"] if spec.video else []) \
+            + (["preparation"] if spec.preparation else []) + (["deliverable"] if spec.package else [])
+        return {"id": self.id, "kind": "iteration", "digest": spec.digest, "title": "Iteración de moléculas",
+                "lines": spec.card_lines(), "molecules": [m.name for m in spec.molecules], "steps": steps}
 
 
 def new_workflow(workflows: dict[str, WorkflowProposal], owner: str, conv_id: str | None,

@@ -1021,3 +1021,12 @@ MolDesign es por API HTTP, no por copia de código.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: ui/src/lib/molcyHost.test.ts, ui/src/components/IterationCard.test.tsx y tests/workflows/test_iteration.py
 
+### tests/workflows/test_video_presentation.py, ui/src/lib/hostNotify.ts, ui/src/lib/hostNotify.test.ts
+
+- Origen: código nuevo en MolChat (2026-11-03) tras el tercer ensayo en la app: la presentación completa de Molcy pedida desde el chat y los avisos de descarga para el panel de actividad del anfitrión.
+- Commit de MolDesign: N/A; la pestaña de Molcy aplica la presentación con su esquema `moldesign.presentacion/1` y el anfitrión pinta los avisos con sus propios textos (`docs/HOST_CONTRACT.md`).
+- Autoría: Johan Amezcua, con colaboración de un agente de código.
+- Transformación: los controles y los colores `#RRGGBB` se validan en el plan, que la huella liga a la aprobación; lo que Molcy no tiene se rechaza antes de la tarjeta. Los avisos sólo llevan una fase cerrada y un nombre de archivo.
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/workflows/test_video_presentation.py y ui/src/lib/hostNotify.test.ts
+

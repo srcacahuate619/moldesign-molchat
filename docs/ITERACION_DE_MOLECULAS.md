@@ -77,6 +77,13 @@ Cuando una molécula cumple, MolChat pide a MolDesign —con el plan ya aprobado
 incluye, el vídeo. El vídeo lo prepara **la pestaña de Molcy a la vista** (acción `molcy_render`): elige la corrida, la
 escena y el formato y pulsa su propio botón; lo renderiza Molcy y **siempre lleva su cierre de MolDesign**.
 
+**Todo lo que Molcy ofrece se puede pedir desde el chat**: escena; formato (horizontal, vertical o *prueba*, la vista
+previa corta); título; receptor automático, visible u oculto; colores del receptor, de los residuos destacados
+(«hotspots») y de las líneas polares y apolares; etiquetas, contactos y muestra anterior; y el movimiento del Ensamble.
+Por ejemplo: «con los hotspots en verde y el receptor morado». El modelo traduce los nombres de color a `#RRGGBB`, la
+tarjeta enseña la presentación antes de aprobar (y la huella del plan la incluye) y la pestaña de Molcy la aplica a la
+vista. Un ajuste que Molcy no tiene, o un color que no es un color, se rechaza antes de la tarjeta.
+
 **El render no bloquea el plan.** Molcy tarda minutos en la GPU; mientras tanto se audita la corrida en Preparación (que
 también se ve, en su pestaña) y se escriben el cuaderno y el ZIP, con el vídeo declarado «en segundo plano». MolChat sigue
 el render aparte y, cuando termina, **rehace la entrega con el MP4 en la misma carpeta**; la tarjeta lo dice mientras

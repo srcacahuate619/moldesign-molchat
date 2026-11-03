@@ -57,7 +57,11 @@ export interface WorkflowProposal {
   title: string;
   lines: string[];
   molecules: string[];
+  /** The steps this plan has, in order, for the timeline. Older sidecars do not send it. */
+  steps?: TimelineStep[];
 }
+
+export type TimelineStep = "case" | "receptor" | "molecules" | "moldex" | "video" | "preparation" | "deliverable";
 
 /** An action the model proposed and the person has not confirmed. Never carries a path or a session. */
 export interface ActionProposal {

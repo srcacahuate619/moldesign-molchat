@@ -62,7 +62,7 @@ que `request_id` sean 32 caracteres hexadecimales y que `case_name` y `name` no 
 | `evaluate_case` | `case_name` | `molchat-evaluation-result` | `started`, `started_unregistered`, `case_not_found`, `case_ambiguous`, `busy`, `blocked`, `needs_review`, `failed`, `unknown` |
 | `audit_case_preparation` | `case_name`, `task_id` | `molchat-preparation-result` | `audited`, `case_not_found`, `case_mismatch`, `not_auditable`, `audit_failed`, `busy`, `failed`, `unknown` |
 | `case_status` | `case_name` | `molchat-case-status-result` | `idle`, `busy`, `not_found`, `ambiguous`, `failed`, `unknown` |
-| `molcy_render` | `task_id`, `scene`, `format` | `molchat-molcy-result` | `started` (con `job_id`), `not_found`, `unavailable`, `busy`, `failed`, `unknown` |
+| `molcy_render` | `task_id`, `scene`, `format`, `presentation` | `molchat-molcy-result` | `started` (con `job_id`), `not_found`, `unavailable`, `busy`, `failed`, `unknown` |
 | `read_editor` | `case_name`, `operation`, `revision` | `molchat-editor-result` | `ok`, `not_ready`, `not_found`, `ambiguous`, `changed`, `too_large`, `read_limit`, `failed`, `unknown` |
 
 Cada respuesta repite el `request_id` de su petición y lleva `status`. Además:
@@ -94,7 +94,11 @@ El anfitrión lleva a la persona a la pestaña de Molcy, que **prepara el vídeo
 Moldex (`task_id`), la escena y el formato, un paso tras otro, y pulsa su propio botón «Generar video» con sus propias
 comprobaciones (GPU, Blender, espacio en disco). Devuelve el `job_id` que empezó o, si no pudo, por qué
 (`not_found`: la corrida no está guardada; `unavailable`: falta GPU, Blender o espacio, con el motivo que enseña la
-pestaña). MolChat no lanza el vídeo por detrás de la ventana cuando el anfitrión tiene esta acción, y un `unknown` no se
+pestaña). `presentation` es un JSON con el esquema de presentación de Molcy (`moldesign.presentacion/1`: título,
+receptor automático/visible/oculto, colores `#RRGGBB` o `null` del receptor, de los residuos destacados y de las líneas
+polares y apolares, etiquetas, contactos y muestra anterior) más `ensamble_variante`; el anfitrión lo valida campo por
+campo y rechaza la petición entera si sobra o falta algo. La pestaña abre «Personalizar presentación» y lo aplica a la
+vista antes de pulsar. MolChat no lanza el vídeo por detrás de la ventana cuando el anfitrión tiene esta acción, y un `unknown` no se
 repite: la pestaña pudo empezar un render.
 
 ### Auditoría en Preparación (`audit_case_preparation`)
@@ -110,6 +114,13 @@ lógica y la devuelve junto con el estado que su auditoría dictó. MolChat **no
   registra es el que dicta **la plataforma**, no el que informó la ventana.
 - El paquete exportado por la plataforma es determinista y entra **intacto** (byte a byte) en el ZIP de entrega de
   MolChat; MolChat no lo abre ni lo reescribe.
+
+## Avisos para el panel de actividad (sin respuesta)
+
+`notify_download` con `request_id` (32 hexadecimales), `phase` (`started`, `done`, `failed`, `video_ready`) y `name`
+(`^[A-Za-z0-9._ -]{1,80}$`). El anfitrión lo convierte en una entrada de su panel de actividad (descargando, descargado,
+no se pudo, «el vídeo ya está en la entrega»); los textos son suyos y el nombre se pinta como texto. La descarga la hace
+MolChat.
 
 ## Acciones que sólo navegan (sin respuesta)
 

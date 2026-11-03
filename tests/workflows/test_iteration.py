@@ -426,7 +426,7 @@ class MolcyTabHost(FakeHost):
         super().__init__()
         self.answer, self.renders = answer, []
 
-    async def render_video(self, task_id: str, scene: str, format: str) -> dict[str, Any]:
+    async def render_video(self, task_id: str, scene: str, format: str, video: Any = None) -> dict[str, Any]:
         self.renders.append((task_id, scene, format))
         return self.answer
 

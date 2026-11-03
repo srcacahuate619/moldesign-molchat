@@ -70,6 +70,30 @@ export default function Chat({
   const [pendingVoice, setPendingVoice] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const aborter = useRef<(() => void) | null>(null);
+  // The conversation follows the newest message unless the person scrolled up on purpose to read something.
+  const list = useRef<HTMLOListElement | null>(null);
+  const following = useRef(true);
+  const [behind, setBehind] = useState(false);
+  const toBottom = useCallback(() => {
+    const el = list.current;
+    if (el) el.scrollTop = el.scrollHeight;
+    following.current = true;
+    setBehind(false);
+  }, []);
+  const onListScroll = useCallback(() => {
+    const el = list.current;
+    if (!el) return;
+    following.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+    if (following.current) setBehind(false);
+  }, []);
+  // The message box grows with what is written (up to a limit, then it scrolls) instead of one rigid line.
+  const box = useRef<HTMLTextAreaElement | null>(null);
+  const fitBox = useCallback(() => {
+    const el = box.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+  }, []);
   const restored = useRef(false);
   const streaming = status !== null;
 
@@ -127,6 +151,16 @@ export default function Chat({
       if (id) void select(id);
     } catch { /* No saved conversation is available. */ }
   }, [select]);
+
+  useEffect(() => {
+    if (following.current) {
+      const el = list.current;
+      if (el) el.scrollTop = el.scrollHeight;
+    } else if (messages.length > 0) {
+      setBehind(true);
+    }
+  }, [messages, streaming]);
+  useEffect(() => { fitBox(); }, [input, fitBox]);
 
   const send = useCallback(
     (text: string) => {
@@ -277,7 +311,7 @@ export default function Chat({
         </ul>
       </aside>}
       <section className="chat-main">
-        <ol className="messages" aria-live="polite">
+        <ol className="messages" aria-live="polite" ref={list} onScroll={onListScroll}>
           {messages.length === 0 && !streaming && (
             <li className="chat-empty"><span className="empty-icon"><BotIcon /></span><strong>{t("app.title")}</strong><span>{t("chat.empty")}</span></li>
           )}
@@ -414,10 +448,14 @@ export default function Chat({
             </p>
           </div>
         )}
+        {behind && (
+          <button type="button" className="jump-to-latest" onClick={toBottom}>{t("chat.latest")}</button>
+        )}
         <form
           className="chat-input"
           onSubmit={(event) => {
             event.preventDefault();
+            toBottom();
             send(input);
           }}
         >
@@ -431,9 +469,18 @@ export default function Chat({
           />
           <label>
             <span className="visually-hidden">{t("chat.input")}</span>
-            <input
+            <textarea
+              ref={box}
+              rows={1}
               value={input}
               onChange={(event) => setInput(event.target.value)}
+              onKeyDown={(event) => {
+                // Enter sends, Shift+Enter starts a new line (and an IME composition is never cut short).
+                if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                  event.preventDefault();
+                  if (!streaming && input.trim()) { toBottom(); send(input); }
+                }
+              }}
               placeholder={t("chat.input")}
               disabled={streaming}
             />

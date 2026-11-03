@@ -103,9 +103,9 @@ describe("IterationCard", () => {
     m.reportMolcy.mockResolvedValue({});
     renderCard();
     fireEvent.click(screen.getByText("Aprobar y ejecutar"));
-    act(() => emit({ type: "case_molcy", request_id: "v1", task_id: "t-2", scene: "busqueda", format: "horizontal" }));
+    act(() => emit({ type: "case_molcy", request_id: "v1", task_id: "t-2", scene: "busqueda", format: "horizontal", presentation: "{\"etiquetas\":false}" }));
     await waitFor(() => expect(m.reportMolcy).toHaveBeenCalledWith("test-session", "v1", { status: "started", job_id: "job-1abcdef" }));
-    expect(m.molcy).toHaveBeenCalledWith("v1", "t-2", "busqueda", "horizontal");
+    expect(m.molcy).toHaveBeenCalledWith("v1", "t-2", "busqueda", "horizontal", "{\"etiquetas\":false}");
   });
 
   it("relays the read-only case question to the host and its answer to the sidecar", async () => {
@@ -157,11 +157,43 @@ describe("IterationCard", () => {
       fireEvent.click(screen.getByText("Aprobar y ejecutar"));
       act(() => emit({ type: "workflow", event: "done", summary: { ...base, video: "started", video_pending: true } }));
       expect(screen.getByText(/sigue renderizando el vídeo en segundo plano/)).toBeInTheDocument();
+      expect(screen.getByText("Descargar ahora (sin el vídeo)")).toBeInTheDocument();
+      expect(screen.getByText(/si descargas ahora, la entrega va sin él/)).toBeInTheDocument();
       await act(async () => { vi.advanceTimersByTime(8100); });
       await waitFor(() => expect(screen.getByText("El vídeo terminó y ya está dentro de la entrega.")).toBeInTheDocument());
       expect(m.getWorkflow).toHaveBeenCalledWith("test-session", proposal.id);
       expect(screen.queryByText(/sigue renderizando/)).not.toBeInTheDocument();
+      expect(screen.getByText("Descargar la entrega (ZIP)")).toBeInTheDocument();
     } finally { vi.useRealTimers(); }
+  });
+
+  it("shows the plan's steps as a timeline that follows what really happened", () => {
+    render(<IterationCard proposal={{ ...proposal, steps: ["case", "receptor", "molecules", "moldex", "video", "preparation", "deliverable"] }}
+      token="test-session" t={t} onSessionInvalid={() => {}} />);
+    fireEvent.click(screen.getByText("Aprobar y ejecutar"));
+    const state = (label: string) => screen.getByText(label).closest("li")?.getAttribute("data-state");
+    act(() => emit({ type: "workflow", event: "approved" }));
+    expect(state("Caso")).toBe("running");
+    act(() => { emit({ type: "workflow", event: "case_step", step: "crear el caso", status: "created" });
+      emit({ type: "workflow", event: "case_step", step: "asignar el receptor", status: "applied" }); });
+    expect(state("Caso")).toBe("done");
+    expect(state("Receptor")).toBe("done");
+    expect(state("Moléculas")).toBe("running");
+    act(() => { emit({ type: "workflow", event: "saved", result: { status: "saved" } });
+      emit({ type: "workflow", event: "video", result: { status: "started", job_id: "j" } });
+      emit({ type: "workflow", event: "phase", phase: "preparation", message: "Auditando" }); });
+    expect(state("Moldex")).toBe("done");
+    expect(state("Vídeo de Molcy")).toBe("running");
+    expect(state("Preparación")).toBe("running");
+    act(() => emit({ type: "workflow", event: "done", summary: { state: "completed", counts: { evaluated: 3 },
+      selected: { name: "B", task_id: "t-2", vina_kcal_mol: -9.6, physical_status: "passed" }, saved: "saved", video: "started",
+      video_pending: true, video_progress: { fotogramas: 30, total: 120 }, preparation: "REVISION", files: { "entrega.zip": 9 }, paths: {}, notes: [] } }));
+    expect(state("Moléculas")).toBe("done");
+    expect(screen.getByText(/3\/3 · B/)).toBeInTheDocument();
+    expect(state("Vídeo de Molcy")).toBe("running");
+    expect(screen.getByText(/25 %/)).toBeInTheDocument();
+    expect(state("Preparación")).toBe("done");
+    expect(state("Entrega")).toBe("running"); // ready, but the video is still coming
   });
 
   it("says nothing was saved when no molecule met the rule", () => {

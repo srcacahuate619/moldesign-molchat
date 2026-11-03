@@ -11,7 +11,7 @@ const STATUSES: MolcyStatus[] = ["started", "not_found", "unavailable", "busy", 
  * Ask the host's Molcy tab to prepare the video in view (run, scene, format) and press «Generate». A silent host is
  * «unknown»: the tab may have started a render, so the caller never asks again.
  */
-export function renderVideoInHost(requestId: string, taskId: string, scene: string, format: string): Promise<MolcyResult> {
+export function renderVideoInHost(requestId: string, taskId: string, scene: string, format: string, presentation: string): Promise<MolcyResult> {
   if (window.parent === window) return Promise.resolve({ status: "failed" });
   return new Promise((resolve) => {
     const finish = (result: MolcyResult) => {
@@ -34,6 +34,7 @@ export function renderVideoInHost(requestId: string, taskId: string, scene: stri
     };
     const timer = window.setTimeout(() => finish({ status: "unknown" }), 95000);
     window.addEventListener("message", onMessage);
-    window.parent.postMessage({ type: "molchat-host-message", kind: "molcy_render", request_id: requestId, task_id: taskId, scene, format }, "*");
+    window.parent.postMessage({ type: "molchat-host-message", kind: "molcy_render", request_id: requestId, task_id: taskId, scene, format,
+      presentation }, "*");
   });
 }

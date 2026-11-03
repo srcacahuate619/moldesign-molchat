@@ -9,7 +9,7 @@ from collections.abc import Callable
 from typing import Any
 
 from ..conversation.tool_loop import Tool
-from .iteration import FORMATS, MAX_MOLECULES, SCENES, IterationSpec, SpecError
+from .iteration import ENSEMBLE_VARIANTS, FORMATS, MAX_MOLECULES, RECEPTOR_VIEWS, SCENES, IterationSpec, SpecError
 
 ITERATION_GUIDANCE = (
     "Cuando el usuario pida, en una sola petición, evaluar UNA LISTA de moléculas una por una, en un mismo caso, contra un "
@@ -17,7 +17,14 @@ ITERATION_GUIDANCE = (
     "juntarlo todo en un único archivo), usa propose_iteration una sola vez: no encadenes tú las herramientas sueltas. "
     "Necesitas del usuario: nombre del caso, receptor (PDB), las moléculas con su SMILES y el umbral en kcal/mol; si falta "
     "alguno, pregúntalo y no inventes SMILES ni receptor. Pasa save=true si pidió guardar, video si pidió vídeo (scene: "
-    "'vídeo de búsqueda' es busqueda; si no dijo el formato, usa horizontal), preparation=true si pidió la auditoría en "
+    "'vídeo de búsqueda' es busqueda). Formato: «de prueba», «vista previa», «rápido» o «corto» es previsualizacion; «vertical», "
+    "«para redes», «shorts», «reels» o «TikTok» es vertical; si no dijo nada, horizontal. Personalización del vídeo, sólo "
+    "lo que la persona pidió: title (título en pantalla), receptor (visible u oculto), receptor_color, residue_color (los "
+    "«hotspots», residuos clave o destacados del sitio), polar_color y apolar_color (las líneas de las interacciones), "
+    "labels, contacts y previous_sample (falso si pide quitarlos) y ensemble_variant. Los colores van como #RRGGBB: "
+    "traduce el nombre (verde #22C55E, morado #8B5CF6, rojo #EF4444, azul #3B82F6, amarillo #EAB308, naranja #F97316, "
+    "rosa #EC4899, cian #06B6D4, blanco #FFFFFF, gris #9CA3AF, negro #111827) o usa el código que dé. "
+    "preparation=true si pidió la auditoría en "
     "Preparación y package=true si pidió juntar o entregar todo en un único archivo/ZIP; no actives lo que no pidió. "
     "stop=first (por defecto) detiene la iteración en la primera molécula que cumple; usa all solo si pidió evaluarlas todas. "
     "La herramienta no ejecuta nada: deja una tarjeta que la persona aprueba una vez; después el plan corre sin más "
@@ -25,6 +32,7 @@ ITERATION_GUIDANCE = (
     "No llames «cribado» a esto: en MolDesign el cribado es el módulo de lotes y esto es otra cosa; di «iteración» o "
     "«evaluar la lista». ")
 
+_COLOR = {"type": "string", "pattern": "^#[0-9A-Fa-f]{6}$", "maxLength": 7}
 _MOLECULE = {"type": "object", "properties": {"name": {"type": "string", "maxLength": 80},
                                               "smiles": {"type": "string", "maxLength": 500}},
              "required": ["smiles"], "additionalProperties": False}
@@ -56,7 +64,12 @@ def propose_iteration_tool(user_text: str, propose: Callable[[IterationSpec], di
         "require_physical": {"type": "boolean"}, "save": {"type": "boolean"},
         "video": {"type": "object", "properties": {
             "scene": {"type": "string", "enum": list(SCENES)}, "format": {"type": "string", "enum": list(FORMATS)},
-            "title": {"type": "string", "maxLength": 80}}, "required": ["scene"], "additionalProperties": False},
+            "title": {"type": "string", "maxLength": 80},
+            "receptor": {"type": "string", "enum": list(RECEPTOR_VIEWS)},
+            "receptor_color": _COLOR, "residue_color": _COLOR, "polar_color": _COLOR, "apolar_color": _COLOR,
+            "labels": {"type": "boolean"}, "contacts": {"type": "boolean"}, "previous_sample": {"type": "boolean"},
+            "ensemble_variant": {"type": "string", "enum": list(ENSEMBLE_VARIANTS)}},
+            "required": ["scene"], "additionalProperties": False},
         "preparation": {"type": "boolean"}, "package": {"type": "boolean"}},
         "required": ["case_name", "pdb_id", "molecules", "threshold_kcal"], "additionalProperties": False}
     return Tool("propose_iteration",
