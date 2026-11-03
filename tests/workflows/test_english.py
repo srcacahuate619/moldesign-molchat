@@ -138,3 +138,13 @@ def test_preparation_state_is_named_as_moldesign_names_it_in_english() -> None:
     with using("en"):
         assert [readiness_label(c) for c in ("REVISION", "BLOQUEADO", "TRANSFERIBLE")] == ["REVIEW", "BLOCKED", "TRANSFERABLE"]
     assert readiness_label("REVISION") == "REVISION" and readiness_label(None) is None
+
+
+def test_the_plan_card_names_molcy_scene_as_the_molcy_tab_does() -> None:
+    from molchat_agent.workflows.iteration import IterationSpec
+
+    spec = IterationSpec.from_dict({"case_name": "c", "pdb_id": "8T69", "molecules": [{"name": "a", "smiles": "CCO"}],
+                                    "threshold_kcal": -9.5, "video": {"scene": "resultado", "format": "previsualizacion"}})
+    with using("en"):
+        assert any("scene Result, format test (short preview)" in line for line in spec.card_lines())
+    assert any("escena resultado" in line for line in spec.card_lines())

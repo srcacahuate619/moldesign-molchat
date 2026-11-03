@@ -58,6 +58,10 @@ def _clean(text: Any, field_name: str, maximum: int) -> str:
     return value
 
 
+# Molcy's scenes as its tab names them in each language (MolDesign frontend/app/molcy/page.tsx).
+_SCENE_NAMES = {"resultado": ("resultado", "Result"), "receptor": ("receptor", "Receptor"), "busqueda": ("búsqueda", "Search"),
+                "ensamble": ("ensamble", "Ensemble")}
+
 @dataclass(frozen=True)
 class Molecule:
     name: str
@@ -251,9 +255,10 @@ class IterationSpec:
             lines.append(tr("La que cumpla se guarda en Moldex.", "The one that meets it is saved to Moldex."))
         if self.video is not None:
             shown = {"previsualizacion": tr("prueba (vista previa corta)", "test (short preview)")}.get(self.video.format, self.video.format)
-            lines.append(tr(f"Vídeo de Molcy (solo GPU): escena {self.video.scene}, formato {shown}; "
+            scene = _SCENE_NAMES.get(self.video.scene, (self.video.scene, self.video.scene))
+            lines.append(tr(f"Vídeo de Molcy (solo GPU): escena {scene[0]}, formato {shown}; "
                             "el cierre de MolDesign se añade siempre.",
-                            f"Molcy video (GPU only): scene {self.video.scene}, format {shown}; "
+                            f"Molcy video (GPU only): scene {scene[1]}, format {shown}; "
                             "MolDesign's closing is always added."))
             custom = self.video.customized()
             lines.append(tr("Presentación: ", "Presentation: ")
