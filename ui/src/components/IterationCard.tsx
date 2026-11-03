@@ -208,6 +208,11 @@ export default function IterationCard({
       if (ok && step === "case") mark("receptor", "running");
       if (ok && step === "receptor") mark("molecules", "running");
     }
+    // The loop is over once the plan moves on: the molecules step stops reading «running» (the banner named it while
+    // Preparation was auditing). Its count comes with the final summary.
+    if (kind === "saved" || kind === "video" || (kind === "phase" && event["phase"] === "preparation")) {
+      setTimeline((prev) => (prev.molecules?.state === "running" ? { ...prev, molecules: { state: "done", detail: prev.molecules.detail } } : prev));
+    }
     if (kind === "saved" && typeof event["result"] === "object" && event["result"]) {
       const status = text((event["result"] as Record<string, unknown>)["status"]);
       mark("moldex", status === "saved" || status === "already_saved" ? "done" : "failed", status);
