@@ -85,6 +85,12 @@ def _arguments(raw: Any, schema: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+#: Calls run in one step: an iteration has up to 12 molecules and a model may look all of them up at once.
+MAX_CALLS_PER_STEP = 16
+#: Beyond this the answer is not a plan but noise, and the turn ends.
+MAX_CALLS_SEEN = 64
+
+
 async def run_tool_loop(provider: Any, messages: list[dict[str, Any]],
                         tools: list[Tool], *, max_steps: int = 4,
                         observe: Callable[[str, str, str, dict[str, Any] | None], None] | None = None) -> LoopResult:
@@ -107,7 +113,7 @@ async def run_tool_loop(provider: Any, messages: list[dict[str, Any]],
         if not isinstance(message, dict) or message.get("role") not in (None, "assistant"):
             raise ProviderError("El modelo devolvió un mensaje no válido.")
         calls = message.get("tool_calls") or []
-        if not isinstance(calls, list) or len(calls) > 8:
+        if not isinstance(calls, list) or len(calls) > MAX_CALLS_SEEN:
             raise ProviderError("El modelo devolvió demasiadas llamadas.")
         content = message.get("content")
         if content is not None and not isinstance(content, str):
@@ -136,8 +142,15 @@ async def run_tool_loop(provider: Any, messages: list[dict[str, Any]],
         if isinstance(reasoning, str):
             assistant_message["reasoning_content"] = reasoning
         transcript.append(assistant_message)
-        for call in clean_calls:
+        for position, call in enumerate(clean_calls):
             function = call["function"]
+            if position >= MAX_CALLS_PER_STEP:
+                # Not run and not a failed turn: every call gets its answer (the protocol needs one per id) and the
+                # model repeats the rest in the next step. Twelve lookups for a twelve-molecule plan used to end the turn.
+                transcript.append({"role": "tool", "tool_call_id": call["id"], "content": json.dumps(
+                    {"error": f"Demasiadas llamadas en un mismo paso (máximo {MAX_CALLS_PER_STEP}); esta no se ejecutó. "
+                              "Repítela en el siguiente paso."}, ensure_ascii=False)})
+                continue
             if observe:
                 observe("start", function["name"], call["id"], None)
             tool = by_name.get(function["name"])

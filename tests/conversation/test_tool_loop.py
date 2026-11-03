@@ -164,3 +164,46 @@ async def test_ten_step_budget_allows_complex_turn_and_summary():
     assert result.text == "Acciones confirmadas." and not result.exhausted and len(calls) == 8
 
 
+
+
+@pytest.mark.asyncio
+async def test_many_lookups_in_one_step_do_not_end_the_turn():
+    """A twelve-molecule plan: the model looks all of them up at once. That used to end the turn («demasiadas llamadas»)."""
+    from molchat_agent.conversation.tool_loop import MAX_CALLS_PER_STEP
+    ran = []
+
+    def batch(n, prefix):
+        return {"role": "assistant", "content": None, "tool_calls": [
+            {"id": f"{prefix}{i}", "type": "function", "function": {"name": "pubchem_lookup", "arguments": json.dumps({"name": f"m{i}"})}}
+            for i in range(n)]}
+
+    class Provider:
+        async def chat_with_tools(self, messages, _tools):
+            answered = [json.loads(m["content"]) for m in messages if m.get("role") == "tool"]
+            if not answered:
+                return batch(MAX_CALLS_PER_STEP + 2, "a")
+            assert len(answered) == MAX_CALLS_PER_STEP + 2  # every call has its answer
+            assert all("Repítela" in r["error"] for r in answered[MAX_CALLS_PER_STEP:])
+            return {"role": "assistant", "content": "Listo."}
+
+    async def execute(args):
+        ran.append(args["name"])
+        return {"status": "ok"}
+
+    result = await run_tool_loop(Provider(), [{"role": "user", "content": "doce moléculas"}],
+                                 [Tool("pubchem_lookup", "Busca", SCHEMA, execute)])
+    assert result.text == "Listo." and len(ran) == MAX_CALLS_PER_STEP
+
+
+@pytest.mark.asyncio
+async def test_an_absurd_number_of_calls_still_ends_the_turn():
+    from molchat_agent.conversation.tool_loop import MAX_CALLS_SEEN
+
+    class Provider:
+        async def chat_with_tools(self, messages, _tools):
+            return {"role": "assistant", "content": None, "tool_calls": [
+                {"id": f"x{i}", "type": "function", "function": {"name": "pubchem_lookup", "arguments": "{}"}}
+                for i in range(MAX_CALLS_SEEN + 1)]}
+
+    with pytest.raises(ProviderError):
+        await run_tool_loop(Provider(), [{"role": "user", "content": "hola"}], [Tool("pubchem_lookup", "Busca", SCHEMA, lambda a: a)])
