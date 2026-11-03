@@ -20,8 +20,42 @@ versionada (`docs/CONTRATO_MOLDESIGN.md`).
 > instalación limpia y rollback aún están pendientes. Revisa los límites científicos y de seguridad antes de fiarte de
 > cualquier número.
 
+## Qué es base previa y qué se construyó en el hackathon
+
+Este proyecto se presenta al Meta Global AI Developer Hackathon (entrega el 4 de noviembre de 2026), cuya regla es que
+sólo cuenta el trabajo nuevo. Esta sección separa lo previo de lo nuevo; la fuente es `git log`, no una descripción.
+
+**Previo al evento (no se reclama como trabajo del hackathon):**
+
+- **MolDesign**, la plataforma: docking con AutoDock Vina, Moldex, Molcy (vídeo), Preparación y su paquete
+  reproducible, y el asistente anterior que vivía dentro de ella. Es otro repositorio, anterior y de otro alcance;
+  MolChat sólo lo consume por API.
+- **Lo portado de MolDesign**, que `PROVENANCE.md` declara pieza por pieza con su origen (por ejemplo, la consulta a
+  PubChem se había desarrollado antes en MolDesign y se trasladó a este repositorio).
+
+**Construido durante el evento — todo este repositorio, por declaración del autor.** Su historial empieza en `d37cc70`
+(2026-10-26 12:53 −06:00) y `git log --reverse --format='%h %ad %s' --date=iso` lista cada cambio con su fecha y hora.
+Resumido:
+
+| Área | Qué se añadió |
+|---|---|
+| Plan inicial de siete etapas (Fases 0 a 6) | Ejecutor de planes y catálogo estricto de herramientas, ciclo de hipótesis acotado, voz, sidecar local con su interfaz, contrato HTTP con MolDesign, kit de conformidad de adaptadores e integración como programa independiente. En ese punto MolChat era un asistente que **proponía planes que una persona aprobaba paso a paso**. |
+| Modelo y proveedores | Catálogo de proveedores con la URL fija en la llave, modo alojado (la clave de la cuenta llega para una llamada), adaptadores de la Meta Model API y de **Muse Spark Open servido por Baseten** (`meta-models/muse-spark-open-1026`). |
+| Agente con herramientas | Ciclo de llamadas estructuradas de herramientas (el modelo elige, el código valida y ejecuta), contexto molecular entre turnos, consulta propia a PubChem con permiso por cuenta, verificación del dibujo del editor contra PubChem, comparación de propiedades con procedencia, acciones sugeridas por el modelo. |
+| Acciones sobre la plataforma | Crear un caso, cargar un SMILES, asignar un receptor, lanzar la evaluación y leer el editor, a través del anfitrión y con estados verificables ([`docs/HOST_CONTRACT.md`](docs/HOST_CONTRACT.md)). |
+| Lectura científica | `get_evaluation_status`, `explain_evaluation` y `compare_poses` (RMSD medido entre poses, controles físicos con nombre, contactos con átomos y ángulos), con un guardián que redacta cualquier cifra que ninguna herramienta devolvió. |
+| Acciones con confirmación | Guardar una corrida en Moldex y pedir un vídeo a Molcy, siempre propuestas que la persona confirma. |
+| **Cribado automático** | De un solo prompt, con **una** aprobación ligada al hash del plan: caso, receptor, bucle determinista sobre una lista de moléculas con regla de parada medida, guardado, vídeo, auditoría en Preparación, cuaderno del agente y un único ZIP. Ver [`docs/CRIBADO_AUTOMATICO.md`](docs/CRIBADO_AUTOMATICO.md). |
+
+La distinción que importa: antes, MolChat **sugería y esperaba**; ahora un plan aprobado una vez **se ejecuta solo**, se
+recupera de los fallos de cada molécula, y declara lo que no pudo hacer. La ciencia, la identidad y las decisiones de
+Preparación siguen siendo de MolDesign: MolChat no calcula ninguna energía ni resuelve ninguna decisión humana.
+
 ## Qué existe en esta versión
 
+- Cribado automático de hasta 12 moléculas con una sola aprobación de plan; regla de parada explícita (energía de
+  Vina y controles físicos superados), cuaderno y ZIP de entrega deterministas
+  ([`docs/CRIBADO_AUTOMATICO.md`](docs/CRIBADO_AUTOMATICO.md)).
 - Núcleo independiente de Python 3.11+, GPL-3.0-or-later, sin motores científicos
   duplicados.
 - Catálogo estricto de herramientas respaldadas por endpoints actuales de

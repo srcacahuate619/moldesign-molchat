@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 from collections import OrderedDict
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from ..conversation.engine import ConversationEngine
@@ -44,8 +45,15 @@ class ServerState:
     receptor_requests: dict[str, tuple[str, asyncio.Future[dict[str, str]]]] = field(default_factory=dict)
     evaluation_requests: dict[str, tuple[str, asyncio.Future[dict[str, str]]]] = field(default_factory=dict)
     editor_requests: dict[str, tuple[str, asyncio.Future[dict[str, str]]]] = field(default_factory=dict)
+    preparation_requests: dict[str, tuple[str, asyncio.Future[dict[str, Any]]]] = field(default_factory=dict)
     #: Actions the model proposed and the person has not confirmed (save in Moldex, Molcy video).
     proposals: dict[str, Proposal] = field(default_factory=dict)
+    #: Screenings the model proposed. One approval click runs the whole plan (see ``workflows``).
+    workflows: dict[str, Any] = field(default_factory=dict)
+    #: Where a finished plan writes its notebook and ZIP; ``None`` keeps them in memory only (tests).
+    output_dir: Path | None = None
+    #: Audits the selected run in Preparación (optional; absent means the plan declares it unavailable).
+    preparation: Any | None = None
     structure_cache: OrderedDict[str, tuple[float, dict[str, str]]] = field(default_factory=OrderedDict)
     pubchem_client: Any | None = None  # injected only for tests; production creates a restricted client
     # Hosted mode (MOLCHAT_HOST_SECRET set): platform calls forward the

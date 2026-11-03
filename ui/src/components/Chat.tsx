@@ -9,9 +9,11 @@ import {
   type PubChemReference,
   type SuggestedAction,
   type TurnResult,
+  type WorkflowProposal,
 } from "../lib/api";
 import type { StringKey } from "../lib/i18n";
 import ActionProposalCard, { validProposals } from "./ActionProposalCard";
+import ScreeningCard, { validWorkflows } from "./ScreeningCard";
 import EvidenceBlock from "./EvidenceBlock";
 import MessageText from "./MessageText";
 import PropertyComparison from "./PropertyComparison";
@@ -34,6 +36,8 @@ interface Message {
   suggestedActions?: SuggestedAction[];
   /** Live only: a proposal lives in the sidecar's memory for minutes, so a reloaded conversation shows none. */
   proposals?: ActionProposal[];
+  /** Live only, like proposals: a screening waits for its one approval in the sidecar's memory. */
+  workflows?: WorkflowProposal[];
 }
 
 const ACTIVE_CONVERSATION = "molchat.activeConversation";
@@ -208,6 +212,7 @@ export default function Chat({
                 comparisonCids: result.comparison_cids,
                 suggestedActions: result.suggested_actions,
                 proposals: validProposals(result.action_proposals),
+                workflows: validWorkflows(result.workflow_proposals),
                 selectable: (result.references?.length ?? 0) > 1,
               },
             ]);
@@ -354,6 +359,9 @@ export default function Chat({
               )}
               {message.role === "assistant" && (message.proposals ?? []).map((proposal) => (
                 <ActionProposalCard key={proposal.id} proposal={proposal} token={token} t={t} onSessionInvalid={onSessionInvalid} />
+              ))}
+              {message.role === "assistant" && (message.workflows ?? []).map((workflow) => (
+                <ScreeningCard key={workflow.id} proposal={workflow} token={token} t={t} onSessionInvalid={onSessionInvalid} />
               ))}
               {message.role === "assistant" && index === messages.length - 1 && !message.selectable && actions.length > 0 && (
                 <div className="context-actions" role="group" aria-label={t("chat.actions")}>

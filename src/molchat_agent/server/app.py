@@ -43,6 +43,10 @@ from ..conversation.property_methods import property_difference_notes
 from ..conversation.product_actions import (ACTIONS_GUIDANCE, Proposal, mask_unconfirmed_actions, molcy_video_status_tool,
                                             molcy_video_tool, new_proposal, outcome_text, proposal_answer, run_proposal,
                                             save_to_moldex_tool, view as proposal_view)
+from ..workflows.notebook import now_iso
+from ..workflows.service import (HostRelay, PlatformHttp, WorkflowProposal, execute as execute_workflow, new_workflow,
+                                 workflow_answer, workflow_outcome_text)
+from ..workflows.tool import SCREENING_GUIDANCE, propose_screening_tool
 from ..conversation.tools import PlatformBackend
 from ..plan import Plan
 from ..providers.base import ProviderDisabled, ProviderError
@@ -351,6 +355,30 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
         pending[1].set_result(payload)
         return JSONResponse({"accepted": True})
 
+    async def preparation_result(request: Request) -> JSONResponse:
+        """The window's answer to «audit this run in Preparación»: the case projection it built, or why it could not."""
+        session = await need_chat(request)
+        pending = state.preparation_requests.get(request.path_params["request_id"])
+        if pending is None or pending[0] != session.sub or pending[1].done():
+            return _error(404, "solicitud no encontrada")
+        payload = await read_json(request)
+        problems = {"case_not_found", "case_mismatch", "not_auditable", "audit_failed", "busy", "failed", "unknown"}
+        if not isinstance(payload, dict) or payload.get("status") not in problems | {"audited"}:
+            return _error(400, "resultado no válido")
+        if payload["status"] == "audited":
+            projection = payload.get("projection")
+            if (set(payload) != {"status", "molecule_id", "estado", "projection"} or not isinstance(projection, dict)
+                    or not isinstance(payload["molecule_id"], str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", payload["molecule_id"])
+                    or payload["estado"] not in {"BLOQUEADO", "REVISION", "TRANSFERIBLE"}):
+                return _error(400, "resultado no válido")
+        else:
+            reason = payload.get("reason")
+            if set(payload) - {"status", "reason"} or (reason is not None and (
+                    not isinstance(reason, str) or len(reason) > 300 or any(ord(ch) < 32 for ch in reason))):
+                return _error(400, "resultado no válido")
+        pending[1].set_result(payload)
+        return JSONResponse({"accepted": True})
+
     async def editor_result(request: Request) -> JSONResponse:
         session = await need_chat(request)
         pending = state.editor_requests.get(request.path_params["request_id"])
@@ -421,6 +449,122 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
             proposal.state, proposal.outcome = "cancelled", {"status": "cancelled", "message": "Cancelado; no se hizo nada."}
             record_outcome(proposal)
         return JSONResponse({"id": proposal.id, "state": proposal.state, "outcome": proposal.outcome})
+
+    # ── Screenings: one approval, then the plan runs by itself ──────────────────────────────────────
+    workflow_tasks: dict[str, asyncio.Task[None]] = {}
+
+    def find_workflow(request: Request, session: Session) -> WorkflowProposal | None:
+        workflow = state.workflows.get(request.path_params["workflow_id"])
+        if workflow is None or workflow.owner != session.sub:
+            return None
+        if workflow.state == "pending" and workflow.expires < time.monotonic():
+            state.workflows.pop(workflow.id, None)
+            return None
+        return workflow
+
+    def workflow_state(workflow: WorkflowProposal) -> dict[str, Any]:
+        return {"id": workflow.id, "state": workflow.state, "digest": workflow.spec.digest, "summary": workflow.summary}
+
+    def remember_workflow(workflow: WorkflowProposal) -> None:
+        """Keep the plan's real outcome in the conversation, so the next turn reads what happened."""
+        if workflow.conv_id is None:
+            return
+        numbers: list[float] = []
+        if workflow.outcome is not None:
+            numbers = [r.affinity_kcal for r in workflow.outcome.records if r.affinity_kcal is not None]
+            numbers += [float(workflow.spec.threshold_kcal), abs(float(workflow.spec.threshold_kcal)), float(len(workflow.spec.molecules))]
+        text = workflow_outcome_text(workflow) if workflow.summary and workflow.summary.get("counts") is not None else (
+            "Cribado interrumpido: no se pudo confirmar todo lo que ocurrió; revisa MolDesign antes de repetirlo.")
+        try:
+            state.memory.add_message(workflow.conv_id, workflow.owner, "assistant", text, verified_numbers=sorted(numbers)[:200])
+        except (ConversationNotFound, PersistenciaFallida):
+            pass
+
+    async def run_workflow(workflow: WorkflowProposal, relay: HostRelay, platform: PlatformHttp,
+                           queue: "asyncio.Queue[dict[str, Any]]") -> None:
+        def emit(event: dict[str, Any]) -> None:
+            queue.put_nowait(event)
+
+        try:
+            preparation = state.preparation(platform, relay) if callable(state.preparation) else None
+            await execute_workflow(workflow, relay, platform, emit, preparation=preparation, output_dir=state.output_dir)
+        except asyncio.CancelledError:
+            workflow.state = "cancelled"
+            workflow.summary = {"state": "interrupted", "counts": None, "notes": ["Se interrumpió antes de terminar."]}
+            raise
+        except Exception:  # noqa: BLE001 - the plan must end with an honest status, never hang the card
+            workflow.summary = {"state": "failed", "counts": None,
+                                "notes": ["El plan terminó con un error interno; revisa MolDesign antes de repetirlo."]}
+            emit({"type": "workflow", "event": "done", "summary": workflow.summary})
+        finally:
+            if workflow.state == "running":
+                workflow.state = "done"
+            remember_workflow(workflow)
+            workflow_tasks.pop(workflow.id, None)
+
+    async def workflow_run(request: Request) -> Response:
+        """The person's click. The model has no route to this endpoint: only the interface calls it."""
+        session = await need_chat(request)
+        workflow = find_workflow(request, session)
+        if workflow is None:
+            return _error(404, "plan no encontrado o caducado")
+        payload = await read_json(request)
+        if not isinstance(payload, dict) or payload.get("digest") != workflow.spec.digest:
+            return _error(409, "la huella del plan no coincide con la que se aprobó: no se ejecuta")
+        if workflow.state != "pending":  # a second click returns what happened, it does not run it again
+            return JSONResponse(workflow_state(workflow))
+        if not state.hosted or state.bridge is None:
+            return _error(409, "se necesita MolDesign para ejecutar este plan")
+        workflow.state, workflow.approved_at = "running", now_iso()
+        queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+        platform = PlatformHttp(state.bridge.with_token(platform_token(request)))
+        task = asyncio.create_task(run_workflow(workflow, HostRelay(state, session.sub, queue), platform, queue))
+        workflow_tasks[workflow.id] = task
+
+        async def stream() -> AsyncIterator[bytes]:
+            yield encode_event({"type": "workflow", "event": "approved", "id": workflow.id, "digest": workflow.spec.digest})
+            try:
+                while not (task.done() and queue.empty()):
+                    try:
+                        event = await asyncio.wait_for(queue.get(), timeout=0.5)
+                    except asyncio.TimeoutError:
+                        continue
+                    yield encode_event(event)
+            finally:
+                if not task.done():
+                    task.cancel()  # the window that carries out the host's actions went away: stop honestly
+
+        return StreamingResponse(stream(), media_type="text/event-stream", headers=dict(SSE_HEADERS))
+
+    async def workflow_get(request: Request) -> JSONResponse:
+        session = await need_chat(request)
+        workflow = find_workflow(request, session)
+        if workflow is None:
+            return _error(404, "plan no encontrado o caducado")
+        return JSONResponse({**workflow_state(workflow), "view": workflow.view()})
+
+    async def workflow_cancel(request: Request) -> JSONResponse:
+        session = await need_chat(request)
+        workflow = find_workflow(request, session)
+        if workflow is None:
+            return _error(404, "plan no encontrado o caducado")
+        if workflow.state == "pending":
+            workflow.state = "cancelled"
+            workflow.summary = {"state": "cancelled", "counts": None, "notes": ["Cancelado antes de empezar; no se hizo nada."]}
+        elif workflow.state == "running" and workflow.id in workflow_tasks:
+            workflow_tasks[workflow.id].cancel()
+        return JSONResponse(workflow_state(workflow))
+
+    async def workflow_file(request: Request) -> Response:
+        session = await need_chat(request)
+        workflow = find_workflow(request, session)
+        name = request.path_params["name"]
+        if workflow is None or name not in workflow.files:
+            return _error(404, "archivo no encontrado")
+        media = {"pdf": "application/pdf", "zip": "application/zip", "md": "text/markdown; charset=utf-8",
+                 "json": "application/json"}.get(name.rsplit(".", 1)[-1], "application/octet-stream")
+        return Response(workflow.files[name], media_type=media,
+                        headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store"})
 
     async def list_harness_jobs(request: Request) -> JSONResponse:
         session = await need_chat(request)
@@ -676,8 +820,13 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
             Route("/v1/receptor-requests/{request_id}/result", receptor_result, methods=["POST"]),
             Route("/v1/evaluation-requests/{request_id}/result", evaluation_result, methods=["POST"]),
             Route("/v1/editor-requests/{request_id}/result", editor_result, methods=["POST"]),
+            Route("/v1/preparation-requests/{request_id}/result", preparation_result, methods=["POST"]),
             Route("/v1/actions/{action_id}/confirm", action_confirm, methods=["POST"]),
             Route("/v1/actions/{action_id}/cancel", action_cancel, methods=["POST"]),
+            Route("/v1/workflows/{workflow_id}", workflow_get, methods=["GET"]),
+            Route("/v1/workflows/{workflow_id}/run", workflow_run, methods=["POST"]),
+            Route("/v1/workflows/{workflow_id}/cancel", workflow_cancel, methods=["POST"]),
+            Route("/v1/workflows/{workflow_id}/files/{name}", workflow_file, methods=["GET"]),
             Route("/v1/harness-jobs", list_harness_jobs, methods=["GET"]),
             Route("/v1/pubchem/permission", pubchem_permission, methods=["GET", "POST", "DELETE"]),
             Route("/v1/conversations/{conv_id}/pubchem-selection", select_pubchem_reference, methods=["POST"]),
@@ -808,6 +957,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
     comparison_facts: list[dict[str, Any]] = []
     #: Proposals this turn left for the person to confirm (nothing is executed until then).
     new_proposals: list[Proposal] = []
+    #: Screenings this turn proposed (one card; the person's single approval runs the whole plan).
+    new_workflows: list[WorkflowProposal] = []
     events: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
     case_status: dict[str, Any] | None = None
     case_started = False
@@ -964,7 +1115,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
         "La aceptación de una tarea no es un resultado ni indica que el cálculo haya terminado. No reintentes un resultado desconocido. "
         "Si el usuario pregunta por el estado o el resultado de una tarea aceptada, usa get_evaluation_status con su task_id; "
         "informa task_status tal cual y, solo si es SUCCESS, la afinidad de Vina como energía de la mejor pose, nunca como actividad ni Ki. "
-        + EXPLAIN_GUIDANCE + COMPARE_GUIDANCE + ACTIONS_GUIDANCE +
+        + EXPLAIN_GUIDANCE + COMPARE_GUIDANCE + ACTIONS_GUIDANCE + SCREENING_GUIDANCE +
         "Si el usuario no indicó un PDB ID exacto busca en el catálogo y asigna únicamente si el resultado es inequívoco; si hay varias opciones pregunta. "
         "Si el usuario pidió expresamente un receptor aleatorio o al azar, usa pick_random_receptor y asigna el receptor devuelto; "
         "conserva su sección y disponibilidad, sin sustituirlo por uno verificado salvo que el usuario haya pedido ese filtro. "
@@ -1280,6 +1431,22 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
 
         tools.extend([save_to_moldex_tool(action_bridge, propose), molcy_video_tool(action_bridge, propose),
                       molcy_video_status_tool(action_bridge)])
+
+        def propose_workflow(spec: Any) -> dict[str, Any] | None:
+            if new_workflows:
+                return None  # one plan per turn; asking twice is not two approvals
+            workflow = new_workflow(state.workflows, owner, conv_id, spec)
+            if workflow is None:
+                return None
+            new_workflows.append(workflow)
+            # The host's own sentence quotes the list size and the threshold the person asked for.
+            numbers = {float(len(spec.molecules)), float(spec.threshold_kcal), abs(float(spec.threshold_kcal))}
+            verified.update(numbers)
+            exact.update(numbers)
+            turn_exact.update(numbers)
+            return workflow.view()
+
+        tools.append(propose_screening_tool(text, propose_workflow))
     if not registro.content_granted(provider.id):
         tools = []
     task = asyncio.create_task(run_tool_loop(provider, messages, tools, max_steps=10, observe=observe_tool))
@@ -1307,6 +1474,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             answer = _mask_unconfirmed_case_claims(answer)
         # The model proposes; the person confirms. Nothing it says in this turn can be a done deed.
         answer = proposal_answer(new_proposals) if new_proposals else mask_unconfirmed_actions(answer)
+        if new_workflows:
+            answer = workflow_answer(new_workflows[0])
         linked_cids = {item.get("structure", {}).get("pubchem_cid") for item in evidence}
         if editor_check_result and editor_check_result.get("status") != "no_reference":
             linked_cids.add(editor_check_result.get("cid"))
@@ -1429,7 +1598,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             }.get(status, "No pude comprobar el dibujo; revisa el editor y vuelve a intentarlo.")
             answer += f'\n\nComprobación del editor · caso «{editor_check_result["case_name"]}» · PubChem {editor_check_result["cid"]}: {explanation}'
         if trace:
-            incomplete = result.exhausted or any(step["status"] not in {"ok", "created", "applied", "started", "already_selected", "exists", "match", "match_stereo_unspecified", "different_stereochemistry", "different_structure", "awaiting_confirmation", "already_saved"}
+            incomplete = result.exhausted or any(step["status"] not in {"ok", "created", "applied", "started", "already_selected", "exists", "match", "match_stereo_unspecified", "different_stereochemistry", "different_structure", "awaiting_confirmation", "awaiting_approval", "already_saved"}
                 and not (step["tool"] in {"pubchem_lookup", "search_receptors", "pick_random_receptor"} and step["status"] == "not_found")
                 for step in trace)
             save_trace("partial" if incomplete else "completed")
@@ -1445,7 +1614,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
                                  verified_numbers=sorted(turn_exact)[:2000])
         yield {"type": "result", "result": {"text": answer, "intent": "harness", "evidence": evidence,
                "references": displayed_refs, "comparison_cids": comparison_cids, "suggested_actions": suggested_actions,
-               "action_proposals": [proposal_view(item) for item in new_proposals], "used_llm": True, "verified_values": sorted(verified),
+               "action_proposals": [proposal_view(item) for item in new_proposals],
+               "workflow_proposals": [item.view() for item in new_workflows], "used_llm": True, "verified_values": sorted(verified),
                "latency_ms": int((time.monotonic() - started) * 1000)}}
     except (ProviderError, ProviderDisabled, ValueError, RuntimeError):
         save_trace("failed")
@@ -1467,6 +1637,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             answer += " No pude confirmar el inicio de la evaluación; revisa el caso antes de reintentar."
         if new_proposals:
             answer += " " + proposal_answer(new_proposals)
+        if new_workflows:
+            answer += " " + workflow_answer(new_workflows[0])
         if trace_error:
             answer += " No se pudo guardar la trazabilidad en Trabajos."
         try:
@@ -1476,6 +1648,7 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             pass
         yield {"type": "result", "result": {"text": answer, "intent": "harness", "evidence": [],
                "action_proposals": [proposal_view(item) for item in new_proposals],
+               "workflow_proposals": [item.view() for item in new_workflows],
                "used_llm": True, "verified_values": [], "latency_ms": int((time.monotonic() - started) * 1000)}}
     finally:
         if not trace_finished:

@@ -2,6 +2,23 @@
 
 ## No publicado
 
+- Cribado automático con una sola aprobación (`propose_screening`, `docs/CRIBADO_AUTOMATICO.md`): el modelo propone un plan
+  cerrado (caso, receptor, hasta 12 moléculas, umbral de Vina, qué guardar) y la persona lo aprueba con un clic ligado al
+  hash SHA-256 del plan. A partir de ahí un bucle determinista evalúa cada molécula como un intento aislado —un fallo se
+  registra y el bucle sigue; `busy` se reintenta y `unknown` nunca—, y una molécula cumple solo si la energía de Vina de su
+  mejor pose está en el umbral **y** los controles físicos de esa pose están en `passed`. Tras elegir, guarda en Moldex, pide
+  un vídeo de búsqueda a Molcy y audita la corrida en Preparación en paralelo; el estado de Preparación es el que dicta
+  MolDesign y nunca se convierte en una decisión humana. El cuaderno (JSON, Markdown y PDF determinista) y el ZIP de entrega
+  (paquete de Preparación intacto, `MANIFEST.json` con SHA-256 y lo ausente declarado en `missing`) los escribe el código,
+  no el modelo. Rutas `/v1/workflows/{id}` (`run` exige el hash, `cancel`, `files/{name}`) y
+  `/v1/preparation-requests/{id}/result`; `MOLCHAT_OUTPUT_DIR` fija la carpeta de salida.
+- Acción de host `audit_case_preparation`: la ventana del anfitrión construye la proyección del caso y devuelve el estado que
+  su auditoría dictó; el sidecar la audita y exporta con la sesión de la cuenta. Las acciones de host se documentan por
+  primera vez en `docs/HOST_CONTRACT.md`.
+- `tool_loop` admite argumentos `boolean` y `number` (este último con rango obligatorio) en los esquemas cerrados.
+- `README.md`: declaración de qué es previo al hackathon (MolDesign y lo portado, que `PROVENANCE.md` detalla) y qué se
+  construyó durante él (este repositorio, desde `d37cc70`).
+
 - Herramienta de solo lectura `compare_poses`: compara dos poses de una evaluación terminada con la evidencia estructural que
   MolDesign declara (energía de Vina y su diferencia, controles físicos de PoseBusters —solo `passed` es válida—, lo que dijo
   el selector y las incertidumbres de la corrida) y con los contactos de cada pose, cuya diferencia calcula el código. No

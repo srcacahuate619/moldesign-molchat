@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import math
+import re
 from typing import Any, Awaitable, Callable
 
 from ..providers.base import ProviderError
@@ -56,6 +58,18 @@ def _arguments(raw: Any, schema: dict[str, Any]) -> dict[str, Any]:
                 value = int(value)
             if type(value) is not int or not spec.get("minimum", 0) <= value <= spec.get("maximum", 999999999999):
                 raise ValueError(f"El campo {key} debe ser un entero válido dentro del rango indicado.")
+            return value
+        if kind == "boolean":
+            if type(value) is not bool:
+                raise ValueError(f"El campo {key} debe ser verdadero o falso.")
+            return value
+        if kind == "number":
+            if isinstance(value, str) and re.fullmatch(r"-?\d{1,6}(\.\d{1,6})?", value):
+                value = float(value)
+            if (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value)
+                    or "minimum" not in spec or "maximum" not in spec
+                    or not spec["minimum"] <= value <= spec["maximum"]):
+                raise ValueError(f"El campo {key} debe ser un número dentro del rango indicado.")
             return value
         if kind == "string":
             if (not isinstance(value, str) or not value.strip() or len(value) > spec.get("maxLength", 120)

@@ -46,6 +46,17 @@ export interface TurnResult {
   comparison_cids?: number[];
   suggested_actions?: SuggestedAction[];
   action_proposals?: ActionProposal[];
+  workflow_proposals?: unknown;
+}
+
+/** A screening the model proposed: one approval runs the whole plan. `digest` binds the click to exactly this plan. */
+export interface WorkflowProposal {
+  id: string;
+  kind: "screening";
+  digest: string;
+  title: string;
+  lines: string[];
+  molecules: string[];
 }
 
 /** An action the model proposed and the person has not confirmed. Never carries a path or a session. */
@@ -165,6 +176,8 @@ export const api = {
     postJson(t, `/v1/receptor-requests/${encodeURIComponent(id)}/result`, { status }),
   reportEvaluationResult: (t: string, id: string, result: import("./evaluationHost").EvaluationResult) =>
     postJson(t, `/v1/evaluation-requests/${encodeURIComponent(id)}/result`, result),
+  reportPreparationResult: (t: string, id: string, result: import("./preparationHost").PreparationResult) =>
+    postJson(t, `/v1/preparation-requests/${encodeURIComponent(id)}/result`, result),
   reportEditorResult: (t: string, id: string, result: { status: string; molfile?: string; revision?: string }) =>
     postJson(t, `/v1/editor-requests/${encodeURIComponent(id)}/result`, result),
   confirmAction: (t: string, id: string) =>
@@ -215,8 +228,29 @@ export const api = {
     })) as { text: string };
     return payload.text;
   },
+  cancelWorkflow: (t: string, id: string) =>
+    postJson(t, `/v1/workflows/${encodeURIComponent(id)}/cancel`, {}) as Promise<{ id: string; state: string }>,
+  /** A file the finished plan produced (notebook, ZIP), as a Blob: the session travels in the header, never in a URL. */
+  workflowFile: async (t: string, id: string, name: string): Promise<Blob> => {
+    const response = await fetch(`/v1/workflows/${encodeURIComponent(id)}/files/${encodeURIComponent(name)}`, {
+      headers: { Authorization: `Bearer ${t}` },
+    });
+    if (!response.ok) throw new ApiError(response.status, `HTTP ${response.status}`);
+    return response.blob();
+  },
   revoke: (t: string) => postJson(t, "/v1/session/revoke", {}),
 };
+
+/** Approve a screening and follow it: the same event stream a chat turn uses, so the host's actions arrive on it. */
+export function runWorkflow(
+  token: string,
+  id: string,
+  digest: string,
+  onEvent: (event: Record<string, unknown>) => void,
+  onError: (error: Error) => void,
+): () => void {
+  return openSsePost(token, `/v1/workflows/${encodeURIComponent(id)}/run`, { digest }, onEvent, onError);
+}
 
 /** Open an SSE POST stream; returns an aborter. Events flow to onEvent. */
 export function openChatStream(
@@ -225,10 +259,20 @@ export function openChatStream(
   onEvent: (event: Record<string, unknown>) => void,
   onError: (error: Error) => void,
 ): () => void {
+  return openSsePost(token, "/v1/chat", body, onEvent, onError);
+}
+
+function openSsePost(
+  token: string,
+  path: string,
+  body: Record<string, unknown>,
+  onEvent: (event: Record<string, unknown>) => void,
+  onError: (error: Error) => void,
+): () => void {
   const controller = new AbortController();
   (async () => {
     try {
-      const response = await fetch("/v1/chat", {
+      const response = await fetch(path, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
