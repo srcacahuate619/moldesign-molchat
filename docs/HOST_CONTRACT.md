@@ -61,6 +61,7 @@ que `request_id` sean 32 caracteres hexadecimales y que `case_name` y `name` no 
 | `assign_case_receptor` | `case_name`, `pdb_id` | `molchat-receptor-result` | `applied`, `already_selected`, `case_not_found`, `case_ambiguous`, `receptor_not_found`, `receptor_ambiguous`, `unavailable`, `locked`, `busy`, `save_failed`, `failed`, `unknown` |
 | `evaluate_case` | `case_name` | `molchat-evaluation-result` | `started`, `started_unregistered`, `case_not_found`, `case_ambiguous`, `busy`, `blocked`, `needs_review`, `failed`, `unknown` |
 | `audit_case_preparation` | `case_name`, `task_id` | `molchat-preparation-result` | `audited`, `case_not_found`, `case_mismatch`, `not_auditable`, `audit_failed`, `busy`, `failed`, `unknown` |
+| `case_status` | `case_name` | `molchat-case-status-result` | `idle`, `busy`, `not_found`, `ambiguous`, `failed`, `unknown` |
 | `read_editor` | `case_name`, `operation`, `revision` | `molchat-editor-result` | `ok`, `not_ready`, `not_found`, `ambiguous`, `changed`, `too_large`, `read_limit`, `failed`, `unknown` |
 
 Cada respuesta repite el `request_id` de su petición y lleva `status`. Además:
@@ -78,6 +79,13 @@ Si una petición no recibe respuesta a tiempo, MolChat registra `unknown` y **no
 anfitrión pudo haber escrito antes de que se agotara la espera: reintentar duplicaría un caso o una evaluación. Un
 anfitrión que sabe que no hizo nada debe contestar `failed`; sólo lo que no se sabe es `unknown`. La iteración de
 moléculas aplica la misma regla: un `unknown` queda declarado en el cuaderno y el bucle sigue con la molécula siguiente.
+
+### Estado del caso (`case_status`)
+
+Pregunta de **sólo lectura**: ¿puede este caso recibir otra molécula ahora? `busy` significa que la ventana sigue cerrando
+la corrida anterior (o atendiendo otra petición del chat); `idle`, que se puede cargar. Puede añadir `run_state` (el estado
+de la última corrida del caso, `^[a-z_]{1,32}$`) y su `task_id`. No navega ni cambia nada. Un anfitrión sin espacio de
+casos montado contesta `unknown`, nunca `idle`; con `unknown`, MolChat recurre a reintentar la carga mientras diga `busy`.
 
 ### Auditoría en Preparación (`audit_case_preparation`)
 

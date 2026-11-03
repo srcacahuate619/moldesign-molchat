@@ -52,14 +52,21 @@ una molécula cumpla no significa que sea activa.
 Cada molécula es un intento aislado con su propio estado: `evaluated`, `failed`, `timeout`, `unknown` o `skipped`.
 
 - Un fallo se registra con su motivo y el bucle sigue con la siguiente.
-- `busy` (MolDesign está ocupado) se espera y se repite en **cada** llamada al anfitrión (asignar el receptor, cargar la
-  molécula, evaluar): cada 5 s, hasta 240 s por llamada y sin pasar del tope total del plan. Es necesario porque la
-  interfaz mantiene el caso bloqueado mientras cierra la corrida anterior —en desarrollo, unos 45 s después de que Vina ya
-  hubiera terminado— y `busy` significa que no se hizo nada, así que repetir es seguro. La tarjeta lo dice mientras
-  espera. Si el bloqueo no se libera, la molécula se anota como fallida con ese motivo («MolDesign siguió ocupado N s»),
-  no como una molécula inválida, y el bucle sigue con la siguiente. Es la primera versión que se probó en la app:
-  reintentaba `busy` sólo al evaluar y no al cargar, así que tras la primera molécula las demás fallaban en cascada;
-  la prueba `test_the_loop_waits_for_the_window_to_close_each_run_and_goes_through_every_molecule` lo reproduce.
+- **Dos señales, cada una de su dueño** (`workflows/evaluation.py`). Que el resultado está listo y cuánto vale lo dice
+  el **backend**: MolChat consulta el trabajo por su `task_id` hasta que es terminal y lee de ahí la energía de Vina de
+  la mejor pose y sus controles físicos. Con ese número **decide en el acto** si la molécula cumple. Que el caso puede
+  recibir otra molécula lo dice la **ventana**, con la acción de sólo lectura `case_status`; sólo se pregunta si el
+  bucle sigue, cada 5 s, hasta 240 s y sin pasar del tope del plan, y la tarjeta lo dice mientras espera. Así una
+  molécula que cumple nunca espera a la ventana.
+- Cada molécula guarda cuánto esperó al caso, cuánto tardó en arrancar y cuánto tardó el backend en dar el resultado; el
+  cuaderno los enseña en «Tiempos medidos».
+- Con una ventana que no conoce `case_status` (contesta `unknown`), se recurre a repetir la carga mientras diga `busy`:
+  `busy` significa que no se hizo nada. Si el bloqueo no se libera, la molécula falla con ese motivo («MolDesign siguió
+  ocupado N s»), no como molécula inválida, y el bucle sigue.
+- Historia: la primera versión probada en la app adivinaba que la corrida había cerrado intentando cargar la siguiente
+  molécula, y sólo reintentaba `busy` al evaluar; tras la primera molécula, las demás fallaron en cascada. Las pruebas
+  `test_the_loop_asks_the_window_and_waits_for_each_run_to_close_before_loading_the_next` y
+  `test_an_older_window_without_case_status_still_works_by_retrying_busy_loads` lo cubren.
 - `unknown` (no se sabe si MolDesign llegó a hacer algo) **nunca se repite**: repetirlo podría duplicar una evaluación.
 - Si se agota el tope total, el estado final es `budget_exhausted`, con lo evaluado hasta ahí.
 - Si la ventana de MolDesign se cierra mientras corre, el plan se cancela.

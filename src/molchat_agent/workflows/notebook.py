@@ -47,7 +47,9 @@ def build_notebook(outcome: IterationOutcome, *, approved_at: str | None, finish
                      "status": _STATUS.get(record.status, record.status),
                      "vina_kcal_mol": record.affinity_kcal, "physical_controls": record.physical_status,
                      "reading": _OUTCOME.get(record.outcome or "", record.reason or ""), "reason": record.reason,
-                     "task_id": record.task_id, "seconds": record.seconds})
+                     "task_id": record.task_id, "seconds": record.seconds,
+                     "timing": {"waiting_case_s": record.seconds_waiting_case, "case_state_before": record.case_state_before,
+                                "to_start_s": record.seconds_to_start, "to_result_s": record.seconds_to_result}})
     selected = next((r for r in outcome.records if r.index == outcome.selected), None)
     return {
         "schema": NOTEBOOK_SCHEMA, "iteration_schema": SCHEMA, "case": spec["case_name"], "receptor": spec["pdb_id"],
@@ -87,6 +89,16 @@ def render_markdown(nb: dict[str, Any]) -> str:
     for row in nb["molecules"]:
         if row["reason"] and row["status"] != "evaluada":
             out.append(f"- Molécula {row['n']} ({row['name']}): {row['reason']}")
+    timed = [row for row in nb["molecules"] if any(v is not None for v in (row.get("timing") or {}).values())]
+    if timed:
+        out += ["", "### Tiempos medidos", "",
+                "Espera del caso: hasta que la ventana dijo que la corrida anterior había cerrado. Resultado: desde que "
+                "arrancó la corrida hasta que el backend la dio por terminada con su energía.", ""]
+        for row in timed:
+            t = row["timing"]
+            out.append(f"- Molécula {row['n']} ({row['name']}): espera del caso {_fmt(t['waiting_case_s'], ' s')} "
+                       f"(«{t['case_state_before'] or 'sin respuesta'}»), arranque {_fmt(t['to_start_s'], ' s')}, "
+                       f"resultado {_fmt(t['to_result_s'], ' s')}, total {_fmt(row['seconds'], ' s')}.")
     out += ["", "## Lo que se hizo con la elegida", ""]
     sel = nb["selected"]
     out.append("Ninguna molécula quedó seleccionada." if sel is None else

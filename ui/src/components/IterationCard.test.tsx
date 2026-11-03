@@ -9,8 +9,10 @@ afterEach(cleanup);
 const m = vi.hoisted(() => ({
   run: vi.fn(), cancel: vi.fn(), file: vi.fn(), createCase: vi.fn(), loadSmiles: vi.fn(), receptor: vi.fn(), evaluate: vi.fn(),
   reportCase: vi.fn(), reportSmiles: vi.fn(), reportReceptor: vi.fn(), reportEvaluation: vi.fn(),
-  audit: vi.fn(), reportPreparation: vi.fn(),
+  audit: vi.fn(), reportPreparation: vi.fn(), caseStatus: vi.fn(), reportCaseStatus: vi.fn(),
 }));
+
+vi.mock("../lib/caseStatusHost", () => ({ caseStatusInHost: m.caseStatus }));
 
 vi.mock("../lib/preparationHost", () => ({ auditPreparationInHost: m.audit }));
 
@@ -24,7 +26,7 @@ vi.mock("../lib/api", async (importOriginal) => {
     ...original, runWorkflow: m.run,
     api: { ...original.api, cancelWorkflow: m.cancel, workflowFile: m.file, reportCaseResult: m.reportCase,
       reportSmilesResult: m.reportSmiles, reportReceptorResult: m.reportReceptor, reportEvaluationResult: m.reportEvaluation,
-      reportPreparationResult: m.reportPreparation },
+      reportPreparationResult: m.reportPreparation, reportCaseStatusResult: m.reportCaseStatus },
   };
 });
 
@@ -93,6 +95,16 @@ describe("IterationCard", () => {
     act(() => emit({ type: "case_preparation", request_id: "p1", case_name: "hipotesis", task_id: "t-2" }));
     await waitFor(() => expect(m.reportPreparation).toHaveBeenCalledWith("test-session", "p1", answer));
     expect(m.audit).toHaveBeenCalledWith("p1", "hipotesis", "t-2");
+  });
+
+  it("relays the read-only case question to the host and its answer to the sidecar", async () => {
+    m.caseStatus.mockResolvedValue({ status: "busy", run_state: "running" });
+    m.reportCaseStatus.mockResolvedValue({});
+    renderCard();
+    fireEvent.click(screen.getByText("Aprobar y ejecutar"));
+    act(() => emit({ type: "case_status", request_id: "s1", case_name: "hipotesis" }));
+    await waitFor(() => expect(m.reportCaseStatus).toHaveBeenCalledWith("test-session", "s1", { status: "busy", run_state: "running" }));
+    expect(m.caseStatus).toHaveBeenCalledWith("s1", "hipotesis");
   });
 
   it("ignores anything that is not one of the host requests", async () => {

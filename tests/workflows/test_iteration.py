@@ -59,6 +59,10 @@ class FakeHost:
             raise outcome
         return outcome
 
+    async def case_status(self, case_name: str) -> dict[str, Any]:
+        self.calls.append(("case_status", case_name))
+        return {"status": "idle"}
+
     async def evaluate(self, case_name: str) -> dict[str, Any]:
         self.evaluations += 1
         self.calls.append(("evaluate", self.current))
@@ -204,12 +208,22 @@ async def test_busy_is_retried_and_unknown_is_never_repeated() -> None:
 class LockedAfterRun(FakeHost):
     """What the real window does: after a run finishes it keeps the case locked while it closes the run (~45 s)."""
 
-    def __init__(self, clock: Clock, lock_s: float) -> None:
+    def __init__(self, clock: Clock, lock_s: float, *, knows_case_status: bool = True) -> None:
         super().__init__()
         self.clock, self.lock_s, self.free_at = clock, lock_s, 0.0
+        self.knows_case_status = knows_case_status
+
+    def locked(self) -> bool:
+        return self.clock.now < self.free_at
+
+    async def case_status(self, case_name: str) -> dict[str, Any]:
+        self.calls.append(("case_status", case_name))
+        if not self.knows_case_status:
+            return {"status": "unknown"}
+        return {"status": "busy", "run_state": "running"} if self.locked() else {"status": "idle"}
 
     async def load_smiles(self, case_name: str, smiles: str) -> dict[str, Any]:
-        if self.clock.now < self.free_at:
+        if self.locked():
             self.calls.append(("load_smiles_busy", smiles))
             return {"status": "busy"}
         return await super().load_smiles(case_name, smiles)
@@ -225,21 +239,39 @@ class LockingPlatform(FakePlatform):
         return await super().job(task_id)
 
 
-async def test_the_loop_waits_for_the_window_to_close_each_run_and_goes_through_every_molecule() -> None:
+async def test_the_loop_asks_the_window_and_waits_for_each_run_to_close_before_loading_the_next() -> None:
     """The failure seen in the app: molecule 1 was evaluated, the window was still closing its run, the load of
-    molecule 2 answered «busy» and was never retried, so 2, 3 and 4 were all reported as failed."""
+    molecule 2 answered «busy» and was never retried, so 2, 3 and 4 were all reported as failed. Now the loop asks
+    the window (``case_status``) and loads only when the case is free, so no load is ever refused."""
     clock = Clock()
     host = LockedAfterRun(clock, lock_s=45.0)
-    platform = LockingPlatform(SCORES, host)
     events: list[dict[str, Any]] = []
-    spec = IterationSpec.from_dict(spec_dict(stop="all"))
-    out = await runner(spec, host, platform, clock, events).run()
+    out = await runner(IterationSpec.from_dict(spec_dict(stop="all")), host, LockingPlatform(SCORES, host), clock, events).run()
     assert [r.status for r in out.records] == ["evaluated"] * 4
     assert out.selected == 3 and out.state == "completed"  # CCC, -10.4
-    assert ("load_smiles_busy", "CCN") in host.calls  # it really was busy, and the loop asked again
+    assert not any(c[0] == "load_smiles_busy" for c in host.calls)  # it waited instead of being refused
+    assert out.records[0].seconds_waiting_case == 0 and out.records[0].case_state_before == "idle"
+    assert out.records[1].case_state_before == "idle" and 44 <= out.records[1].seconds_waiting_case <= 46
     phases = [e["message"] for e in events if e["event"] == "phase"]
-    assert any("sigue cerrando la corrida anterior" in (m or "") for m in phases)
-    assert phases[-1] is None  # the card goes back to its normal text once the wait is over
+    assert any("sigue cerrando la corrida anterior" in (m or "") for m in phases) and phases[-1] is None
+
+
+async def test_an_older_window_without_case_status_still_works_by_retrying_busy_loads() -> None:
+    clock = Clock()
+    host = LockedAfterRun(clock, lock_s=45.0, knows_case_status=False)
+    out = await runner(IterationSpec.from_dict(spec_dict(stop="all")), host, LockingPlatform(SCORES, host), clock).run()
+    assert [r.status for r in out.records] == ["evaluated"] * 4
+    assert ("load_smiles_busy", "CCN") in host.calls and out.records[1].case_state_before == "unknown"
+
+
+async def test_the_decision_is_made_on_vinas_number_and_a_qualifying_molecule_never_waits_for_the_window() -> None:
+    clock = Clock()
+    host = LockedAfterRun(clock, lock_s=45.0)
+    out = await runner(IterationSpec.from_dict(spec_dict()), host, LockingPlatform(SCORES, host), clock).run()
+    assert out.selected == 2 and [r.status for r in out.records] == ["evaluated", "evaluated", "skipped", "skipped"]
+    # two questions: before A (free) and before B (waited for A's run to close); none after B qualified
+    assert len([c for c in host.calls if c[0] == "case_status"]) > 2
+    assert host.locked()  # B's run was still closing when the loop moved on to save it
 
 
 async def test_a_window_that_never_frees_is_reported_as_busy_not_as_a_bad_molecule_and_the_loop_goes_on() -> None:

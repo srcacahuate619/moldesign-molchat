@@ -26,6 +26,8 @@ import unicodedata
 from collections.abc import Awaitable, Callable
 from typing import Any, Protocol
 
+from .evaluation import EvaluationStep
+
 SCHEMA = "moldesign.molchat.iteration/1"
 MAX_MOLECULES = 12
 MAX_NAME = 80
@@ -36,7 +38,6 @@ SCENES = ("resultado", "receptor", "busqueda", "ensamble")
 FORMATS = ("horizontal", "vertical", "previsualizacion")
 
 _PDB = re.compile(r"[A-Za-z0-9_-]{1,64}")
-_TERMINAL = frozenset({"SUCCESS", "FAILURE", "FAILED", "CANCELLED", "CANCELED", "REVOKED"})
 _CASE_OK = frozenset({"created", "exists"})
 _RECEPTOR_OK = frozenset({"applied", "already_selected"})
 
@@ -195,6 +196,7 @@ class HostPort(Protocol):
     async def assign_receptor(self, case_name: str, pdb_id: str) -> dict[str, Any]: ...
     async def load_smiles(self, case_name: str, smiles: str) -> dict[str, Any]: ...
     async def evaluate(self, case_name: str) -> dict[str, Any]: ...
+    async def case_status(self, case_name: str) -> dict[str, Any]: ...  # read-only: can the case take another molecule?
 
 
 class PlatformPort(Protocol):
@@ -222,6 +224,10 @@ class MoleculeRecord:
     physical_status: str | None = None
     reason: str | None = None
     seconds: float | None = None
+    seconds_waiting_case: float | None = None  # until the window said the previous run was closed
+    case_state_before: str | None = None  # what the window answered (idle, busy, unknown...)
+    seconds_to_start: float | None = None
+    seconds_to_result: float | None = None  # run start → backend terminal: when the number was known
 
     def as_dict(self) -> dict[str, Any]:
         return dict(self.__dict__)
@@ -246,11 +252,6 @@ class IterationOutcome:
                 "video": self.video, "preparation": self.preparation, "deliverable": self.deliverable,
                 "notes": list(self.notes)}
 
-
-def _number(value: Any) -> float | None:
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
-        return None
-    return float(value)
 
 
 def judge(spec: IterationSpec, affinity: float | None, physical: str | None) -> tuple[str, str]:
@@ -372,67 +373,37 @@ class IterationRunner:
             self.emit("phase", message=None)
         return result, waited
 
+    def _left(self) -> float:
+        return self.spec.budget_s - (self._clock() - self._plan_started)
+
     async def _run_one(self, record: MoleculeRecord) -> None:
+        """One molecule: wait for the case to be free, evaluate, decide on the number. The decision is made as soon
+        as the backend gives Vina's energy; whether the window has closed the run only matters for the next molecule."""
         began = self._clock()
         self.emit("molecule_started", index=record.index, name=record.name)
+        step = EvaluationStep(self.host, self.platform, clock=self._clock, sleep=self._sleep, poll_s=self._poll_s,
+                              busy_wait_s=self._busy_wait_s, busy_budget_s=self._busy_budget_s,
+                              on_wait=lambda message: self.emit("phase", message=message))
         try:
-            await self._evaluate(record)
+            free = await step.wait_until_free(self.spec.case_name, self._left())
+            record.case_state_before, record.seconds_waiting_case = free.status, free.seconds
+            if free.status in {"not_found", "ambiguous"}:
+                record.status = "failed"
+                record.reason = f"MolDesign no encontró un único caso «{self.spec.case_name}» ({free.status})."
+            else:
+                reading = await step.evaluate(self.spec.case_name, record.smiles,
+                                              timeout_s=self.spec.per_molecule_timeout_s, budget_s=self._left())
+                record.status, record.reason, record.task_id = reading.status, reading.reason, reading.task_id
+                record.molecule_id, record.affinity_kcal = reading.molecule_id, reading.vina_kcal
+                record.physical_status = reading.physical_status
+                record.seconds_to_start, record.seconds_to_result = reading.seconds_to_start, reading.seconds_to_result
+                if reading.status == "evaluated":
+                    record.outcome, record.reason = judge(self.spec, record.affinity_kcal, record.physical_status)
         except asyncio.CancelledError:
             raise
         except Exception as exc:  # noqa: BLE001 - one molecule never stops the others
             record.status, record.reason = "failed", f"Error inesperado ({type(exc).__name__}); se siguió con la siguiente."
         record.seconds = round(self._clock() - began, 1)
-
-    async def _evaluate(self, record: MoleculeRecord) -> None:
-        spec = self.spec
-        loaded, waited = await self._until_free(f"cargar «{record.name}»", lambda: self.host.load_smiles(spec.case_name, record.smiles))
-        if loaded.get("status") != "applied":
-            record.status = "failed"
-            record.reason = (f"MolDesign siguió ocupado {waited:.0f} s y no se cargó la molécula en el caso."
-                             if loaded.get("status") == "busy"
-                             else f"No se cargó la molécula en el caso («{loaded.get('status')}»).")
-            return
-        started, waited = await self._until_free(f"evaluar «{record.name}»", lambda: self.host.evaluate(spec.case_name))
-        status = started.get("status")
-        task_id = started.get("task_id")
-        if status == "unknown":
-            record.status = "unknown"
-            record.reason = "No se pudo confirmar si la evaluación empezó; no se repitió para no duplicarla."
-            return
-        if status not in {"started", "started_unregistered"} or not isinstance(task_id, str):
-            reason = started.get("reason") if isinstance(started.get("reason"), str) else None
-            record.status = "failed"
-            record.reason = (f"MolDesign siguió ocupado {waited:.0f} s y no inició la evaluación." if status == "busy"
-                             else f"MolDesign no inició la evaluación («{status}»)" + (f": {reason}" if reason else "."))
-            return
-        record.task_id = task_id
-        job = await self._follow(task_id, spec.per_molecule_timeout_s)
-        if job is None:
-            record.status, record.reason = "timeout", f"La evaluación no terminó en {spec.per_molecule_timeout_s} s."
-            return
-        if job.get("status") != "SUCCESS" or not isinstance(job.get("result"), dict):
-            error = job.get("error") if isinstance(job.get("error"), str) else None
-            record.status = "failed"
-            record.reason = f"La evaluación terminó en {job.get('status')}" + (f": {error[:200]}" if error else ".")
-            return
-        result = job["result"]
-        record.affinity_kcal = _number(result.get("affinity_kcal"))
-        molecule_id = result.get("molecule_id")
-        record.molecule_id = molecule_id if isinstance(molecule_id, str) else None
-        top = await self.platform.top_pose(task_id)
-        record.physical_status = top.get("physical_status") if isinstance(top.get("physical_status"), str) else None
-        record.status = "evaluated"
-        record.outcome, record.reason = judge(spec, record.affinity_kcal, record.physical_status)
-
-    async def _follow(self, task_id: str, timeout_s: int) -> dict[str, Any] | None:
-        deadline = self._clock() + timeout_s
-        while True:
-            job = await self.platform.job(task_id)
-            if isinstance(job, dict) and job.get("status") in _TERMINAL:
-                return job
-            if self._clock() >= deadline:
-                return None
-            await self._sleep(self._poll_s)
 
     async def _after_selection(self, best: MoleculeRecord) -> None:
         """Save, ask for the video and follow it. Each step is its own attempt and its own line in the record."""

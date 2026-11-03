@@ -16,7 +16,7 @@ ITERATION = {"case_name": "hipotesis-8T69", "pdb_id": "8T69", "threshold_kcal": 
              "video": {"scene": "busqueda"}, "preparation": True, "package": True}
 REGISTRIES = (("case_requests", "case-requests"), ("smiles_requests", "smiles-requests"),
               ("receptor_requests", "receptor-requests"), ("evaluation_requests", "evaluation-requests"),
-              ("preparation_requests", "preparation-requests"))
+              ("preparation_requests", "preparation-requests"), ("case_status_requests", "case-status-requests"))
 PROJECTION = {"projection_version": 1, "case_id": "c-1", "name": "hipotesis-8T69"}
 
 
@@ -40,6 +40,8 @@ class Window:
             return {"status": "applied"}
         if kind == "preparation-requests":
             return self.preparation
+        if kind == "case-status-requests":
+            return {"status": "idle"}
         if kind == "smiles-requests":
             return {"status": self.smiles.pop(0) if len(self.smiles) > 1 else self.smiles[0]}
         return {"status": "started", "task_id": TASK}

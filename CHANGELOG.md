@@ -2,6 +2,12 @@
 
 ## No publicado
 
+- La evaluación de cada molécula es una pieza propia (`workflows/evaluation.py`) con dos señales explícitas: el
+  **backend** dice cuándo terminó la corrida y cuánto dio Vina (por `task_id`), y la iteración decide con ese número en el
+  acto; la **ventana** dice si el caso puede recibir otra molécula con la nueva acción de host de sólo lectura
+  `case_status` (`/v1/case-status-requests/{id}/result`), que sólo se pregunta si el bucle sigue. Sustituye a deducir el
+  cierre de la corrida intentando cargar la siguiente. Cada molécula guarda los tiempos medidos (espera del caso, arranque,
+  resultado) y el cuaderno los enseña.
 - Iteración automática con una sola aprobación (`propose_iteration`, `docs/ITERACION_DE_MOLECULAS.md`): el modelo propone un plan
   cerrado (caso, receptor, hasta 12 moléculas, umbral de Vina, qué guardar) y la persona lo aprueba con un clic ligado al
   hash SHA-256 del plan. A partir de ahí un bucle determinista evalúa cada molécula como un intento aislado —un fallo se

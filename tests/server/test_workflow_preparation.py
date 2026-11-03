@@ -116,3 +116,23 @@ async def test_the_result_endpoint_refuses_what_is_not_the_contract(tmp_path, mo
         assert await post({"status": "case_not_found", "reason": "no está"}) == (200, True)
         missing = await chat.client.post("/v1/preparation-requests/nope/result", headers=chat.headers, json=good)
         assert missing.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_the_case_status_endpoint_takes_only_the_read_only_answer(tmp_path, monkeypatch):
+    async with Chat(tmp_path, monkeypatch, fake()) as chat:
+        loop = asyncio.get_running_loop()
+
+        async def post(payload):
+            future = loop.create_future()
+            chat.state.case_status_requests["s1"] = ("owner", future)
+            response = await chat.client.post("/v1/case-status-requests/s1/result", headers=chat.headers, json=payload)
+            return response.status_code, future.done()
+
+        assert await post({"status": "idle"}) == (200, True)
+        assert await post({"status": "busy", "run_state": "running", "task_id": "task-7"}) == (200, True)
+        for bad in ({"status": "free"}, {"status": "idle", "extra": 1}, {"status": "busy", "run_state": "Running!"},
+                    {"status": "busy", "task_id": "../x"}, {}):
+            assert await post(bad) == (400, False), bad
+        missing = await chat.client.post("/v1/case-status-requests/nope/result", headers=chat.headers, json={"status": "idle"})
+        assert missing.status_code == 404

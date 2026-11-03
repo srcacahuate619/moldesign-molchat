@@ -42,6 +42,9 @@ class Host:
     async def evaluate(self, case_name: str) -> dict[str, Any]:
         return {"status": "started", "task_id": f"t-{self.smiles}"}
 
+    async def case_status(self, case_name: str) -> dict[str, Any]:
+        return {"status": "idle"}
+
 
 class Platform:
     scores = {"CCO": -7.0, "CCN": -9.9}

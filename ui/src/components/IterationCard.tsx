@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, api, runWorkflow, type WorkflowProposal } from "../lib/api";
 import { createCaseInHost } from "../lib/caseHost";
+import { caseStatusInHost } from "../lib/caseStatusHost";
 import { evaluateCaseInHost } from "../lib/evaluationHost";
 import type { StringKey } from "../lib/i18n";
 import { auditPreparationInHost } from "../lib/preparationHost";
@@ -112,6 +113,8 @@ export default function IterationCard({
       report(assignReceptorInHost(id, name, event["pdb_id"]).then((r) => api.reportReceptorResult(token, id, r)));
     } else if (event["type"] === "case_evaluation" && typeof name === "string") {
       report(evaluateCaseInHost(id, name).then((r) => api.reportEvaluationResult(token, id, r)));
+    } else if (event["type"] === "case_status" && typeof name === "string") {
+      report(caseStatusInHost(id, name).then((r) => api.reportCaseStatusResult(token, id, r)));
     } else if (event["type"] === "case_preparation" && typeof name === "string" && typeof event["task_id"] === "string") {
       report(auditPreparationInHost(id, name, event["task_id"]).then((r) => api.reportPreparationResult(token, id, r)));
     }

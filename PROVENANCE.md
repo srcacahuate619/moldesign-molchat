@@ -1002,3 +1002,13 @@ MolDesign es por API HTTP, no por copia de código.
 - Transformación: la tarjeta muestra todo el plan, envía la huella con el único clic y sigue la iteración en una tabla en vivo; relevan al anfitrión sus peticiones con el mismo apretón de origen que los demás puentes y rechazan respuestas de otro origen, de otra petición o con un estado fuera de contrato.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: ui/src/components/IterationCard.test.tsx y ui/src/lib/preparationHost.test.ts
+
+### src/molchat_agent/workflows/evaluation.py, tests/workflows/test_evaluation.py, ui/src/lib/caseStatusHost.ts, ui/src/lib/caseStatusHost.test.ts
+
+- Origen: código nuevo en MolChat (2026-11-03) tras el primer ensayo en la app: la evaluación de una molécula como pieza aislada y la acción de host de sólo lectura `case_status`.
+- Commit de MolDesign: N/A; el anfitrión contesta `case_status` desde su espacio de casos con las mismas señales que deciden `busy` (`docs/HOST_CONTRACT.md`).
+- Autoría: Johan Amezcua, con colaboración de un agente de código.
+- Transformación: el resultado y la energía de Vina se leen del backend por `task_id`; la disponibilidad del caso se pregunta a la ventana sólo si la iteración sigue; cada lectura guarda sus tiempos. Con una ventana que no conoce la pregunta se repite la carga mientras diga `busy`; `unknown` nunca se repite.
+- Licencia resultante: GPL-3.0-or-later
+- Tests: tests/workflows/test_evaluation.py, tests/workflows/test_iteration.py y ui/src/lib/caseStatusHost.test.ts
+

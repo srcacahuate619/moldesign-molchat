@@ -154,6 +154,10 @@ class HostRelay:
     async def evaluate(self, case_name: str) -> dict[str, Any]:
         return await self._ask(self.state.evaluation_requests, "case_evaluation", {"case_name": case_name}, 150)
 
+    async def case_status(self, case_name: str) -> dict[str, Any]:
+        """Read-only: can the case take another molecule? The window answers idle or busy (closing the last run)."""
+        return await self._ask(self.state.case_status_requests, "case_status", {"case_name": case_name}, 20)
+
     async def audit_preparation(self, case_name: str, task_id: str) -> dict[str, Any]:
         """Preparación audits the run in the person's window and hands back the case projection it built."""
         return await self._ask(self.state.preparation_requests, "case_preparation",

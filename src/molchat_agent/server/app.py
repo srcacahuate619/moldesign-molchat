@@ -379,6 +379,21 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
         pending[1].set_result(payload)
         return JSONResponse({"accepted": True})
 
+    async def case_status_result(request: Request) -> JSONResponse:
+        """The window's answer to «can this case take another molecule?». Read-only on its side; closed vocabulary here."""
+        session = await need_chat(request)
+        pending = state.case_status_requests.get(request.path_params["request_id"])
+        if pending is None or pending[0] != session.sub or pending[1].done():
+            return _error(404, "solicitud no encontrada")
+        payload = await read_json(request)
+        if (not isinstance(payload, dict) or set(payload) - {"status", "run_state", "task_id"}
+                or payload.get("status") not in {"idle", "busy", "not_found", "ambiguous", "failed", "unknown"}
+                or ("run_state" in payload and not (isinstance(payload["run_state"], str) and re.fullmatch(r"[a-z_]{1,32}", payload["run_state"])))
+                or ("task_id" in payload and not (isinstance(payload["task_id"], str) and re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", payload["task_id"])))):
+            return _error(400, "resultado no válido")
+        pending[1].set_result(payload)
+        return JSONResponse({"accepted": True})
+
     async def editor_result(request: Request) -> JSONResponse:
         session = await need_chat(request)
         pending = state.editor_requests.get(request.path_params["request_id"])
@@ -821,6 +836,7 @@ def create_app(state: ServerState, *, allowed_hosts: tuple[str, ...] | None = No
             Route("/v1/evaluation-requests/{request_id}/result", evaluation_result, methods=["POST"]),
             Route("/v1/editor-requests/{request_id}/result", editor_result, methods=["POST"]),
             Route("/v1/preparation-requests/{request_id}/result", preparation_result, methods=["POST"]),
+            Route("/v1/case-status-requests/{request_id}/result", case_status_result, methods=["POST"]),
             Route("/v1/actions/{action_id}/confirm", action_confirm, methods=["POST"]),
             Route("/v1/actions/{action_id}/cancel", action_cancel, methods=["POST"]),
             Route("/v1/workflows/{workflow_id}", workflow_get, methods=["GET"]),

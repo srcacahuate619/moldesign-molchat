@@ -176,6 +176,8 @@ export const api = {
     postJson(t, `/v1/receptor-requests/${encodeURIComponent(id)}/result`, { status }),
   reportEvaluationResult: (t: string, id: string, result: import("./evaluationHost").EvaluationResult) =>
     postJson(t, `/v1/evaluation-requests/${encodeURIComponent(id)}/result`, result),
+  reportCaseStatusResult: (t: string, id: string, result: import("./caseStatusHost").CaseStatusResult) =>
+    postJson(t, `/v1/case-status-requests/${encodeURIComponent(id)}/result`, result),
   reportPreparationResult: (t: string, id: string, result: import("./preparationHost").PreparationResult) =>
     postJson(t, `/v1/preparation-requests/${encodeURIComponent(id)}/result`, result),
   reportEditorResult: (t: string, id: string, result: { status: string; molfile?: string; revision?: string }) =>
