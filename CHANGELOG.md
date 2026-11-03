@@ -2,6 +2,9 @@
 
 ## No publicado
 
+- La interfaz informa al anfitrión de lo que está haciendo en una línea (`molchat-ui-status`): un plan esperando aprobación,
+  «Evaluando 2 de 3 · última Vina −7.2», el vídeo en curso o el resultado. Con el panel minimizado, MolDesign lo enseña en
+  una burbuja. El cuadro de escribir vuelve a quedar abajo (el commit anterior le quitó el alto a la sección del chat).
 - Cuarto ensayo en la app: una corrida fallida y rápida dejó que el editor volviera a la molécula anterior y se evaluó la
   equivocada; y Vina se quedó sin memoria porque el equipo estaba saturado. Ahora Vina sin memoria se repite una vez tras
   20 s (sólo ese fallo) y el anfitrión comprueba la molécula antes de pulsar. La sección del chat ya no tiene una segunda

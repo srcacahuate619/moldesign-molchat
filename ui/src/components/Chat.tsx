@@ -14,6 +14,7 @@ import {
 import type { StringKey } from "../lib/i18n";
 import ActionProposalCard, { validProposals } from "./ActionProposalCard";
 import IterationCard, { validWorkflows } from "./IterationCard";
+import { reportStatus } from "../lib/hostStatus";
 import EvidenceBlock from "./EvidenceBlock";
 import MessageText from "./MessageText";
 import PropertyComparison from "./PropertyComparison";
@@ -164,6 +165,8 @@ export default function Chat({
     }
   }, [messages, streaming]);
   useEffect(() => { fitBox(); }, [input, fitBox]);
+  useEffect(() => { reportStatus("chat", status ? { state: "thinking", text: status } : null); }, [status]);
+  useEffect(() => () => reportStatus("chat", null), []);
 
   const send = useCallback(
     (text: string) => {

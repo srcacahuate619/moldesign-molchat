@@ -9,6 +9,7 @@ import { assignReceptorInHost } from "../lib/receptorHost";
 import { loadSmilesInHost } from "../lib/smilesHost";
 import { renderVideoInHost } from "../lib/molcyHost";
 import { newNoticeId, notifyHost } from "../lib/hostNotify";
+import { reportStatus, type BubbleStatus } from "../lib/hostStatus";
 
 type Phase = "pending" | "running" | "done" | "cancelled" | "interrupted";
 
@@ -60,6 +61,34 @@ function progressText(value: unknown): string | null {
   if (typeof value !== "object" || value === null) return null;
   const done = (value as Record<string, unknown>)["fotogramas"], total = (value as Record<string, unknown>)["total"];
   return typeof done === "number" && typeof total === "number" && total > 0 ? `${Math.round((100 * done) / total)} %` : null;
+}
+
+const kcal = (value: number) => value.toFixed(1).replace("-", "−");
+
+/** The bubble's line for a plan card. Exported for its tests. */
+export function bubbleLine(phase: Phase, rows: Row[], timeline: Partial<Record<TimelineStep, StepView>>, summary: Summary | null,
+  message: string | null, steps: TimelineStep[], t: (key: StringKey) => string): BubbleStatus | null {
+  if (phase === "pending") return { state: "attention", text: t("bubble.approve") };
+  if (phase === "cancelled") return null;
+  if (phase === "interrupted") return { state: "error", text: t("bubble.interrupted") };
+  if (phase === "running") {
+    const running = rows.findIndex((row) => row.status === "running");
+    const lastVina = [...rows].reverse().find((row) => row.vina !== null)?.vina ?? null;
+    const previous = lastVina === null ? "" : ` · ${t("bubble.lastVina")} ${kcal(lastVina)}`;
+    if (running >= 0) {
+      return { state: "working", text: t("bubble.evaluating").replace("{n}", String(running + 1)).replace("{total}", String(rows.length)) + previous };
+    }
+    const step = steps.find((name) => timeline[name]?.state === "running");
+    return { state: "working", text: step ? `${t(`iteration.timeline.${step}` as StringKey)}…${previous}` : message ?? t("bubble.working") };
+  }
+  if (summary?.videoPending) {
+    return { state: "working", text: t("bubble.video") + (summary.videoProgress ? ` ${summary.videoProgress}` : "") };
+  }
+  if (summary?.selected) {
+    const vina = summary.selected.vina_kcal_mol;
+    return { state: "done", text: `${t("bubble.done")}: ${summary.selected.name}` + (vina === null ? "" : ` · Vina ${kcal(vina)}`) };
+  }
+  return { state: "done", text: t("bubble.noneQualified") };
 }
 
 const blank = (): Row => ({ status: "pending", outcome: null, vina: null, physical: null, reason: null });
@@ -257,6 +286,12 @@ export default function IterationCard({
       notifyHost(notice, "done", name);
     } catch { notifyHost(notice, "failed", name); setProblem(t("iteration.downloadFailed")); }
   };
+
+  // One line for the host's bubble: what the plan is doing now, so it can be followed with the panel minimised.
+  useEffect(() => {
+    reportStatus(`iteration:${proposal.id}`, bubbleLine(phase, rows, timeline, summary, message, proposal.steps ?? STEPS, t));
+  }, [phase, rows, timeline, summary, message, proposal.id, proposal.steps, t]);
+  useEffect(() => () => reportStatus(`iteration:${proposal.id}`, null), [proposal.id]);
 
   const label = (row: Row) => (row.outcome ? t(`iteration.reading.${row.outcome}` as StringKey) : t(`iteration.state.${row.status}` as StringKey));
   const files = summary ? Object.keys(summary.files) : [];

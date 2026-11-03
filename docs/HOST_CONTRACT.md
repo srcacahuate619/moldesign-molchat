@@ -122,6 +122,15 @@ lógica y la devuelve junto con el estado que su auditoría dictó. MolChat **no
 no se pudo, «el vídeo ya está en la entrega»); los textos son suyos y el nombre se pinta como texto. La descarga la hace
 MolChat.
 
+## Estado para el panel minimizado (sin respuesta)
+
+Sobre propio, fuera de `molchat-host-message`: `{ type: "molchat-ui-status", state, text }`, sin más campos. `state` es
+`attention` (algo espera a la persona: aprobar un plan, confirmar una acción), `error`, `working`, `thinking`, `done` o
+`idle` (nada en marcha; `text` vacío). `text` es una línea de 1 a 140 caracteres sin caracteres de control. La interfaz
+sólo lo manda cuando cambia; varias partes informan a la vez y gana la más importante, en ese orden. El anfitrión lo
+pinta como texto en una burbuja junto a su botón cuando el panel está minimizado; minimizar no detiene nada, porque el
+iframe sigue vivo. Un estado mal formado apaga la burbuja.
+
 ## Acciones que sólo navegan (sin respuesta)
 
 | `kind` | Campos | Efecto esperado |

@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import IterationCard, { validWorkflows } from "./IterationCard";
+import IterationCard, { bubbleLine, validWorkflows } from "./IterationCard";
 import { strings } from "../lib/i18n";
 
 afterEach(cleanup);
@@ -234,5 +234,33 @@ describe("validWorkflows", () => {
   });
   it("shows at most one card per turn", () => {
     expect(validWorkflows([good, { ...good, id: "c".repeat(32) }])).toHaveLength(1);
+  });
+});
+
+describe("the bubble's line for a plan", () => {
+  const row = (status: string, vina: number | null = null) => ({ status, outcome: null, vina, physical: null, reason: null });
+  const steps = ["case", "receptor", "molecules", "moldex", "video", "preparation", "deliverable"] as const;
+  const summary = (patch: Record<string, unknown>) => ({ state: "selected", counts: null, selected: null, saved: null, video: null, preparation: null,
+    videoPending: false, videoProgress: null, files: {}, paths: {}, notes: [], ...patch });
+
+  it("asks for the approval, then says which molecule is being evaluated and the last Vina", () => {
+    expect(bubbleLine("pending", [], {}, null, null, [...steps], t)).toEqual({ state: "attention", text: "Un plan espera tu aprobación" });
+    expect(bubbleLine("running", [row("evaluated", -7.24), row("running"), row("pending")], {}, null, null, [...steps], t))
+      .toEqual({ state: "working", text: "Evaluando 2 de 3 · última Vina −7.2" });
+  });
+
+  it("between molecules it names the running step, and the video keeps the bubble busy after the plan ends", () => {
+    expect(bubbleLine("running", [row("evaluated", -9.1)], { moldex: { state: "running", detail: null } }, null, null, [...steps], t)?.text)
+      .toBe("Moldex… · última Vina −9.1");
+    expect(bubbleLine("done", [], {}, summary({ videoPending: true, videoProgress: "40 %" }), null, [...steps], t))
+      .toEqual({ state: "working", text: "Molcy renderiza el vídeo 40 %" });
+  });
+
+  it("ends with the chosen molecule, says when none met the rule, and an interruption is an error", () => {
+    expect(bubbleLine("done", [], {}, summary({ selected: { name: "Mol 2", task_id: "x", vina_kcal_mol: -9.566, physical_status: "passed" } }), null, [...steps], t))
+      .toEqual({ state: "done", text: "Listo: Mol 2 · Vina −9.6" });
+    expect(bubbleLine("done", [], {}, summary({}), null, [...steps], t)?.text).toBe("Terminó: ninguna molécula cumplió la regla");
+    expect(bubbleLine("interrupted", [], {}, null, null, [...steps], t)?.state).toBe("error");
+    expect(bubbleLine("cancelled", [], {}, null, null, [...steps], t)).toBeNull();
   });
 });

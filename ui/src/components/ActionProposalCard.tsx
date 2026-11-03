@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ApiError, api, type ActionOutcome, type ActionProposal } from "../lib/api";
 import { postToHost } from "../lib/deeplinks";
 import type { StringKey } from "../lib/i18n";
+import { reportStatus } from "../lib/hostStatus";
 
 type Phase = "pending" | "running" | "done" | "cancelled";
 
@@ -37,6 +38,14 @@ export default function ActionProposalCard({
   const [phase, setPhase] = useState<Phase>("pending");
   const [outcome, setOutcome] = useState<ActionOutcome | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+
+  // The host's bubble says when an action waits for the person, so a minimised panel does not hide it.
+  useEffect(() => {
+    const source = `action:${proposal.id}`;
+    reportStatus(source, phase === "pending" ? { state: "attention", text: t("bubble.confirm") }
+      : phase === "running" ? { state: "working", text: proposal.title } : null);
+  }, [phase, proposal.id, proposal.title, t]);
+  useEffect(() => () => reportStatus(`action:${proposal.id}`, null), [proposal.id]);
 
   const settle = (state: "done" | "cancelled", result: ActionOutcome | null) => {
     setOutcome(result);
