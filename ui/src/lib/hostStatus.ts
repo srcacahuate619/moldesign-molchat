@@ -37,8 +37,57 @@ export function reportStatus(source: string, status: BubbleStatus | null): void 
   window.parent.postMessage(message, "*");
 }
 
+/** A running plan, in a few fields, for the host to show that MolChat is the one driving: the steps, each molecule with
+ * its Vina as it arrives, and what it is doing now. Sent on its own envelope, so a host that does not know it ignores
+ * it and keeps the one-line bubble. */
+export const PROGRESS_ENVELOPE = "molchat-ui-progress";
+
+export type ProgressPhase = "running" | "rendering" | "done" | "stopped";
+export type ProgressStepState = "pending" | "running" | "done" | "failed" | "skipped";
+export interface PlanProgress {
+  title: string;
+  phase: ProgressPhase;
+  now: string;
+  steps: { label: string; state: ProgressStepState }[];
+  molecules: { name: string; state: ProgressStepState; vina: number | null; meets: boolean }[];
+}
+
+const PHASE_RANK: Record<ProgressPhase, number> = { running: 4, rendering: 3, stopped: 2, done: 1 };
+const plans = new Map<string, { progress: PlanProgress; at: number }>();
+let lastProgress = "";
+
+/** The plan that wins now: one at work before one that finished; ties go to the most recent report. */
+export function currentProgress(): PlanProgress | null {
+  let best: { progress: PlanProgress; at: number } | null = null;
+  for (const entry of plans.values()) {
+    if (!best || PHASE_RANK[entry.progress.phase] > PHASE_RANK[best.progress.phase]
+        || (PHASE_RANK[entry.progress.phase] === PHASE_RANK[best.progress.phase] && entry.at > best.at)) best = entry;
+  }
+  return best ? best.progress : null;
+}
+
+const clean = (text: string, max: number) => text.replace(/[\x00-\x1f]/g, " ").slice(0, max);
+
+export function reportProgress(source: string, progress: PlanProgress | null): void {
+  if (progress === null) plans.delete(source);
+  else plans.set(source, { progress, at: ++tick });
+  const now = currentProgress();
+  const message = { type: PROGRESS_ENVELOPE, progress: now && {
+    title: clean(now.title, 140), phase: now.phase, now: clean(now.now, 140),
+    steps: now.steps.slice(0, 10).map((step) => ({ label: clean(step.label, 60), state: step.state })),
+    molecules: now.molecules.slice(0, 12).map((m) => ({ name: clean(m.name, 80), state: m.state, vina: m.vina, meets: m.meets })),
+  } };
+  const key = JSON.stringify(message);
+  if (key === lastProgress) return;
+  lastProgress = key;
+  if (window.parent === window) return;
+  window.parent.postMessage(message, "*");
+}
+
 /** Only for tests: forget every source. */
 export function resetStatus(): void {
   sources.clear();
   last = "";
+  plans.clear();
+  lastProgress = "";
 }

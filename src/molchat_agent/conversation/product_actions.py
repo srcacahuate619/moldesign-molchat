@@ -23,6 +23,7 @@ from typing import Any
 import httpx
 
 from ..bridge import MolDesignBridge
+from ..lang import tr
 from .harness_tools import fetch_job
 from .tool_loop import Tool
 
@@ -123,14 +124,19 @@ def _detail(data: Any) -> str | None:
 def _failure(code: int, data: Any, what: str) -> dict[str, Any]:
     detail = _detail(data)
     if code == 0:
-        return {"status": "unavailable", "message": "No se pudo contactar con MolDesign; no se confirmó nada."}
+        return {"status": "unavailable", "message": tr("No se pudo contactar con MolDesign; no se confirmó nada.",
+                                                    "Could not reach MolDesign; nothing was confirmed.")}
     if code in (401, 403):
-        return {"status": "session_expired", "message": "La sesión con MolDesign caducó; reconecta MolChat."}
+        return {"status": "session_expired", "message": tr("La sesión con MolDesign caducó; reconecta MolChat.",
+                                                        "The MolDesign session expired; reconnect MolChat.")}
     if code == 404:
-        return {"status": "not_found", "message": "MolDesign no encontró esa corrida en tu cuenta."}
+        return {"status": "not_found", "message": tr("MolDesign no encontró esa corrida en tu cuenta.",
+                                                  "MolDesign did not find that run in your account.")}
     if code in (409, 422):
-        return {"status": "rejected", "message": f"MolDesign rechazó la solicitud: {detail or what}", "detail": detail}
-    return {"status": "failed", "message": f"{what} MolDesign respondió con un error.", "detail": detail}
+        return {"status": "rejected", "message": tr(f"MolDesign rechazó la solicitud: {detail or what}",
+                                                  f"MolDesign rejected the request: {detail or what}"), "detail": detail}
+    return {"status": "failed", "message": tr(f"{what} MolDesign respondió con un error.", f"{what} MolDesign answered with an error."),
+            "detail": detail}
 
 
 async def _job_ref(bridge: MolDesignBridge, task_id: str) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
@@ -143,7 +149,8 @@ async def _job_ref(bridge: MolDesignBridge, task_id: str) -> tuple[dict[str, Any
     molecule_id = result.get("molecule_id") if isinstance(result, dict) else None
     if job["status"] != "SUCCESS" or not isinstance(molecule_id, str) or not _UUID.fullmatch(molecule_id):
         return None, {"status": "not_ready", "task_status": job["status"],
-                      "message": "La evaluación no terminó con un resultado; no se puede guardar ni usar para un vídeo."}
+                      "message": tr("La evaluación no terminó con un resultado; no se puede guardar ni usar para un vídeo.",
+                                     "The evaluation did not end with a result; it cannot be saved or used for a video.")}
     target = result.get("target_name") if isinstance(result.get("target_name"), str) else None
     return {"task_id": task_id, "molecule_id": molecule_id, "receptor": (target or "")[:120] or None}, None
 
@@ -282,35 +289,43 @@ async def run_save(bridge: MolDesignBridge, spec: dict[str, Any]) -> dict[str, A
     if code == 200 and isinstance(data, dict) and data.get("status") == "saved":
         name = data.get("name") if isinstance(data.get("name"), str) else None
         return {"status": "saved", "task_id": spec["task_id"], "name": (name or "")[:200] or None,
-                "message": "Corrida guardada en Moldex."}
-    return _failure(code, data, "No se pudo guardar en Moldex.")
+                "message": tr("Corrida guardada en Moldex.", "Run saved to Moldex.")}
+    return _failure(code, data, tr("No se pudo guardar en Moldex.", "Could not save to Moldex."))
 
 
 async def run_video(bridge: MolDesignBridge, spec: dict[str, Any]) -> dict[str, Any]:
     if spec.get("save_first"):
         saved = await run_save(bridge, spec)
         if saved["status"] != "saved":
-            return {**saved, "message": "No se guardó la corrida en Moldex, así que no se pidió el vídeo. " + saved["message"]}
+            return {**saved, "message": tr("No se guardó la corrida en Moldex, así que no se pidió el vídeo. ",
+                                            "The run was not saved to Moldex, so no video was requested. ") + saved["message"]}
     entry, listed = await _moldex_entry(bridge, {"molecule_id": spec["molecule_id"], "task_id": spec["task_id"]})
     if not listed:
-        return {"status": "unavailable", "message": "No se pudo comprobar la fuente del vídeo; no se pidió nada."}
+        return {"status": "unavailable", "message": tr("No se pudo comprobar la fuente del vídeo; no se pidió nada.",
+                                                        "Could not check the video's source; nothing was requested.")}
     if entry is None or not entry.get("disponible"):
-        return {"status": "source_unavailable", "message": (entry or {}).get("motivo") or "La corrida no aparece como fuente de vídeo."}
+        return {"status": "source_unavailable", "message": (entry or {}).get("motivo") or tr(
+            "La corrida no aparece como fuente de vídeo.", "The run is not listed as a video source.")}
     if spec["scene"] not in entry.get("escenas_disponibles", []):
         return {"status": "scene_unavailable", "available_scenes": [s for s in entry.get("escenas_disponibles", []) if s in SCENES],
-                "message": f"La escena «{spec['scene']}» no está disponible para esta corrida."}
+                "message": tr(f"La escena «{spec['scene']}» no está disponible para esta corrida.",
+                               f"The scene «{spec['scene']}» is not available for this run.")}
     body = {"origen": "moldex", "id": spec["molecule_id"], "task_id": spec["task_id"], "escena": spec["scene"],
             "formato": spec["format"], "dispositivo": "gpu", "presentacion": spec["presentation"]}
     code, data = await _http(bridge, "POST", "/molcy/trabajos", body=body, timeout=60)
     if code == 0:  # the request may have reached Molcy: never say "nothing happened"
-        return {"status": "unknown", "message": "No se pudo confirmar si el vídeo quedó en cola; revisa la pestaña Molcy antes de reintentar."}
+        return {"status": "unknown", "message": tr(
+            "No se pudo confirmar si el vídeo quedó en cola; revisa la pestaña Molcy antes de reintentar.",
+            "Could not confirm whether the video was queued; check the Molcy tab before retrying.")}
     if code == 202 and isinstance(data, dict) and isinstance(data.get("id"), str) and _UUID.fullmatch(data["id"]):
         adjustments = data.get("ajustes") if isinstance(data.get("ajustes"), dict) else None
         return {"status": "started", "job_id": data["id"], "saved_first": bool(spec.get("save_first")),
-                "adjustments": adjustments, "message": "Vídeo en cola en Molcy."}
+                "adjustments": adjustments, "message": tr("Vídeo en cola en Molcy.", "Video queued in Molcy.")}
     if code == 202:  # accepted, but without an id we can follow
-        return {"status": "unknown", "message": "MolDesign aceptó la solicitud sin devolver un identificador válido; revisa la pestaña Molcy antes de reintentar."}
-    return _failure(code, data, "No se pudo pedir el vídeo.")
+        return {"status": "unknown", "message": tr(
+            "MolDesign aceptó la solicitud sin devolver un identificador válido; revisa la pestaña Molcy antes de reintentar.",
+            "MolDesign accepted the request without returning a valid identifier; check the Molcy tab before retrying.")}
+    return _failure(code, data, tr("No se pudo pedir el vídeo.", "Could not request the video."))
 
 
 async def run_proposal(bridge: MolDesignBridge, proposal: Proposal) -> dict[str, Any]:

@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import IterationCard, { bubbleLine, validWorkflows } from "./IterationCard";
+import IterationCard, { bubbleLine, planProgress, validWorkflows } from "./IterationCard";
 import { strings } from "../lib/i18n";
 
 afterEach(cleanup);
@@ -260,6 +260,23 @@ describe("the bubble's line for a plan", () => {
     expect(bubbleLine("done", [], {}, summary({ selected: { name: "Mol 2", task_id: "x", vina_kcal_mol: -9.566, physical_status: "passed" } }), null, [...steps], t))
       .toEqual({ state: "done", text: "Listo: Mol 2 · Vina −9.6" });
     expect(bubbleLine("done", [], {}, summary({}), null, [...steps], t)?.text).toBe("Terminó: ninguna molécula cumplió la regla");
+  });
+
+  it("gives the host the plan to show who is driving: nothing while it waits for the person, then steps and molecules", () => {
+    const proposal = { id: "a".repeat(32), kind: "iteration" as const, digest: `sha256:${"0".repeat(64)}`, title: "Iteración",
+      lines: ["Caso «VMAT2» · receptor 8T69"], molecules: ["cafeína", "cetanserina", "valbenazina"] };
+    expect(planProgress("pending", [], {}, null, null, proposal, [...steps], t)).toBeNull();
+    const qualified = { ...row("evaluated", -11.2), outcome: "qualifies" };
+    const progress = planProgress("running", [row("evaluated", -6.2), qualified, row("running")],
+      { case: { state: "done", detail: null }, molecules: { state: "running", detail: null } }, null,
+      { state: "working", text: "Evaluando 3 de 3" }, proposal, [...steps], t);
+    expect(progress).toMatchObject({ title: "Caso «VMAT2» · receptor 8T69", phase: "running", now: "Evaluando 3 de 3" });
+    expect(progress?.steps.slice(0, 3)).toEqual([{ label: "Caso", state: "done" }, { label: "Receptor", state: "pending" },
+      { label: "Moléculas", state: "running" }]);
+    expect(progress?.molecules).toEqual([{ name: "cafeína", state: "done", vina: -6.2, meets: false },
+      { name: "cetanserina", state: "done", vina: -11.2, meets: true }, { name: "valbenazina", state: "running", vina: null, meets: false }]);
+    expect(planProgress("done", [], {}, summary({ videoPending: true }), null, proposal, [...steps], t)?.phase).toBe("rendering");
+    expect(planProgress("interrupted", [], {}, null, null, proposal, [...steps], t)?.phase).toBe("stopped");
     expect(bubbleLine("interrupted", [], {}, null, null, [...steps], t)?.state).toBe("error");
     expect(bubbleLine("cancelled", [], {}, null, null, [...steps], t)).toBeNull();
   });

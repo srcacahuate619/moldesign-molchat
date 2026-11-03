@@ -9,7 +9,7 @@ import { assignReceptorInHost } from "../lib/receptorHost";
 import { loadSmilesInHost } from "../lib/smilesHost";
 import { renderVideoInHost } from "../lib/molcyHost";
 import { newNoticeId, notifyHost } from "../lib/hostNotify";
-import { reportStatus, type BubbleStatus } from "../lib/hostStatus";
+import { reportProgress, reportStatus, type BubbleStatus, type PlanProgress, type ProgressPhase, type ProgressStepState } from "../lib/hostStatus";
 import { StepDoneIcon, StepFailedIcon, StepPendingIcon, StepRunningIcon, StepSkippedIcon } from "./Icons";
 
 type Phase = "pending" | "running" | "done" | "cancelled" | "interrupted";
@@ -91,6 +91,26 @@ export function bubbleLine(phase: Phase, rows: Row[], timeline: Partial<Record<T
     return { state: "done", text: `${t("bubble.done")}: ${summary.selected.name}` + (vina === null ? "" : ` · Vina ${kcal(vina)}`) };
   }
   return { state: "done", text: t("bubble.noneQualified") };
+}
+
+const MOLECULE_STATE: Record<string, ProgressStepState> = { pending: "pending", running: "running", evaluated: "done",
+  skipped: "skipped", failed: "failed", timeout: "failed", unknown: "failed" };
+
+/** The plan for the host's autopilot view: nothing while it waits for approval or after it was cancelled (a person is
+ * deciding, not MolChat). Exported for its tests. */
+export function planProgress(phase: Phase, rows: Row[], timeline: Partial<Record<TimelineStep, StepView>>, summary: Summary | null,
+  bubble: BubbleStatus | null, proposal: WorkflowProposal, steps: TimelineStep[], t: (key: StringKey) => string): PlanProgress | null {
+  if (phase === "pending" || phase === "cancelled") return null;
+  const stage: ProgressPhase = phase === "interrupted" ? "stopped" : phase === "running" ? "running"
+    : summary?.videoPending ? "rendering" : "done";
+  return {
+    title: proposal.lines[0] ?? proposal.title,
+    phase: stage,
+    now: bubble?.text ?? t("bubble.working"),
+    steps: steps.map((step) => ({ label: t(`iteration.timeline.${step}` as StringKey), state: timeline[step]?.state ?? "pending" })),
+    molecules: proposal.molecules.map((name, index) => ({ name, state: MOLECULE_STATE[rows[index]?.status ?? "pending"] ?? "failed",
+      vina: rows[index]?.vina ?? null, meets: rows[index]?.outcome === "qualifies" })),
+  };
 }
 
 const blank = (): Row => ({ status: "pending", outcome: null, vina: null, physical: null, reason: null });
@@ -291,9 +311,11 @@ export default function IterationCard({
 
   // One line for the host's bubble: what the plan is doing now, so it can be followed with the panel minimised.
   useEffect(() => {
-    reportStatus(`iteration:${proposal.id}`, bubbleLine(phase, rows, timeline, summary, message, proposal.steps ?? STEPS, t));
-  }, [phase, rows, timeline, summary, message, proposal.id, proposal.steps, t]);
-  useEffect(() => () => reportStatus(`iteration:${proposal.id}`, null), [proposal.id]);
+    const line = bubbleLine(phase, rows, timeline, summary, message, proposal.steps ?? STEPS, t);
+    reportStatus(`iteration:${proposal.id}`, line);
+    reportProgress(`iteration:${proposal.id}`, planProgress(phase, rows, timeline, summary, line, proposal, proposal.steps ?? STEPS, t));
+  }, [phase, rows, timeline, summary, message, proposal, t]);
+  useEffect(() => () => { reportStatus(`iteration:${proposal.id}`, null); reportProgress(`iteration:${proposal.id}`, null); }, [proposal.id]);
 
   const label = (row: Row) => (row.outcome ? t(`iteration.reading.${row.outcome}` as StringKey) : t(`iteration.state.${row.status}` as StringKey));
   const files = summary ? Object.keys(summary.files) : [];

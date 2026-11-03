@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { currentStatus, reportStatus, resetStatus } from "./hostStatus";
+import { currentProgress, currentStatus, reportProgress, reportStatus, resetStatus, type PlanProgress } from "./hostStatus";
 
 describe("the bubble's line", () => {
   let posted: unknown[];
@@ -41,5 +41,22 @@ describe("the bubble's line", () => {
     vi.spyOn(window, "parent", "get").mockReturnValue(window);
     reportStatus("chat", { state: "thinking", text: "Escribiendo…" });
     expect(posted).toEqual([]);
+  });
+
+  it("the plan's progress goes on its own envelope, a running plan wins over a finished one, and only changes are sent", () => {
+    const plan = (phase: PlanProgress["phase"], now: string): PlanProgress => ({ title: "Caso «x» · receptor 8T69", phase, now,
+      steps: [{ label: "Caso", state: "done" }], molecules: [{ name: "cafeína", state: "done", vina: -6.2, meets: false }] });
+    reportProgress("iteration:old", plan("done", "Listo"));
+    reportProgress("iteration:new", plan("running", "Evaluando 2 de 6"));
+    reportProgress("iteration:new", plan("running", "Evaluando 2 de 6"));
+    expect(currentProgress()?.now).toBe("Evaluando 2 de 6");
+    reportProgress("iteration:new", null);
+    reportProgress("iteration:old", null);
+    expect(posted).toEqual([
+      { type: "molchat-ui-progress", progress: plan("done", "Listo") },
+      { type: "molchat-ui-progress", progress: plan("running", "Evaluando 2 de 6") },
+      { type: "molchat-ui-progress", progress: plan("done", "Listo") },
+      { type: "molchat-ui-progress", progress: null },
+    ]);
   });
 });

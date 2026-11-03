@@ -30,7 +30,10 @@ _STATUS = {"evaluated": ("evaluada", "docked"), "failed": ("falló", "failed"),
 _OUTCOME = {"qualifies": ("cumple la regla", "meets the rule"),
             "near": ("energía suficiente, controles físicos no superados", "energy enough, physical checks not passed"),
             "below_threshold": ("no llega al umbral", "does not reach the threshold")}
-_STATE = {"completed": ("Terminó: hay una molécula que cumple la regla.", "Finished: one molecule meets the rule."),
+# MolDesign's severity codes (services/avisos.py: Severidad) are Spanish words; the label follows the notebook's language.
+_SEVERITY = {"positiva": ("positiva", "positive"), "info": ("info", "info"), "precaucion": ("precaución", "caution"),
+             "critica": ("crítica", "critical"), "heredada": ("heredada", "legacy")}
+_STATE = {"completed":("Terminó: hay una molécula que cumple la regla.", "Finished: one molecule meets the rule."),
           "none_qualified": ("Terminó: ninguna molécula cumplió la regla.", "Finished: no molecule met the rule."),
           "blocked": ("Se detuvo antes de evaluar: el caso no quedó preparado.",
                       "Stopped before docking: the case was not set up."),
@@ -231,8 +234,8 @@ def run_lines(run: dict[str, Any] | None) -> list[str]:
         out.append(tr("Avisos de la corrida: ninguno.", "Run warnings: none."))
     else:
         out.append(tr(f"Avisos de la corrida ({len(warnings)}):", f"Run warnings ({len(warnings)}):"))
-        out += [f"  - [{w.get('severity') or tr('sin severidad', 'no severity')}] {w['message']}"
-                + (f" ({w['code']})" if w.get("code") else "") for w in warnings]
+        out += [f"  - [{_pick(_SEVERITY, w.get('severity'), w.get('severity') or tr('sin severidad', 'no severity'))}] "
+                f"{w['message']}" + (f" ({w['code']})" if w.get("code") else "") for w in warnings]
     return out
 
 

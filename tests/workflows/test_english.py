@@ -74,3 +74,59 @@ def test_a_plan_keeps_the_language_it_was_proposed_in() -> None:
         assert workflow_answer(proposal).startswith("I prepared an iteration over 1 molecule with")
         assert proposal.view()["title"] == "Molecule iteration"
     assert new_workflow(workflows, "owner", None, spec).lang == "es"
+
+
+def test_moldesign_is_asked_in_the_chats_language() -> None:
+    """MolDesign translates its own messages (the run warnings among them) when asked: an English plan asks in English,
+    so its notebook no longer copies Spanish warnings (seen in the hackathon take, 2026-11-03)."""
+    import asyncio
+
+    import httpx
+
+    from molchat_agent.bridge import MolDesignBridge, _ask_in_chat_language
+
+    bridge = MolDesignBridge(require_contract=False)
+    assert _ask_in_chat_language in bridge.client.event_hooks["request"]
+
+    async def asked(lang: str) -> str:
+        request = httpx.Request("GET", "http://127.0.0.1:8000/evaluation/status/x")
+        with using(lang):
+            await _ask_in_chat_language(request)
+        return request.headers["Accept-Language"]
+
+    assert asyncio.run(asked("en")) == "en" and asyncio.run(asked("es")) == "es"
+    asyncio.run(bridge.client.aclose())
+
+
+def test_run_warnings_carry_an_english_severity_in_an_english_notebook() -> None:
+    from molchat_agent.workflows.notebook import run_lines
+
+    run = {"warnings": [{"code": "ESPECIE_ACOPLADA_DISTINTA", "severity": "precaucion",
+                         "message": "The docked species differs from the input."},
+                        {"code": "ESTEREOQUIMICA_NO_DECLARADA", "severity": "critica", "message": "2 unassigned centres."}]}
+    with using("en"):
+        lines = "\n".join(run_lines(run))
+    assert "[caution] The docked species differs from the input. (ESPECIE_ACOPLADA_DISTINTA)" in lines
+    assert "[critical] 2 unassigned centres." in lines
+    with using("es"):
+        assert "[precaución]" in "\n".join(run_lines(run))
+
+
+def test_saving_to_moldex_is_reported_in_english() -> None:
+    import asyncio
+
+    import httpx
+
+    from molchat_agent.bridge import MolDesignBridge
+    from molchat_agent.conversation.product_actions import run_save
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"status": "saved", "name": "ketanserin"})
+
+    async def save() -> dict:
+        async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", transport=httpx.MockTransport(handle)) as client:
+            bridge = MolDesignBridge(require_contract=False, token="t", client=client)
+            with using("en"):
+                return await run_save(bridge, {"task_id": "t-1", "molecule_id": "m-1"})
+
+    assert asyncio.run(save())["message"] == "Run saved to Moldex."
