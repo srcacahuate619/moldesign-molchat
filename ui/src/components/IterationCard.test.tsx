@@ -176,6 +176,8 @@ describe("IterationCard", () => {
     expect(state("Caso")).toBe("running");
     act(() => { emit({ type: "workflow", event: "case_step", step: "crear el caso", status: "created" });
       emit({ type: "workflow", event: "case_step", step: "asignar el receptor", status: "applied" }); });
+      // an English plan names the step in English: the card goes by its key
+      act(() => { emit({ type: "workflow", event: "case_step", step: "assign the receptor", key: "receptor", status: "applied" }); });
     expect(state("Caso")).toBe("done");
     expect(state("Receptor")).toBe("done");
     expect(state("Moléculas")).toBe("running");

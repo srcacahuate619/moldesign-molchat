@@ -202,7 +202,8 @@ export default function IterationCard({
     if (kind === "approved") mark("case", "running");
     if (kind === "case_step") {
       const ok = event["status"] === "created" || event["status"] === "exists" || event["status"] === "applied" || event["status"] === "already_selected";
-      const step: TimelineStep = event["step"] === "asignar el receptor" ? "receptor" : "case";
+      // «key» names the step whatever the language; older sidecars only sent the Spanish label
+      const step: TimelineStep = event["key"] === "receptor" || event["step"] === "asignar el receptor" ? "receptor" : "case";
       mark(step, ok ? "done" : "failed", text(event["status"]));
       if (ok && step === "case") mark("receptor", "running");
       if (ok && step === "receptor") mark("molecules", "running");

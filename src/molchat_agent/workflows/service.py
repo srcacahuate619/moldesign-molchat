@@ -224,22 +224,31 @@ class PreparationHttp:
             return {"status": "audit_failed", "message": tr("MolDesign no devolvió la auditoría de Preparación.",
                                                             "MolDesign did not return the Preparation audit.")}
         readiness = audit["estado"]
+        label = readiness_label(readiness)
         blockers = [str(item)[:120] for item in (audit.get("bloqueantes") or [])][:10]
         review = [str(item)[:120] for item in (audit.get("en_revision") or [])][:10]
         out: dict[str, Any] = {"status": "audited", "readiness": readiness, "reason": str(audit.get("razon") or "")[:300],
                                "blockers": blockers, "in_review": review}
         code, blob, name = await self.platform.post_bytes(f"{base}/package", projection)
         if code != 200 or not blob:
-            out.update(status="export_failed", message=tr(f"Preparación quedó en {readiness}, pero MolDesign no entregó el paquete.",
-                                                          f"Preparation ended in {readiness}, but MolDesign did not deliver the package."))
+            out.update(status="export_failed", message=tr(f"Preparación quedó en {label}, pero MolDesign no entregó el paquete.",
+                                                          f"Preparation ended in {label}, but MolDesign did not deliver the package."))
             return out
         out.update(status="exported", package=(name or f"dossier_{_fname(task_id)}.zip", blob),
-                   message=(tr(f"Preparación: {readiness}. ", f"Preparation: {readiness}. ") + (
+                   message=(tr(f"Preparación: {label}. ", f"Preparation: {label}. ") + (
                        tr("Nada propio del caso pide revisión.", "Nothing in the case asks for review.")
                        if readiness == "TRANSFERIBLE" else
                        tr(f"{len(blockers)} bloqueantes y {len(review)} requisitos en revisión; MolChat no los decidió.",
                           f"{len(blockers)} blockers and {len(review)} requirements under review; MolChat did not decide them."))))
         return out
+
+
+# Preparation's state is a MolDesign code (Spanish); the plan's texts name it as MolDesign's English interface does.
+_READINESS_EN = {"BLOQUEADO": "BLOCKED", "REVISION": "REVIEW", "TRANSFERIBLE": "TRANSFERABLE"}
+
+
+def readiness_label(code: str | None) -> str | None:
+    return tr(code, _READINESS_EN.get(code, code)) if code else code
 
 
 @dataclass
@@ -490,7 +499,7 @@ def summarize(outcome: IterationOutcome, proposal: WorkflowProposal) -> dict[str
                                                        "vina_kcal_mol": selected.affinity_kcal,
                                                        "physical_status": selected.physical_status},
             "saved": (outcome.saved or {}).get("status"), "video": (outcome.video or {}).get("final") or (outcome.video or {}).get("status"),
-            "preparation": (outcome.preparation or {}).get("readiness") or (outcome.preparation or {}).get("status"),
+            "preparation": readiness_label((outcome.preparation or {}).get("readiness")) or (outcome.preparation or {}).get("status"),
             "video_pending": video_pending(outcome), "video_progress": (outcome.video or {}).get("progress"),
             "files": {name: len(data) for name, data in proposal.files.items()}, "paths": dict(proposal.saved_paths),
             "notes": list(outcome.notes)}

@@ -427,9 +427,9 @@ class IterationRunner:
 
     async def _prepare_case(self) -> bool:
         spec, out = self.spec, self.outcome
-        for label, call, ok in ((tr("crear el caso", "create the case"), lambda: self.host.create_case(spec.case_name), _CASE_OK),
-                                (tr("asignar el receptor", "assign the receptor"),
-                                 lambda: self.host.assign_receptor(spec.case_name, spec.pdb_id), _RECEPTOR_OK)):
+        for key, label, call, ok in (("case", tr("crear el caso", "create the case"), lambda: self.host.create_case(spec.case_name), _CASE_OK),
+                                     ("receptor", tr("asignar el receptor", "assign the receptor"),
+                                      lambda: self.host.assign_receptor(spec.case_name, spec.pdb_id), _RECEPTOR_OK)):
             try:
                 result, waited = await self._until_free(label, call)
             except asyncio.CancelledError:
@@ -438,7 +438,8 @@ class IterationRunner:
                 out.notes.append(_could_not(label) + f": {type(exc).__name__}.")
                 return False
             status = result.get("status") if isinstance(result, dict) else None
-            self.emit("case_step", step=label, status=status)
+            # «key» is stable; «step» is the label in the plan's language (the card used to compare the Spanish one)
+            self.emit("case_step", step=label, key=key, status=status)
             if status not in ok:
                 answered = status or tr("sin respuesta", "no answer")
                 out.notes.append(_could_not(label) + ": " + (

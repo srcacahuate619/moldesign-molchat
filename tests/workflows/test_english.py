@@ -130,3 +130,11 @@ def test_saving_to_moldex_is_reported_in_english() -> None:
                 return await run_save(bridge, {"task_id": "t-1", "molecule_id": "m-1"})
 
     assert asyncio.run(save())["message"] == "Run saved to Moldex."
+
+
+def test_preparation_state_is_named_as_moldesign_names_it_in_english() -> None:
+    from molchat_agent.workflows.service import readiness_label
+
+    with using("en"):
+        assert [readiness_label(c) for c in ("REVISION", "BLOQUEADO", "TRANSFERIBLE")] == ["REVIEW", "BLOCKED", "TRANSFERABLE"]
+    assert readiness_label("REVISION") == "REVISION" and readiness_label(None) is None
