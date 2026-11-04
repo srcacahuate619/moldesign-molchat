@@ -1058,11 +1058,11 @@ MolDesign es por API HTTP, no por copia de código.
 - Licencia resultante: GPL-3.0-or-later
 - Tests: tests/workflows/test_recorded_delivery.py
 
-### benchmarks/run_benchmark.py, benchmarks/run_live.py, benchmarks/render_results.py, benchmarks/verify_artifacts.py
+### benchmarks/run_benchmark.py, benchmarks/run_live.py, benchmarks/render_results.py, benchmarks/verify_artifacts.py, benchmarks/smoke_sidecar.py
 
 - Origen: código nuevo en MolChat (2026-11-03) para organizar tests existentes y registrar mediciones reales con el harness de producción y el proveedor ya autorizado por la cuenta.
 - Commit de MolDesign: N/A; las consultas reales usan el contrato HTTP del backend sin copiar su implementación.
 - Autoría: Johan Amezcua, con colaboración de un agente de código.
 - Transformación: selección y agregación de pytest, trazas sanitizadas del protocolo, medición de latencias, comprobaciones de contratos de tarea, tablas, gráficas y verificación de artefactos. Las pruebas originales conservan su oráculo; las simulaciones y las llamadas reales se publican por separado.
 - Licencia resultante: GPL-3.0-or-later
-- Tests: benchmarks/scenarios.json reutiliza tests/conversation, tests/workflows, tests/server y tests/adversarial; benchmarks/prompts.json define los contratos de las pruebas reales; benchmarks/verify_artifacts.py comprueba las entregas y sus hashes.
+- Tests: benchmarks/scenarios.json reutiliza tests/conversation, tests/workflows, tests/server y tests/adversarial; benchmarks/prompts.json define los contratos de las pruebas reales; benchmarks/verify_artifacts.py comprueba las entregas y sus hashes. tests/test_check_scripts.py cubre la procedencia sin Git y benchmarks/smoke_sidecar.py verifica el sidecar real en loopback sin guardar su sesión.

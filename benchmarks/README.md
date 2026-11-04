@@ -69,9 +69,24 @@ CI runs the keyless layer and uploads its evidence without provider secrets. Liv
 
 ## Optional container
 
+Use a Linux Docker engine. The commands below assume the engine can access the local checkout and bind-mount paths; an SSH context resolves mounted paths on its remote host.
+
 ```sh
-docker build -f benchmarks/Dockerfile -t molchat-benchmark .
-docker run --rm molchat-benchmark
+docker build --build-arg SOURCE_COMMIT="$(git rev-parse HEAD)" -f benchmarks/Dockerfile -t molchat-benchmark .
+docker run --rm --network none molchat-benchmark python benchmarks/smoke_sidecar.py
+docker run --rm --network none molchat-benchmark
 ```
 
-The image contains the Python sidecar and keyless regression simulator, not MolDesign, Tauri, Vina or Blender. Its default command runs the synthetic benchmark. On Linux, the sidecar can be started with `docker run --rm --network host -e MOLCHAT_PROVIDER=fake molchat-benchmark python -m molchat_agent serve`; its loopback-only binding is preserved. No local Docker daemon was available during this evaluation, so the image build is **unverified** here.
+Run these commands from a clean checkout. In PowerShell, replace `$(git rev-parse HEAD)` with the full commit hash or use `--build-arg "SOURCE_COMMIT=$(git rev-parse HEAD)"`. The source revision is embedded as an image label and an explicit build-argument claim in the results; Git history is excluded from the image and worktree cleanliness inside it is recorded as unknown. File hashes still describe the actual copied inputs.
+
+The image contains the Python sidecar and keyless regression simulator, not MolDesign, Tauri, Vina or Blender. Its default command repeats the maintained synthetic scenario suite three times. The smoke command starts the installed sidecar on a free loopback port, checks `/v1/health`, discards its temporary session output and stops it. The runtime commands above use no external network and receive no provider credentials. Building the image needs internet access for Python dependencies.
+
+**Verification environment:** the `Standalone Docker verification` job in [GitHub Actions](https://github.com/srcacahuate619/moldesign-molchat/actions/workflows/ci.yml?query=branch%3Amaster) builds the Linux image, runs the real sidecar smoke check and then the synthetic benchmark with `--network none`. Its result JSON, JUnit reports and synthetic ZIP are uploaded as `molchat-docker-verification-synthetic`. A successful job verifies those operations; it does not validate scientific docking, GPU rendering or a desktop installer. The original evidence capture had no available local Docker daemon; the later CI job verifies the container independently.
+
+To retain local outputs in Bash or PowerShell, create `reports/docker-verification`, then mount it:
+
+```sh
+docker run --rm --network none --mount "type=bind,src=$(pwd)/reports/docker-verification,dst=/molchat/reports/benchmark-run" molchat-benchmark
+```
+
+For an interactive API inside the container, run `docker run --rm -e MOLCHAT_PROVIDER=fake molchat-benchmark python -m molchat_agent serve`. The sidecar intentionally binds to container loopback; ordinary port publishing does not expose it. This image is an agent/simulator verification path, not the full MolDesign installation.

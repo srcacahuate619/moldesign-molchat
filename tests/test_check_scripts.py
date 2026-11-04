@@ -7,9 +7,12 @@ clean under ``scripts/check_secrets.py``.
 """
 
 import shutil
+import importlib.util
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
@@ -194,3 +197,48 @@ def test_ui_build_flags_missing_and_stale(tmp_path):
     result = _run(base, "check_ui_build.py")
     assert result.returncode == 1
     assert "STALE" in result.stdout
+
+
+def _benchmark_module(tmp_path, monkeypatch):
+    spec = importlib.util.spec_from_file_location('benchmark_environment_check', ROOT / 'benchmarks' / 'run_benchmark.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    monkeypatch.setattr(module, 'ROOT', tmp_path)
+    monkeypatch.setattr(module, 'HERE', tmp_path / 'benchmarks')
+    return module
+
+
+@pytest.mark.parametrize('error', [FileNotFoundError('git'), subprocess.CalledProcessError(128, ['git'])])
+def test_benchmark_container_records_build_revision_without_git(tmp_path, monkeypatch, error):
+    benchmark = _benchmark_module(tmp_path, monkeypatch)
+    def unavailable(*_args, **_kwargs):
+        raise error
+    monkeypatch.setattr(benchmark.subprocess, 'check_output', unavailable)
+    monkeypatch.setenv('MOLCHAT_BENCHMARK_SOURCE_COMMIT', 'a' * 40)
+    result = benchmark.environment()
+    assert result['git_commit'] == 'a' * 40
+    assert result['git_metadata_source'] == 'image-build-argument'
+    assert result['tracked_worktree_dirty'] is None
+
+
+def test_benchmark_checkout_revision_takes_precedence_over_build_argument(tmp_path, monkeypatch):
+    benchmark = _benchmark_module(tmp_path, monkeypatch)
+    monkeypatch.setattr(benchmark.subprocess, 'check_output', lambda command, **_: 'b' * 40 if command[1] == 'rev-parse' else '')
+    monkeypatch.setenv('MOLCHAT_BENCHMARK_SOURCE_COMMIT', 'a' * 40)
+    result = benchmark.environment()
+    assert result['git_commit'] == 'b' * 40 and result['git_metadata_source'] == 'checkout'
+    assert result['tracked_worktree_dirty'] is False
+
+
+def test_benchmark_without_git_or_build_revision_records_unknown(tmp_path, monkeypatch):
+    benchmark = _benchmark_module(tmp_path, monkeypatch)
+    def unavailable(*_args, **_kwargs):
+        raise FileNotFoundError('git')
+    monkeypatch.setattr(benchmark.subprocess, 'check_output', unavailable)
+    monkeypatch.delenv('MOLCHAT_BENCHMARK_SOURCE_COMMIT', raising=False)
+    result = benchmark.environment()
+    assert result['git_commit'] is None and result['tracked_worktree_dirty'] is None
+    assert result['git_metadata_source'] == 'not-recorded'
+    monkeypatch.setenv('MOLCHAT_BENCHMARK_SOURCE_COMMIT', 'not-a-commit')
+    with pytest.raises(ValueError, match='40-character'):
+        benchmark.environment()

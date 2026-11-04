@@ -1,12 +1,14 @@
 # MolChat Agent
 
+[![CI: tests, evidence and Docker](https://github.com/srcacahuate619/moldesign-molchat/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/srcacahuate619/moldesign-molchat/actions/workflows/ci.yml?query=branch%3Amaster)
+
 **One approval takes a hypothesis about a few molecules from a prompt to an auditable lab notebook.** MolChat helps computational chemistry researchers run a short list of candidate molecules against one target without manually starting each run, checking when to stop, and assembling the evidence for a colleague.
 
 **▶ [Watch the 3-minute demo](https://www.youtube.com/watch?v=luRIXlqWy6I)** · **[Reliability benchmark](benchmarks/README.md)** · [Judge's guide](kit/en/HACKATHON.md) · [Kit en español](kit/es/README.md) · [Architecture](docs/ARQUITECTURA.md) · [CI](https://github.com/srcacahuate619/moldesign-molchat/actions/workflows/ci.yml)
 
 **In the recorded VMAT2 run**, Muse Spark Open turned a six-candidate request into a reviewable plan. With one approval, MolChat coordinated five docking runs, stopped when ketanserin met the score and pose checks, and skipped the sixth candidate. It recorded the outcome in a notebook and delivery ZIP. [The real ZIP, byte for byte](kit/vmat2-run/) · [Run conditions and exact prompt](kit/en/GETTING_STARTED.md#7-try-the-demo-prompt)
 
-**Measured reliability:** 36 fixed prompts, two real Muse Spark trials per prompt, plus a separate keyless harness benchmark. [All tables, graphs and traces](benchmarks/RESULTS.md) · [Actual provider calls and harness boundaries](docs/META_EXECUTION.md)
+**68/72 task contracts passed in the initial live evaluation:** 36 fixed prompts, two real Muse Spark trials per prompt. All four failures remain public: two exposed an incorrect evaluator expectation and two exposed a missing time-budget field. The targeted follow-up passed **6/6**, reported separately. [All outcomes and corrections](benchmarks/RESULTS.md) · [Actual provider calls and harness boundaries](docs/META_EXECUTION.md)
 
 [Submission text and evidence links](kit/en/SUBMISSION.md) · [Final integration check](benchmarks/published/release-check/README.md) · [Frozen handoff](kit/FINAL_RELEASE.md)
 
@@ -14,11 +16,27 @@
 |---|---|---|
 | Live Muse Spark: easy / moderate / hard | 24/24 · 24/24 · 20/24 task contracts in the initial run | [36 prompts and every outcome](benchmarks/RESULTS.md) |
 | Follow-up after findings | 6/6 targeted trials: corrected empty-search criterion and repaired time-budget schema | [Failures and corrections](benchmarks/FINDINGS.md) |
-| Keyless harness | 220/220 checks in each of 3 repetitions | `python benchmarks/run_benchmark.py` |
-| New real VMAT2 campaigns | Same outcome in 2 campaigns: 2 docked, 1 skipped; real audit, video and complete ZIP | [Artifacts and screenshots](benchmarks/published/capsule/README.md) · [Automated reproduction](benchmarks/published/capsule-reproduction/README.md) |
+| Keyless harness, published reference | 220/220 checks in each of 3 repetitions; CI also includes the later release regression cases | `python benchmarks/run_benchmark.py` |
+| Two real VMAT2 campaigns | Both: 2 docked, 1 skipped; real audit, video and complete ZIP; same machine and protocol | [Campaign 1: original evidence](benchmarks/published/capsule/README.md) · [Campaign 2: separate evidence](benchmarks/published/capsule-reproduction/README.md) |
 | Closing integration check | 16/16 assertions on corrected source, including explicit time limits and no writes before approval | [Final delivery and retained failed attempt](benchmarks/published/release-check/README.md) |
 
-The initial failures are retained. Scripted tests measure harness behaviour; live trials measure these specific model tasks. Neither measures biological activity or proves that docking predicts potency. Live planning and the browser capsule use separately recorded source revisions; native desktop commands are partly emulated.
+**Limits:** scripted tests measure harness behaviour and live trials measure these fixed model tasks. The two VMAT2 campaigns repeat one environment and protocol; they are not independent scientific replications. The browser capsule partly emulates desktop commands and does not validate the native Windows installer or WebView2. Live planning and browser runs use separately recorded source revisions. Vina scores do not establish biological activity or potency.
+
+## Evidence at a glance
+
+![Initial Muse Spark task-contract results: easy 24/24, moderate 24/24, hard 20/24](benchmarks/published/figures/live-by-difficulty.svg)
+
+The initial score is preserved, including the evaluator and schema defects. Follow-up results are separate from this graph.
+
+![Wall time per live prompt, including model requests, tools and network time](benchmarks/published/figures/live-latency.svg)
+
+These are live prompt latencies on the recorded machine, not docking speed measurements.
+
+![Actual MolChat table: aspirin did not qualify, ketanserin met the rule, valbenazine was not evaluated](benchmarks/published/release-check/screenshots/03-stop.png)
+
+Actual capture from the corrected integration run: valbenazine is marked **not evaluated** after the stop rule was met. [Full approval and notebook captures](benchmarks/published/release-check/README.md) · [Original delivery ZIP](benchmarks/published/release-check/delivery.zip)
+
+The optional [standalone Docker image](benchmarks/README.md#optional-container) covers the sidecar and synthetic benchmark. Its Linux build, real sidecar health check and offline benchmark run are checked by the dedicated Docker CI job.
 
 ## Start here
 

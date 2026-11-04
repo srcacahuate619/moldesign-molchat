@@ -9,6 +9,46 @@ permissions:
   contents: read
 
 jobs:
+  docker:
+    name: Standalone Docker verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the standalone agent and simulator image
+        run: docker build --build-arg SOURCE_COMMIT="${{ github.sha }}" -f benchmarks/Dockerfile -t molchat-benchmark .
+      - name: Start the sidecar without external networking
+        run: |
+          mkdir -p reports/docker-verification
+          docker run --rm --network none molchat-benchmark python benchmarks/smoke_sidecar.py > reports/docker-verification/sidecar.json
+      - name: Run the synthetic benchmark without networking or credentials
+        run: |
+          docker run --rm --network none \
+            --mount type=bind,src="$PWD/reports/docker-verification",dst=/molchat/reports/benchmark-run \
+            molchat-benchmark
+      - name: Summarize the verified container
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, subprocess
+          output = pathlib.Path('reports/docker-verification')
+          result = json.loads((output / 'results.json').read_text())
+          sidecar = json.loads((output / 'sidecar.json').read_text())
+          image = json.loads(subprocess.check_output(['docker', 'image', 'inspect', 'molchat-benchmark']))[0]
+          proof = {'source_commit': os.environ['GITHUB_SHA'], 'image_id': image['Id'],
+                   'os': image['Os'], 'architecture': image['Architecture'], 'runtime_network': 'none',
+                   'sidecar': sidecar, 'benchmark': result['summary']}
+          (output / 'verification.json').write_text(json.dumps(proof, indent=2) + '\n')
+          counts = ', '.join(f"{c['passed']}/{sum(c.values())}" for c in result['summary']['checks_per_repetition'])
+          summary = f"## Standalone Docker verification\n\nSource: `{proof['source_commit']}`\n\nImage: {proof['os']}/{proof['architecture']}\n\nSidecar health: passed. Synthetic checks per repetition: {counts}. Both runtime checks used `--network none` and no provider credentials.\n\nScope: agent and simulator; no MolDesign desktop, Vina or Blender.\n"
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as handle:
+              handle.write(summary)
+          PY
+      - name: Upload Docker verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: molchat-docker-verification-synthetic
+          path: reports/docker-verification/
+          if-no-files-found: error
   verify:
     runs-on: ubuntu-latest
     strategy:

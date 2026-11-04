@@ -1,0 +1,19 @@
+# Only the standalone agent, selected regression inputs and archived demo enter the image.
+**
+!pyproject.toml
+!README.md
+!LICENSE
+!src/
+!src/**
+!tests/
+!tests/**
+!kit/
+!kit/vmat2-run/
+!kit/vmat2-run/**
+!benchmarks/
+!benchmarks/Dockerfile
+!benchmarks/run_benchmark.py
+!benchmarks/scenarios.json
+!benchmarks/smoke_sidecar.py
+**/__pycache__/
+**/*.py[cod]

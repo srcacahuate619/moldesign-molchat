@@ -37,7 +37,19 @@ def sanitize(text: str) -> str:
 
 def environment() -> dict:
     def git(*args):
-        return subprocess.check_output(['git', *args], cwd=ROOT, text=True).strip()
+        return subprocess.check_output(['git', *args], cwd=ROOT, text=True, stderr=subprocess.DEVNULL).strip()
+    try:
+        commit = git('rev-parse', 'HEAD')
+        dirty = bool(git('status', '--porcelain', '--untracked-files=no'))
+        revision_source = 'checkout'
+    except (OSError, subprocess.CalledProcessError):
+        # A container intentionally contains no Git binary/history. Its explicit
+        # build argument is a provenance claim, not an inspected Git checkout.
+        commit = os.environ.get('MOLCHAT_BENCHMARK_SOURCE_COMMIT') or None
+        if commit is not None and re.fullmatch(r'[0-9a-fA-F]{40}', commit) is None:
+            raise ValueError('MOLCHAT_BENCHMARK_SOURCE_COMMIT must contain a full 40-character commit hash.')
+        dirty = None
+        revision_source = 'image-build-argument' if commit else 'not-recorded'
     versions = {}
     for name in ('pytest', 'httpx', 'rdkit', 'reportlab', 'pypdf', 'starlette'):
         try:
@@ -49,8 +61,8 @@ def environment() -> dict:
     # Results themselves are not inputs; the inventory makes an uncommitted run attributable.
     inputs = {p.relative_to(ROOT).as_posix(): sha(p) for p in files
               if p.name not in {'results.json'} and 'published' not in p.parts}
-    return {'git_commit': git('rev-parse', 'HEAD'),
-            'tracked_worktree_dirty': bool(git('status', '--porcelain', '--untracked-files=no')),
+    return {'git_commit': commit, 'git_metadata_source': revision_source,
+            'tracked_worktree_dirty': dirty,
             'python': platform.python_version(), 'platform': platform.system(),
             'architecture': platform.machine(), 'packages': versions,
             'input_sha256': hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest(),
