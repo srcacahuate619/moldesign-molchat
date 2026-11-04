@@ -2,6 +2,8 @@
 
 **▶ [Watch the 3-minute demo](https://www.youtube.com/watch?v=luRIXlqWy6I)**
 
+**[Reliability evidence: 36 live prompts, graphs, traces and a new complete campaign](../../benchmarks/README.md)** · [Real provider invocation and harness boundaries](../../docs/META_EXECUTION.md). Initial failures and targeted corrections are reported separately.
+
 Computational chemistry researchers can hand off a short docking campaign from one prompt. Muse Spark Open resolves compound names through PubChem and prepares a plan with the target, candidate order, stopping rule, and requested outputs. A researcher approves it once. MolChat drives the desktop app and returns the evidence needed to review or hand off the result.
 
 ## The recorded run

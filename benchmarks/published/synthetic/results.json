@@ -1,0 +1,4132 @@
+{
+  "schema": "molchat.benchmark/1",
+  "evidence_type": "synthetic_regression",
+  "started_at_utc": "2026-11-04T04:14:41.689529+00:00",
+  "environment": {
+    "git_commit": "90873aba2cef373ee0ea99107437b58511540ae7",
+    "tracked_worktree_dirty": true,
+    "python": "3.12.10",
+    "platform": "Windows",
+    "architecture": "AMD64",
+    "packages": {
+      "pytest": "9.2.0",
+      "httpx": "0.28.1",
+      "rdkit": "2025.9.6",
+      "reportlab": "4.5.1",
+      "pypdf": "6.14.2",
+      "starlette": "1.10.0"
+    },
+    "input_sha256": "34c3ec868bb6a68d63a179782140f6bce14834ac959ab72f72553ca84f0e9f7a",
+    "inputs": {
+      "benchmarks/package.json": "49e062e2470a556575425ee1d887179db1840b76c83aa1405c5fc95ae5953951",
+      "benchmarks/prompts.json": "654a14319adfc0bf5f1f3649335939af81600740da0dbf4c66957df1866fa4c9",
+      "benchmarks/render_results.py": "1ee3189df8bc3afe3f183ebebf6b368468c58c6f944ae3f6f74dacf5f0b9fc1f",
+      "benchmarks/run_benchmark.py": "b33b5a53c5702645486daba7ea975e27db8c0e8b12ec297402a3a7277d100488",
+      "benchmarks/run_live.py": "78e3a5f817bf5eaf5d5ce5e4cb7eebbb2c099788d33ec67b6ee72cbd76d6f2bd",
+      "benchmarks/scenarios.json": "e3506f9f1825494bf29de6d5e95a81ed6d4ddd5fec861d4020cf4da3e00f2e64",
+      "benchmarks/verify_artifacts.py": "5589f66331ace7a57b6c6c777f1dbce6fd4f9bf046e941a1963abcfc038e4178",
+      "src/molchat_agent/__init__.py": "ad35cfb3cf841587b6389a3a6cb6e42195f43b3456526fcc8539c013cd86c81a",
+      "src/molchat_agent/__main__.py": "3be72ae355fb6bc5f180778033398acc9a37148b99405e06a688022bb2fb3d47",
+      "src/molchat_agent/bridge.py": "b8298477914b7f6a72e5daf91d8792cd95973636ab6fc2e4a1164090d0652cc5",
+      "src/molchat_agent/capabilities.py": "dab93a5dafbce25ab14d52c3f3acf0dc08eeba04952b1f38f90b4099a300b1aa",
+      "src/molchat_agent/cli.py": "08741ba065284f96d1e644db382921f1e377ac56e430b8fb5da65ca2399f8159",
+      "src/molchat_agent/config.py": "7f9ca51afedc0b65fdfa3ba8db40d6128ae3fb58b94b75c940084f478036a47a",
+      "src/molchat_agent/conversation/__init__.py": "38fba2bc53836dc7af4f1bdf1f804e71be1fd151b45d4064dd58f54ed9dab247",
+      "src/molchat_agent/conversation/case_selection.py": "f28479c44c561c83fee6129d10785b782e1a3e98b9ed9b0aa82d7188fcd74945",
+      "src/molchat_agent/conversation/compare_poses.py": "ae1643dcfba9891cf9e90cb0e0a051f2fc596ac5e86983d776c749aca1fb5158",
+      "src/molchat_agent/conversation/deterministic.py": "28724123d41b12eb27a4f64379c5f2bbff2a98b59412288d2eb8afdfec25a34c",
+      "src/molchat_agent/conversation/engine.py": "e360a0b14dd1d4febef524d07419a220b3494769588795748f82297abb5d394a",
+      "src/molchat_agent/conversation/evidence.py": "361dee0b697f6e78e9140c7453ce869c77463fcd575a51781aff387bc7670331",
+      "src/molchat_agent/conversation/explain_evaluation.py": "ce80cd1b3b26e2b5c1728524b78f3a22782f6eb53c6a4ef20a5fcb674a657f54",
+      "src/molchat_agent/conversation/harness_tools.py": "13eb4c2d4628acc362685d6942575573690358115ed0caf3890bedef4c3ed81b",
+      "src/molchat_agent/conversation/intents.py": "4d8a8791021485ad75598cf63cdde893cd4cbdc698be764b7286fdd0f6f9b35e",
+      "src/molchat_agent/conversation/memory.py": "5c76eee60e4a46b2fd3baafc086161c872ce2f121e1d4369771163405809947c",
+      "src/molchat_agent/conversation/product_actions.py": "1b6f0201adb8cdffe456fa36d2394ac19c5242d94350641b06128be09f6e64c8",
+      "src/molchat_agent/conversation/prompts.py": "0164cabed5b551cd12b58ab7754ef2a328e261ebd801a1a5018733ddc8a66b47",
+      "src/molchat_agent/conversation/property_methods.py": "8a31db0cf3f6368a1a057e46a02c2fdc62079e5c63fb20b7ae7127000ccfc3b8",
+      "src/molchat_agent/conversation/pubchem.py": "64a197b24fe8ced5a5212b78881d3ea0520e2a0aea960f3d72472fef8af79377",
+      "src/molchat_agent/conversation/structure_check.py": "78957e11b43e8c67c6c70bcee4d73f4b5462b61e845a210d2fff4fc450220b50",
+      "src/molchat_agent/conversation/tool_loop.py": "7048d925570e38512c2d333ebe711c66a5fc867bca08a4eab9eaac3f4d3db1b4",
+      "src/molchat_agent/conversation/tools.py": "07a6f7c9c61f6131eec23233b00ab9ff5e511ec4d108d837cf9881e9c40f7434",
+      "src/molchat_agent/executor.py": "0c7b603433d84e2b9dcf0b51b2bd9b31b7575f8ae1cd236ba4253dca0a62288f",
+      "src/molchat_agent/lang.py": "205d8cf4b685bea988c0f0bd11034133d36e63df92975d091b6d2e973569c1ce",
+      "src/molchat_agent/meta.py": "587ef00e93119694ec3ae640fb44ee05c7591417bae88b7aa00b40195b2be202",
+      "src/molchat_agent/orchestration/__init__.py": "1c4daed761b0efda41f38ecff2c672c9deb4c2160469726004e838cf5f186d35",
+      "src/molchat_agent/orchestration/budget.py": "0f51f4dea1fe7cae8d8a54f0a25e8b7fac02a4863c18dd06ad2ef0b92f4775a9",
+      "src/molchat_agent/orchestration/hypothesis.py": "b2acf10505938aee102e54e7718904bb7f3e7f5c551740a247cf7a60fab2f77a",
+      "src/molchat_agent/orchestration/jobs.py": "e9dbbbe6af10936c5eb44c48d55c4ec3ec4e8938922b7c365691cdda0028f46a",
+      "src/molchat_agent/orchestration/store.py": "93c626b5e92de98920f270ed8a42a9d05706505ebf924329389a680afd6220a4",
+      "src/molchat_agent/plan.py": "170992ade2469f6ef8bb1b59d0fc5169b2c59309848c2ffeb8ce4e43c43b4bc7",
+      "src/molchat_agent/providers/__init__.py": "e903aa39dcb3a5ae33c8cb35e97d974104b04d278dc7c4bbaae3b026a6ea3a8f",
+      "src/molchat_agent/providers/alojado.py": "6ce07ec9629153fed2f39c2883e9d781c03d775e59d18df63844db3ef19354ea",
+      "src/molchat_agent/providers/base.py": "ccf80647be225e04320f8435d3479df2643ca94c36185ddcd7482f66ba726c0c",
+      "src/molchat_agent/providers/catalogo.py": "18e6e0d8378a08277a3ab31db4ef161d1db480e8117aed89b25e1d6c1f1a4b63",
+      "src/molchat_agent/providers/claude.py": "b345d1a66519b23e3af3ab1a37f785093f1350d2c996e25b16af81239c8f1c3e",
+      "src/molchat_agent/providers/fake.py": "44df0f254ba4aa8f932cbd7e652efae8f9898aff17f68b3b17aebec0331b9230",
+      "src/molchat_agent/providers/gemini.py": "772b4f72a1af2f86997b1112c076fa9e9d2cd2927234aad7060a89f0b1d121ab",
+      "src/molchat_agent/providers/local_http.py": "c12df94da5d124691e0e9a061a398373d12df46cc7ea86444837784de2f97826",
+      "src/molchat_agent/providers/meta.py": "2e6d2563eeecf2445621f7afcafe25db3201776e2e092cdb8a1553a9daf9c869",
+      "src/molchat_agent/providers/openai_compatible.py": "494d6cf48a06fb922525014942a994ee3cef8700d06786b38fdfe474f4de3b33",
+      "src/molchat_agent/providers/registry.py": "57aaeba4df4dea9e393754383a9b6b0e532757125c791b1e8b6e84b5a13088b8",
+      "src/molchat_agent/runtime/__init__.py": "d02f65954e4fe451352524ed6760b9a85f278335f64558c41af064156f238b9e",
+      "src/molchat_agent/runtime/llama_server.py": "9e0a985d72bb0886a575551d97c0ed3bb58bbccec1a583c133a96f586dd53d77",
+      "src/molchat_agent/runtime/models.py": "dddfac44a391be1aaba8636a63bf301b8da7961827e6dad166d12508c9e7e562",
+      "src/molchat_agent/server/__init__.py": "d563103f2a3506b6b0d2c549d37ca9aa02a66373795108964ed47902038e4ebf",
+      "src/molchat_agent/server/app.py": "56b06feada4a012256241e8f2e9a4041d80640a830ad7679d87fae5decbfc708",
+      "src/molchat_agent/server/auth.py": "352b09de28160968d7b9ae68912064da5e4104fd2c1037422811c320099ecd83",
+      "src/molchat_agent/server/events.py": "30be478c13078863d5a9317fd1854f38fe2d50b8e5a2f7185245563c9ee89342",
+      "src/molchat_agent/server/executions.py": "529552ee370871afd7f89b0872d676a42f75a8b198a917bbf5a22f0930a396cf",
+      "src/molchat_agent/server/serve.py": "2531a3f695933a1f458a9a6b929982c186646af74cddd15dd14e32ac6f60a591",
+      "src/molchat_agent/server/state.py": "da5521ebc30831f7a5921141c371f598e00c93c21ff5ba3d95ec03608811d79d",
+      "src/molchat_agent/tools/__init__.py": "fe6f0218c5d68f37a6752a846fa8880aeaa603a20ca5b4a1ee206465906cb3e3",
+      "src/molchat_agent/tools/catalog.py": "638e9a2ec883d8b8692d87640bb5d2267eae95aa2250d980abfdebc42f702b20",
+      "src/molchat_agent/tools/molcy.py": "b70df05a2dc9f05053de67a9851e70a44eb233f2871249a3d3e7b006db25df65",
+      "src/molchat_agent/tools/moldesign.py": "6ece824b60257ab052ef4c9827cd57758f3950b6cf67a2d0bc9fa2fd1100ba51",
+      "src/molchat_agent/tools/reference.py": "9f4dba13bc88f7f710ffc57b5d196b6c519a32fc0020d1a91dd295576db7289e",
+      "src/molchat_agent/voice/__init__.py": "87c3a817cbfc34bcebab8304cfbfbdecdd18dc23daa5df2830517f60c7be2f24",
+      "src/molchat_agent/voice/cloud_stt.py": "cec11db57a2f2e070842d556d863d03a5827935470ec0d3afe24f431396059c6",
+      "src/molchat_agent/voice/evaluate.py": "33699400ddf75dfe3d9c2dab7d8e1aaf33ea89f1604d62204cc5a6d5f25b3e3d",
+      "src/molchat_agent/voice/local_whisper.py": "1ef8ae1de65a455430fc5ce885e6bb10f3412fe56cc2a26bebdc7823ca9a03f0",
+      "src/molchat_agent/voice/moldesign_whisper.py": "87f5778145d028c7b07f5b305acc3842dd5867b17d0f5250ed916d53c44bf352",
+      "src/molchat_agent/voice/stt.py": "daa184885daac91d0c6e6a6b35eb75ecb98c41232ecea6319681fccd56311ba1",
+      "src/molchat_agent/voice/vocabulary.py": "557439d93febebd95114dec94eb1338c50816b3e4c4133826c86f016190a2d4f",
+      "src/molchat_agent/workflows/__init__.py": "94de5ddea6416ea4005d3eddf7c0505d18796f2ce479f3255e992d836d790b98",
+      "src/molchat_agent/workflows/deliverable.py": "1b47755acf7cd783b1b81b54b0aa7c5f28aa9b90b564b5543a7251f23b0bec4e",
+      "src/molchat_agent/workflows/evaluation.py": "27a7e4d44d6c782de0566b4855c6badb0025b7de4949f467bef8f66ee10fcd1e",
+      "src/molchat_agent/workflows/iteration.py": "2dbddd0e7f1ac766b478b5ef4162a8d276d14b9d31686f9abb2957819b89348b",
+      "src/molchat_agent/workflows/notebook.py": "2e8e349b05c23232d15599d144ae3ee82337f308bef5a4817c991f740e3c4801",
+      "src/molchat_agent/workflows/run_record.py": "b3002870ae6ac504097b7dcb68a77172e48cbd7da983a9946c2f9848fa52af2e",
+      "src/molchat_agent/workflows/service.py": "31fd2d1c04d65bda35e9494acd4076a8d5775f4abb15b925c96815e52c935eb1",
+      "src/molchat_agent/workflows/tool.py": "ffd8bf338886dd50b645a6ee72ce61e75c013cf434e65df662218ef88ff87f36",
+      "tests/adversarial/__init__.py": "d288f176b86f801e954bc5c1d4eac556055ed06d657bc2ed3378a9394308b5a4",
+      "tests/adversarial/test_gate.py": "fe3ac063673791f66661e7993e91b3ba3534a960b8423fabacf4a94ec9dfe459",
+      "tests/contract/conftest.py": "d5145e6c3b99a065fb7400e8ec8cc0da98f591936270a21ba419e74a8dd534fb",
+      "tests/contract/test_live_cr.py": "4dfb36fe6c5dfb743170fdb8b54d8b70a955ec6b064b63c0c4f3145837c30e5d",
+      "tests/contract/test_live_fase3.py": "c55a512745d40c684c038c731c13e5ed63f16b31891a442f42b041397b44ef08",
+      "tests/contract/test_live_molcy.py": "ef9d47fe58721291d387a7dc5dcd44766f49050f2348603a0e45203c08642b1f",
+      "tests/contract/test_live_moldesign.py": "afe425eda69dd2b104237cf916424008d2883ccab2a4ad12e2313e689f16dbdc",
+      "tests/conversation/fake_moldesign.py": "57ffc9d7b0470d7b38bcd978af0f9ffbcf56828f1310eb1773d059784db7b714",
+      "tests/conversation/test_case_selection.py": "bd3820c32877e9699780cfc1bbfcb6fad5e09dd8264e1a192b0e8313bc4f72aa",
+      "tests/conversation/test_compare_poses.py": "1dc1923c0a6d1678f8d9dfe815c5ca1b5cb26407090f724990310c4d3a2fe7f6",
+      "tests/conversation/test_deterministic.py": "489482b43c115e4148a425ae02ed5380d72f218a4776324d21477d0b3cbf1f41",
+      "tests/conversation/test_engine.py": "43a5145f843b00413b0bf46891478bc2978dba6a960b53d2e143f99db4f8d625",
+      "tests/conversation/test_engine_failures.py": "ad5fe753674375677a1ae764f4c45b8fbf636dce51538ec1015339df59b62fc0",
+      "tests/conversation/test_engine_llm.py": "0732bed0ad06efa27571bad93f7b9772f49978583a2b373b5eba9cfb06e6d825",
+      "tests/conversation/test_evaluation_status.py": "a8532fb110c3af3cc4e6fd82ca4a9373619e88d5562c3677608b4e0e58e1b52c",
+      "tests/conversation/test_evidence.py": "bd2648a43c27de5822f58ca769206490a2383012b94f9c721fe9bf1a513c2f36",
+      "tests/conversation/test_explain_evaluation.py": "8bc51cc2561a9e43f88224390478f2c198a8a035795a096f790a92e3125e26b5",
+      "tests/conversation/test_harness_tools.py": "6a0a48787a7cb60b2de4ce2fe2bb9c9cf32ea3f5a2a027c29d61c4b60852e09a",
+      "tests/conversation/test_intents.py": "c7baa57a6e82270b21852faba7157e6f718448cf79cfa8ce3215687a95f4f24f",
+      "tests/conversation/test_memory.py": "65f6477c5a6298a35839009a214459353b74e8f0b8ff23788eb8847ed42ccab3",
+      "tests/conversation/test_number_guard_es.py": "b71e9af8ce2502dd3803ec08e33160b3b4964c70613a34f7e465f9be119d4a4c",
+      "tests/conversation/test_platform_backend.py": "308e792157eac7512363aff6749c304c56e065e2daedf7118615b91a327103d7",
+      "tests/conversation/test_product_actions.py": "494fd330f44504a763dc88753d51b7534af4bf437eb8e019eb8b68185c922b6c",
+      "tests/conversation/test_property_methods.py": "38ce3e65d00688aa91d50741d6aef9d987ef8a5584a1dff91e27c5a9fa1206da",
+      "tests/conversation/test_pubchem_owned.py": "a32b398b57f2da9b3b1cbd054388196fb405101fdca0958de9bf9cbc04f45295",
+      "tests/conversation/test_structure_check.py": "83ec942cc18901ba962d592bc2c4186aacb01e348f00b12b5125753254c1f3a6",
+      "tests/conversation/test_tool_loop.py": "1945d8cedf23d8ef062fb4445ef9d0e24fe6f607d54074b8ffb568a84453043b",
+      "tests/conversation/test_tool_loop_number_boolean.py": "642bf17e7a438a9386c33480235994b130a67bdb5eff1f912e16ca954a03e6b6",
+      "tests/orchestration/__init__.py": "a4f18b7da8a94e55a97ecc78207a1b6c10433e07a789f29d83565fc12cd1a73e",
+      "tests/orchestration/test_hypothesis.py": "f290aabd939f55cebe1c623c54dc2b65c55b139fe2a1c7f3b8fb0188d2817cb2",
+      "tests/orchestration/test_jobs.py": "6edc4394aa0207c86239e24bf178417e85497366e03b9f2b3c5ca2f14bc25936",
+      "tests/orchestration/test_store.py": "44bc902d064594af8658aea5749ad1abd1318392274deaa01168cf57c5473e91",
+      "tests/providers/test_alojado.py": "e58dd988ee212f73e8227e154b3155aee56680f7335d8e6243da890e5b70d2f2",
+      "tests/providers/test_catalogo.py": "5550d600d7d5d6fce6beb443b10159f963a2469d8abbc417d3f484708840c72e",
+      "tests/providers/test_chat.py": "c02524350281dd4cbbf7c8c04b53f88d1d21c008134c4f7df2c813e028807e86",
+      "tests/providers/test_claude.py": "760e5b4359f6537541a8311d971ee2778a9bf09fa5d3d19db891c9712ec20975",
+      "tests/providers/test_consent.py": "5d0a59f772db673de1df610acbc23636d6962a434133146ba61c7884edd1f301",
+      "tests/providers/test_construir.py": "01345abe5287692df2e852cfb46012d1f9689115ee65e9d4cd51e6857c40f17a",
+      "tests/providers/test_gemini.py": "c376806db7523d50af806e53464ce3de8e28f3c62b76398b8285436cf395b3c1",
+      "tests/providers/test_local_http.py": "daf01428db2b82ca2a360f1828fb1952a3e3cb8ef091bf35c2ef6dab59a63c10",
+      "tests/providers/test_meta_policy.py": "2cfe2188e22001d6517840cdbd63169daf474c5abe66dc29054fd62349f042e8",
+      "tests/providers/test_ollama.py": "09e5298631b83f94530734a8d20a18e6b72a723a7cc6fd40f3db891057abd1bb",
+      "tests/providers/test_openai_compatible.py": "f81cbb1fb8acd57fffa13ab5cc03e9d824b98214bed8af63c1771d48c7be0fc0",
+      "tests/providers/test_parity.py": "643fcdb05295dd0e9e1f0545e806ed7f048067a135134790deb3b999058762f4",
+      "tests/providers/test_port.py": "b2602264cb4a4b873c4d6ee6b05715af2850f4659a7e5504b22218173baa8f50",
+      "tests/providers/test_registry.py": "ced3849a67234b130a87a3cbfe7a816d3eaffabe942b32226fd53d9fba44c4af",
+      "tests/quality/__init__.py": "fa96aa17e53ea3e64bc3c3679692269775e5245a0de54faba55a4cc30a21f89c",
+      "tests/quality/runner.py": "563f951bde7ae344d86131678b2a036882c3b51e6d7f74ffd7b367023323e38b",
+      "tests/quality/test_quality.py": "2ebae2246f8c3832e115dd023d280d8f4650bc0cacbcf29fd594f8ccb5e60be4",
+      "tests/runtime/__init__.py": "e2424355547ad01e2bf3378b9e9f9c41b37b5714dc34ec5d7811cd442f492c83",
+      "tests/runtime/test_cli.py": "4d2ae996f4802af0447826711aa7288e66546c73252bcc85dc2728bafc963cb5",
+      "tests/runtime/test_llama_server.py": "7697a78c64938ba2e6e0b09c2f00d80263ebbebee5a6f0c3dfad46694aa2e6a2",
+      "tests/runtime/test_models.py": "1f84a87763f5156cc4459ce946cda3535dba2cfad191d335d61d00330eb31874",
+      "tests/server/__init__.py": "8fb79c4d6d16bad24f633b3553f7139e32577833747cbe169fa3f790c17e290a",
+      "tests/server/test_app.py": "c16236a67eeba780972f70affb7aa60bd32ba3c75b0b7d4a3931eb94a7f150c7",
+      "tests/server/test_auth.py": "e803f20e657c9a8fdf73b7b30c8724f3fa0c20fa82616e6a0e35b86e4e2c2ce5",
+      "tests/server/test_case_host_action.py": "e70404148029f3f289c39c8fb30a5e0282715c73a47bd33c587f6e5014114879",
+      "tests/server/test_compare_poses_chat.py": "bd63521da3b7b3967796d055afca53a70b57c30b30e4bbe6587d4b7467e5f087",
+      "tests/server/test_executions.py": "fe4f7212c9f78be3341323b8fd377dd57323bbb61f01d40311ee7e35d7150976",
+      "tests/server/test_explain_chat.py": "bab0a6a24789b895812a449929b5fa8d4ff5d889aa86ade49dbaa60208744b63",
+      "tests/server/test_harness_chat.py": "6dc4094a1403ad248e876d5f4fe811d5ec766409c8ea1a8ae49457f8bf1eb6ab",
+      "tests/server/test_hosted_forwarding.py": "ec08aaa106cdb7bc2b60233670a9b1ba9e0be7373f489cabb88844caeba01399",
+      "tests/server/test_product_actions_chat.py": "4e7dddfc7c1ffe73579218b2f1c358054eecd1efb1ad3fea9b2d8a844b464cb3",
+      "tests/server/test_property_differences_chat.py": "ef2d9a57f16d1d6e9a51f8ab139e5e6247486002a7645bbf5cfbcb861f60a6b5",
+      "tests/server/test_serve.py": "92951b672c978a6e2bc28b6fe54b4df8b5d98eef07150c8d27ea1426cc079e95",
+      "tests/server/test_transcribe.py": "28a74c6207681b8773dddd6c5b99c24180218ada11e0c6b477cb7cdfd583cec1",
+      "tests/server/test_workflow_chat.py": "acb755d2d452bd5ce2bd31aa829c3897c22188a3c85b172029a78f7a220e2837",
+      "tests/server/test_workflow_preparation.py": "1c87e3ced5754df1f5c94b80d7d51feeb2efe046d175d38327f3846b66710791",
+      "tests/server/test_workflow_sources.py": "b133692f5dae31cd9b73d6fb5b17bec64176f9e6a94fc0d5a93952a3d83d87c4",
+      "tests/test_bridge.py": "45a07693a0bca871081806e48f43097a83455bb6b19e7a884f61b5f7dce3093a",
+      "tests/test_bridge_proveedores.py": "db705630b365d03975d16d86574022cbd1f12e3c3b8ac283973f7d481ef01294",
+      "tests/test_capabilities.py": "c3224a4b10e4373212e01416650f563ae791747798fb41f4221aec17c390e022",
+      "tests/test_check_scripts.py": "4a796c96a63fb9866c170d1b07738c451de3b9dbfe5e1a041320822eaaba90a1",
+      "tests/test_config.py": "729863bcc27f98581788f7872201d0d300eabf2fb450293af3871fd3b7844f08",
+      "tests/test_conformance.py": "705ce47d612391b6f28d1f74d139bd6ee85fb4607976c2c7256d2811379f34a3",
+      "tests/test_doctor.py": "2e7df59aab11a0ded2623ad3bb413d74d4c98d1575aa0147c5907d765abcabf1",
+      "tests/test_executor.py": "aee824c3fc175f483d6337e1c42c2b4ec0c9d76126698d0db506d7d9c0dd7c48",
+      "tests/test_main_entry.py": "38334b44be98328d0de77314ab0a872e47120376113a256159ace677d841af2b",
+      "tests/test_make_manifest.py": "59ab56830c5208abd8cdfd0383c4645fa5a29570aebfc56f609bc9be6be88e32",
+      "tests/test_meta.py": "9ef9c5c3626ea39d7aef90aec28f3605b724532116d6843fbe4892fcd26c90b5",
+      "tests/test_plan.py": "fa17540785283abf574331a0737108d1256ad8189472db79d687e5f0da336ddb",
+      "tests/test_reference_backend.py": "271047f34ad24f95e1655f7444f3084075646953fa77bf044bebda322fdf2822",
+      "tests/tools/__init__.py": "cdddb7922347f32eeb031b8dde69be465b9587b96a83c9ff5ddfb90e814dd752",
+      "tests/tools/test_catalog.py": "c00aa1f40d4426b8a70358dfa3dfa47e23e3efe6a5b731dd4ba5ed66271b7e7d",
+      "tests/tools/test_molcy.py": "182c5b3a2aa72c5673ba9f6ae928cb81f81ae4b2657126a75751c473a54aa037",
+      "tests/tools/test_moldesign.py": "cbeefbcf4b71bd589f9727afa6f65ae90fa785c11d243799b6fb58d0d7c90633",
+      "tests/voice/__init__.py": "92e8ddcaf4ea83d3ac92eba0a795bdb2e02982a7f10a5d749e2f45508577f794",
+      "tests/voice/test_cloud_stt.py": "293e69e1198ab880c266f2f3822d0396383ff8dffe9b8f33b4ea7cdeba6c7fa3",
+      "tests/voice/test_local_whisper.py": "232801545fe16d45e71fb1e7d08aafe5d1abffa0a25af3a19e5a90f89d65ff91",
+      "tests/voice/test_vocabulary.py": "590bd55dc12ae65d47b3a1340708749acbe4f2250cfec0f9c99a9e3db5db83ed",
+      "tests/voice/test_whisper.py": "1e6b60d7687f872601e26c9893610f28fdce94c16d5a833e9db17fd5ddb8ceff",
+      "tests/workflows/test_english.py": "402b98af17bcbe7e4d9d45f879d29b11478237a5b91785eda48130a6b03caf06",
+      "tests/workflows/test_evaluation.py": "ae12198a695b293c5281b337c56b914463059d39d6091d56af4df001f617dfac",
+      "tests/workflows/test_iteration.py": "c067b9aa5c7fb6569c3928df897d74134528af9a95ab6d4586ac434a73f9fea1",
+      "tests/workflows/test_notebook_and_deliverable.py": "992b03553f3ef327d8e039105b417b144dd147595a7c3e82a1dafaa91901fbc1",
+      "tests/workflows/test_recorded_delivery.py": "d98b103a485b1e701a89351f08d9aaf1d04bef2527aa69d3927ec9afd98c8c15",
+      "tests/workflows/test_run_record.py": "1594107ce97129d2324d5e72499b5f7766d97580bb389c2d1e4af6f2b924b6b1",
+      "tests/workflows/test_service.py": "2ce5f2caf84469404f4c2d4aa41717f4bc1abd275812da8f73b8d842d630b640",
+      "tests/workflows/test_video_presentation.py": "251de8b05d2f251d602d9f400a70f47333cddc4ffe847b054a650dd48c70c0f5"
+    }
+  },
+  "repetitions": 3,
+  "scenario_file_sha256": "e3506f9f1825494bf29de6d5e95a81ed6d4ddd5fec861d4020cf4da3e00f2e64",
+  "runs": [
+    {
+      "repetition": 1,
+      "exit_code": 0,
+      "wall_s": 11.580903,
+      "checks": [
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_and_booleans_pass_within_their_range",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[5]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[0.1]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[-31]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[True]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[abc]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[NaN]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[None]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[value7]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[-9,5]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[1e3]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_a_boolean_is_only_a_boolean[true]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_a_boolean_is_only_a_boolean[1]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_a_boolean_is_only_a_boolean[0]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_a_boolean_is_only_a_boolean[None]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_a_boolean_is_only_a_boolean[si]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_a_number_schema_without_bounds_is_not_accepted",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_schema_1_without_schema_key_still_parses",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_bindings_require_schema_2",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/test_plan.py::test_step_limits_per_schema",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/test_plan.py::test_malformed_or_forward_references_rejected[s2.task_id]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/test_plan.py::test_malformed_or_forward_references_rejected[s0.x]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_malformed_or_forward_references_rejected[s9.nope]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_malformed_or_forward_references_rejected[task_id]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_malformed_or_forward_references_rejected[s1.]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_malformed_or_forward_references_rejected[s1.a b]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_malformed_or_forward_references_rejected[s1]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_undeclared_head_route_rejected",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_binding_with_extra_keys_is_not_a_binding",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_resolve_walks_dicts_and_lists",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_digest_covers_unresolved_bindings",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_block_declares_class_source_and_label",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_error_renders_as_abstention_without_numbers",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_flow_block_is_closed_and_splittable",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_verify_numbers_marks_unbacked_and_clears_backed",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_quotation_and_ordinals_are_not_fabrication",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_redact_keeps_quotable_and_verified",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_context_identifiers_survive_without_whitelisting_their_digits_as_measurements",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_a_modified_structure_is_not_protected_by_context",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_prompts_are_versioned_and_static",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_pubchem_is_queried_directly_after_account_permission",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_partial_properties_failure_preserves_identity",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_revoked_permission_prevents_further_requests",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_not_found_is_different_from_source_failure",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_permission_is_scoped_to_host_session[False-True-True]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_permission_is_scoped_to_host_session[True-True-False]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_permission_is_scoped_to_host_session[False-False-False]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_permission_is_scoped_to_host_session[None-True-False]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_cid_accepts_integer_and_decimal_string[9887712_0]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_cid_accepts_integer_and_decimal_string[9887712_1]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_cid_is_rejected[True]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_cid_is_rejected[0]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_cid_is_rejected[-1]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_cid_is_rejected[2.5]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_cid_is_rejected[1.5]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_cid_is_rejected[abc]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_cid_is_rejected[9999999999999]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_schema_error_gives_model_actionable_feedback_before_safe_retry",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_tool_schema_result_and_original_question_are_sent_in_one_loop",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_calls_do_not_execute[bad_call0]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_calls_do_not_execute[bad_call1]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_calls_do_not_execute[bad_call2]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_execution_failure_never_claims_no_action_or_retries",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_repeated_call_id_and_step_limit",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_six_step_budget_allows_four_tool_calls_and_model_summary",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_ten_step_budget_allows_complex_turn_and_summary",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_many_lookups_in_one_step_do_not_end_the_turn",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_an_absurd_number_of_calls_still_ends_the_turn",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_harness_reads_pubchem_directly_and_returns_result_to_model",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_case_result_comes_from_product_bridge[created]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_case_result_comes_from_product_bridge[exists]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_case_result_comes_from_product_bridge[failed]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_case_result_comes_from_product_bridge[unknown]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_structure_check_detects_transformation[CCO-same]",
+          "status": "passed",
+          "duration_s": 0.237
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_structure_check_detects_transformation[CC-changed]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_absent_rdkit_does_not_confirm_structure_or_send_smiles",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_load_smiles_requires_valid_chemical_structure_and_host_ack",
+          "status": "passed",
+          "duration_s": 0.019
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_receptor_catalog_is_account_scoped_paginated_and_preserves_uncertainty",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_receptor_catalog_fails_closed_when_host_unavailable",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_random_receptor_samples_complete_catalog_and_excludes_unavailable_and_ambiguous",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_random_receptor_reports_no_available_candidates",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_the_result_is_read_from_the_backend_when_the_job_is_terminal_and_the_time_is_measured",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_a_job_that_never_ends_is_a_timeout_with_its_task_and_a_failed_job_keeps_its_error",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_a_missing_vina_number_is_not_invented",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_unknown_start_is_never_repeated_and_busy_load_is",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_the_window_is_asked_until_the_case_is_free_and_says_so_while_waiting",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_a_window_that_never_frees_gives_up_within_its_budget_and_an_unknown_answer_returns_at_once",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_a_run_that_ran_out_of_memory_is_repeated_once_after_a_pause_and_kept_if_it_works",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_running_out_of_memory_twice_fails_and_says_so",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_any_other_failure_is_never_repeated",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_stops_at_the_first_molecule_that_meets_the_rule",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_failing_molecule_is_recorded_and_the_loop_goes_on",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_an_unexpected_exception_in_one_molecule_does_not_stop_the_others",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_failed_job_and_a_timeout_are_each_recorded_without_stopping",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_energy_alone_does_not_qualify_a_pose_the_physical_controls_reject",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_physical_check_not_evaluated_is_not_a_pass",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_without_the_physical_requirement_energy_is_enough",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_nobody_qualifies_means_nothing_is_saved_and_no_video",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_stop_all_evaluates_the_whole_list_and_keeps_the_lowest_energy",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_busy_is_retried_and_unknown_is_never_repeated",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_the_loop_asks_the_window_and_waits_for_each_run_to_close_before_loading_the_next",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_an_older_window_without_case_status_still_works_by_retrying_busy_loads",
+          "status": "passed",
+          "duration_s": 0.004
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_the_decision_is_made_on_vinas_number_and_a_qualifying_molecule_never_waits_for_the_window",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_window_that_never_frees_is_reported_as_busy_not_as_a_bad_molecule_and_the_loop_goes_on",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_the_wait_never_outlasts_the_plans_own_time",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_unknown_on_load_is_not_repeated",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_busy_receptor_assignment_is_retried_before_the_plan_gives_up",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_case_that_cannot_be_prepared_blocks_before_any_evaluation",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_an_existing_case_is_reused_and_said",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_the_time_budget_skips_what_is_left_and_still_keeps_what_it_found",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_cancellation_is_not_swallowed",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_video_is_not_requested_when_the_run_was_not_saved",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_follow_video_waits_for_the_render_to_finish",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_events_carry_each_molecule_for_the_live_table",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_the_digest_binds_every_parameter",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change0-negativo]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change1-negativo]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change2-negativo]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change3-n\\xfamero]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change4-n\\xfamero]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change5-entre 1 y]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change6-repite]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change7-espacios]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change8-smiles]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change9-entre 1 y]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change10-stop]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change11-pdb_id]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change12-case_name]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change13-control]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change14-video]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change15-budget_s]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change16-desconocidos]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change17-package]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_video_turns_saving_on_and_the_card_says_everything_the_run_will_do",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_judge_reads_numbers_but_never_invents_a_pass",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_the_video_is_launched_by_the_molcy_tab_in_view_not_behind_the_window",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_tab_that_cannot_render_is_declared_with_its_reason_and_never_retried_behind_its_back",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_the_notebook_keeps_the_literal_request_and_every_molecule_with_its_numbers",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_the_notebook_is_the_same_bytes_for_the_same_record",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_when_nothing_qualified_the_notebook_says_nothing_was_selected",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_markdown_lists_the_exceptions_instead_of_hiding_them",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_the_pdf_is_deterministic_and_carries_the_text",
+          "status": "passed",
+          "duration_s": 1.14
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_the_deliverable_carries_all_three_pieces_and_verifies_against_its_manifest",
+          "status": "passed",
+          "duration_s": 0.004
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_the_preparation_package_goes_in_exactly_as_it_was_received",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_a_missing_video_and_a_missing_preparation_are_declared_with_the_reason",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_without_reportlab_the_pdf_is_declared_missing_not_faked",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_same_input_same_zip_bytes",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_file_names_cannot_escape_the_archive",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_tampering_is_detected",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_the_run_record_copies_protocol_warnings_and_docked_species",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_what_the_run_did_not_persist_stays_unrecorded",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_a_huge_field_is_replaced_by_its_size_and_hash_not_cut",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_the_source_is_the_pubchem_lookup_whose_smiles_matches_literally",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_two_compounds_with_the_same_smiles_are_ambiguous",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_the_loop_keeps_the_record_and_the_source_of_each_molecule",
+          "status": "passed",
+          "duration_s": 0.004
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_the_notebook_says_where_each_smiles_came_from_and_what_each_run_recorded",
+          "status": "passed",
+          "duration_s": 0.105
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_a_field_missing_in_one_run_is_not_counted_as_equal",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_the_presentation_reaches_molcys_schema_and_the_card",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_an_untouched_video_says_it_uses_molcys_automatic_presentation_and_a_change_changes_the_digest",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_what_is_not_a_molcy_control_or_a_colour_is_refused[video0]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_what_is_not_a_molcy_control_or_a_colour_is_refused[video1]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_what_is_not_a_molcy_control_or_a_colour_is_refused[video2]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_what_is_not_a_molcy_control_or_a_colour_is_refused[video3]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_what_is_not_a_molcy_control_or_a_colour_is_refused[video4]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_what_is_not_a_molcy_control_or_a_colour_is_refused[video5]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_previous_sample_only_matters_in_the_search_scene_and_the_variant_only_in_the_ensemble",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_the_model_tool_takes_the_colours_and_leaves_a_card_and_refuses_a_name_instead_of_a_code",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_the_model_tool_preserves_requested_time_limits_in_the_approved_spec",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_engine_failures.py::test_conceptual_provider_failure_returns_text",
+          "status": "passed",
+          "duration_s": 0.055
+        },
+        {
+          "test": "tests/conversation/test_engine_failures.py::test_properties_without_descriptors_returns_text",
+          "status": "passed",
+          "duration_s": 0.054
+        },
+        {
+          "test": "tests/conversation/test_engine_failures.py::test_incomplete_multicompare_returns_text",
+          "status": "passed",
+          "duration_s": 0.068
+        },
+        {
+          "test": "tests/conversation/test_engine_failures.py::test_druglikeness_without_descriptors_returns_text",
+          "status": "passed",
+          "duration_s": 0.049
+        },
+        {
+          "test": "tests/conversation/test_engine_failures.py::test_tool_error_path_returns_text",
+          "status": "passed",
+          "duration_s": 0.042
+        },
+        {
+          "test": "tests/conversation/test_engine_failures.py::test_conceptual_needs_a_configured_provider",
+          "status": "passed",
+          "duration_s": 0.041
+        },
+        {
+          "test": "tests/server/test_workflow_chat.py::test_asking_for_a_chain_leaves_one_card_and_runs_nothing",
+          "status": "passed",
+          "duration_s": 0.417
+        },
+        {
+          "test": "tests/server/test_workflow_chat.py::test_an_invalid_plan_is_refused_to_the_model_and_no_card_exists",
+          "status": "passed",
+          "duration_s": 0.855
+        },
+        {
+          "test": "tests/server/test_workflow_chat.py::test_a_wrong_digest_does_not_run_and_the_click_runs_the_whole_plan_once",
+          "status": "passed",
+          "duration_s": 0.553
+        },
+        {
+          "test": "tests/server/test_workflow_chat.py::test_cancelling_before_the_click_leaves_nothing_to_run",
+          "status": "passed",
+          "duration_s": 0.391
+        },
+        {
+          "test": "tests/server/test_workflow_chat.py::test_another_account_cannot_run_or_read_the_plan",
+          "status": "passed",
+          "duration_s": 0.359
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_the_plan_does_not_wait_for_the_render_and_the_delivery_is_completed_when_it_ends",
+          "status": "passed",
+          "duration_s": 0.095
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_review_is_declared_in_the_notebook_not_decided",
+          "status": "passed",
+          "duration_s": 0.045
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_a_render_that_failed_is_missing_in_the_zip_with_its_reason_and_the_rest_still_ships",
+          "status": "passed",
+          "duration_s": 0.109
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_preparation_that_raises_is_recorded_and_the_zip_declares_it",
+          "status": "passed",
+          "duration_s": 0.041
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_without_a_preparation_port_the_plan_says_so_instead_of_pretending",
+          "status": "passed",
+          "duration_s": 0.043
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_nothing_qualified_still_delivers_the_notebook_and_declares_the_rest",
+          "status": "passed",
+          "duration_s": 0.041
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_no_package_requested_means_no_zip",
+          "status": "passed",
+          "duration_s": 0.045
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_files_are_written_to_the_output_folder_when_one_is_given",
+          "status": "passed",
+          "duration_s": 0.053
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_a_plan_proposal_expires_and_the_pending_ones_are_capped",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_the_host_relay_waits_for_the_window_and_gives_up_as_unknown",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_summary_lists_counts_and_never_a_path_the_ui_must_open",
+          "status": "passed",
+          "duration_s": 0.035
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_preparation_is_audited_by_moldesign_and_its_package_goes_into_the_zip_untouched",
+          "status": "passed",
+          "duration_s": 0.533
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_a_blocked_audit_still_ships_and_says_it_is_blocked",
+          "status": "passed",
+          "duration_s": 0.497
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_when_the_window_cannot_audit_the_zip_declares_it_and_the_plan_still_ends",
+          "status": "passed",
+          "duration_s": 0.551
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_an_audit_for_another_molecule_is_not_accepted",
+          "status": "passed",
+          "duration_s": 0.513
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_a_package_that_moldesign_cannot_build_keeps_the_audit_and_declares_the_rest",
+          "status": "passed",
+          "duration_s": 0.646
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_the_result_endpoint_refuses_what_is_not_the_contract",
+          "status": "passed",
+          "duration_s": 0.063
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_the_case_status_endpoint_takes_only_the_read_only_answer",
+          "status": "passed",
+          "duration_s": 0.052
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_the_molcy_endpoint_takes_a_job_or_a_reason_and_nothing_else",
+          "status": "passed",
+          "duration_s": 0.051
+        },
+        {
+          "test": "tests/server/test_workflow_sources.py::test_each_molecule_of_the_plan_keeps_the_cid_it_came_from",
+          "status": "passed",
+          "duration_s": 0.152
+        },
+        {
+          "test": "tests/server/test_workflow_sources.py::test_a_failed_turn_says_why",
+          "status": "passed",
+          "duration_s": 0.378
+        },
+        {
+          "test": "tests/server/test_workflow_sources.py::test_a_turn_in_english_asks_the_model_for_english_and_the_plan_keeps_it",
+          "status": "passed",
+          "duration_s": 0.417
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestPromptInjection::test_poisoned_text_cannot_reassign_ownership",
+          "status": "passed",
+          "duration_s": 0.073
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestPromptInjection::test_other_owners_conversation_is_unusable",
+          "status": "passed",
+          "duration_s": 0.031
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestPromptInjection::test_tool_calls_have_no_identity_parameter",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestPromptInjection::test_two_owners_same_memory_stay_isolated",
+          "status": "passed",
+          "duration_s": 0.103
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestFugaEntreUsuarios::test_recall_search_never_crosses_owners",
+          "status": "passed",
+          "duration_s": 0.105
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestFugaEntreUsuarios::test_molecule_catalog_is_owner_scoped",
+          "status": "passed",
+          "duration_s": 0.04
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestFugaEntreUsuarios::test_deleting_foreign_conversation_deletes_nothing",
+          "status": "passed",
+          "duration_s": 0.029
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestFugaEntreUsuarios::test_message_index_is_owner_scoped",
+          "status": "passed",
+          "duration_s": 0.034
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestToolCallsInvalidos::test_unknown_molecule_data_abstains_without_numbers",
+          "status": "passed",
+          "duration_s": 0.045
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestToolCallsInvalidos::test_empty_tool_argument_abstains",
+          "status": "passed",
+          "duration_s": 0.02
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestToolCallsInvalidos::test_hallucinated_smiles_never_reaches_tools",
+          "status": "passed",
+          "duration_s": 0.049
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestToolCallsInvalidos::test_error_text_carries_no_values",
+          "status": "passed",
+          "duration_s": 0.051
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestLlamadasRemotas::test_offline_overrides_grants_at_engine_level",
+          "status": "passed",
+          "duration_s": 0.047
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestLlamadasRemotas::test_denial_is_actionable",
+          "status": "passed",
+          "duration_s": 0.048
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestAlucinacion::test_number_without_tool_is_marked",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestAlucinacion::test_number_backed_by_tool_is_clean",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_recorded_delivery.py::test_the_recorded_delivery_is_the_one_the_docs_quote_and_checks_against_its_manifest",
+          "status": "passed",
+          "duration_s": 0.007
+        },
+        {
+          "test": "tests/workflows/test_recorded_delivery.py::test_the_copies_next_to_it_are_the_bytes_inside_it",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_recorded_delivery.py::test_the_notebook_says_what_the_docs_say_about_the_run",
+          "status": "passed",
+          "duration_s": 0.001
+        }
+      ]
+    },
+    {
+      "repetition": 2,
+      "exit_code": 0,
+      "wall_s": 10.876096,
+      "checks": [
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_and_booleans_pass_within_their_range",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[5]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[0.1]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[-31]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[True]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[abc]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[NaN]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[None]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[value7]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[-9,5]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[1e3]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_a_boolean_is_only_a_boolean[true]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_a_boolean_is_only_a_boolean[1]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_a_boolean_is_only_a_boolean[0]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_a_boolean_is_only_a_boolean[None]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_a_boolean_is_only_a_boolean[si]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_a_number_schema_without_bounds_is_not_accepted",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/test_plan.py::test_schema_1_without_schema_key_still_parses",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_bindings_require_schema_2",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/test_plan.py::test_step_limits_per_schema",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/test_plan.py::test_malformed_or_forward_references_rejected[s2.task_id]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/test_plan.py::test_malformed_or_forward_references_rejected[s0.x]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/test_plan.py::test_malformed_or_forward_references_rejected[s9.nope]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_malformed_or_forward_references_rejected[task_id]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/test_plan.py::test_malformed_or_forward_references_rejected[s1.]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/test_plan.py::test_malformed_or_forward_references_rejected[s1.a b]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_malformed_or_forward_references_rejected[s1]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_undeclared_head_route_rejected",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_binding_with_extra_keys_is_not_a_binding",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_resolve_walks_dicts_and_lists",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/test_plan.py::test_digest_covers_unresolved_bindings",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_block_declares_class_source_and_label",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_error_renders_as_abstention_without_numbers",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_flow_block_is_closed_and_splittable",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_verify_numbers_marks_unbacked_and_clears_backed",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_quotation_and_ordinals_are_not_fabrication",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_redact_keeps_quotable_and_verified",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_context_identifiers_survive_without_whitelisting_their_digits_as_measurements",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_a_modified_structure_is_not_protected_by_context",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_prompts_are_versioned_and_static",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_pubchem_is_queried_directly_after_account_permission",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_partial_properties_failure_preserves_identity",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_revoked_permission_prevents_further_requests",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_not_found_is_different_from_source_failure",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_permission_is_scoped_to_host_session[False-True-True]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_permission_is_scoped_to_host_session[True-True-False]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_permission_is_scoped_to_host_session[False-False-False]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_permission_is_scoped_to_host_session[None-True-False]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_cid_accepts_integer_and_decimal_string[9887712_0]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_cid_accepts_integer_and_decimal_string[9887712_1]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_cid_is_rejected[True]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_cid_is_rejected[0]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_cid_is_rejected[-1]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_cid_is_rejected[2.5]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_cid_is_rejected[1.5]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_cid_is_rejected[abc]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_cid_is_rejected[9999999999999]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_schema_error_gives_model_actionable_feedback_before_safe_retry",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_tool_schema_result_and_original_question_are_sent_in_one_loop",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_calls_do_not_execute[bad_call0]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_calls_do_not_execute[bad_call1]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_calls_do_not_execute[bad_call2]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_execution_failure_never_claims_no_action_or_retries",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_repeated_call_id_and_step_limit",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_six_step_budget_allows_four_tool_calls_and_model_summary",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_ten_step_budget_allows_complex_turn_and_summary",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_many_lookups_in_one_step_do_not_end_the_turn",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_an_absurd_number_of_calls_still_ends_the_turn",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_harness_reads_pubchem_directly_and_returns_result_to_model",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_case_result_comes_from_product_bridge[created]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_case_result_comes_from_product_bridge[exists]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_case_result_comes_from_product_bridge[failed]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_case_result_comes_from_product_bridge[unknown]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_structure_check_detects_transformation[CCO-same]",
+          "status": "passed",
+          "duration_s": 0.238
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_structure_check_detects_transformation[CC-changed]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_absent_rdkit_does_not_confirm_structure_or_send_smiles",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_load_smiles_requires_valid_chemical_structure_and_host_ack",
+          "status": "passed",
+          "duration_s": 0.027
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_receptor_catalog_is_account_scoped_paginated_and_preserves_uncertainty",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_receptor_catalog_fails_closed_when_host_unavailable",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_random_receptor_samples_complete_catalog_and_excludes_unavailable_and_ambiguous",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_random_receptor_reports_no_available_candidates",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_the_result_is_read_from_the_backend_when_the_job_is_terminal_and_the_time_is_measured",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_a_job_that_never_ends_is_a_timeout_with_its_task_and_a_failed_job_keeps_its_error",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_a_missing_vina_number_is_not_invented",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_unknown_start_is_never_repeated_and_busy_load_is",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_the_window_is_asked_until_the_case_is_free_and_says_so_while_waiting",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_a_window_that_never_frees_gives_up_within_its_budget_and_an_unknown_answer_returns_at_once",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_a_run_that_ran_out_of_memory_is_repeated_once_after_a_pause_and_kept_if_it_works",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_running_out_of_memory_twice_fails_and_says_so",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_any_other_failure_is_never_repeated",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_stops_at_the_first_molecule_that_meets_the_rule",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_failing_molecule_is_recorded_and_the_loop_goes_on",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_an_unexpected_exception_in_one_molecule_does_not_stop_the_others",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_failed_job_and_a_timeout_are_each_recorded_without_stopping",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_energy_alone_does_not_qualify_a_pose_the_physical_controls_reject",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_physical_check_not_evaluated_is_not_a_pass",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_without_the_physical_requirement_energy_is_enough",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_nobody_qualifies_means_nothing_is_saved_and_no_video",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_stop_all_evaluates_the_whole_list_and_keeps_the_lowest_energy",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_busy_is_retried_and_unknown_is_never_repeated",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_the_loop_asks_the_window_and_waits_for_each_run_to_close_before_loading_the_next",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_an_older_window_without_case_status_still_works_by_retrying_busy_loads",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_the_decision_is_made_on_vinas_number_and_a_qualifying_molecule_never_waits_for_the_window",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_window_that_never_frees_is_reported_as_busy_not_as_a_bad_molecule_and_the_loop_goes_on",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_the_wait_never_outlasts_the_plans_own_time",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_unknown_on_load_is_not_repeated",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_busy_receptor_assignment_is_retried_before_the_plan_gives_up",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_case_that_cannot_be_prepared_blocks_before_any_evaluation",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_an_existing_case_is_reused_and_said",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_the_time_budget_skips_what_is_left_and_still_keeps_what_it_found",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_cancellation_is_not_swallowed",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_video_is_not_requested_when_the_run_was_not_saved",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_follow_video_waits_for_the_render_to_finish",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_events_carry_each_molecule_for_the_live_table",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_the_digest_binds_every_parameter",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change0-negativo]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change1-negativo]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change2-negativo]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change3-n\\xfamero]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change4-n\\xfamero]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change5-entre 1 y]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change6-repite]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change7-espacios]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change8-smiles]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change9-entre 1 y]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change10-stop]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change11-pdb_id]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change12-case_name]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change13-control]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change14-video]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change15-budget_s]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change16-desconocidos]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change17-package]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_video_turns_saving_on_and_the_card_says_everything_the_run_will_do",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_judge_reads_numbers_but_never_invents_a_pass",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_the_video_is_launched_by_the_molcy_tab_in_view_not_behind_the_window",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_tab_that_cannot_render_is_declared_with_its_reason_and_never_retried_behind_its_back",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_the_notebook_keeps_the_literal_request_and_every_molecule_with_its_numbers",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_the_notebook_is_the_same_bytes_for_the_same_record",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_when_nothing_qualified_the_notebook_says_nothing_was_selected",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_markdown_lists_the_exceptions_instead_of_hiding_them",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_the_pdf_is_deterministic_and_carries_the_text",
+          "status": "passed",
+          "duration_s": 0.489
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_the_deliverable_carries_all_three_pieces_and_verifies_against_its_manifest",
+          "status": "passed",
+          "duration_s": 0.005
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_the_preparation_package_goes_in_exactly_as_it_was_received",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_a_missing_video_and_a_missing_preparation_are_declared_with_the_reason",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_without_reportlab_the_pdf_is_declared_missing_not_faked",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_same_input_same_zip_bytes",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_file_names_cannot_escape_the_archive",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_tampering_is_detected",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_the_run_record_copies_protocol_warnings_and_docked_species",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_what_the_run_did_not_persist_stays_unrecorded",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_a_huge_field_is_replaced_by_its_size_and_hash_not_cut",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_the_source_is_the_pubchem_lookup_whose_smiles_matches_literally",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_two_compounds_with_the_same_smiles_are_ambiguous",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_the_loop_keeps_the_record_and_the_source_of_each_molecule",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_the_notebook_says_where_each_smiles_came_from_and_what_each_run_recorded",
+          "status": "passed",
+          "duration_s": 0.135
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_a_field_missing_in_one_run_is_not_counted_as_equal",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_the_presentation_reaches_molcys_schema_and_the_card",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_an_untouched_video_says_it_uses_molcys_automatic_presentation_and_a_change_changes_the_digest",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_what_is_not_a_molcy_control_or_a_colour_is_refused[video0]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_what_is_not_a_molcy_control_or_a_colour_is_refused[video1]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_what_is_not_a_molcy_control_or_a_colour_is_refused[video2]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_what_is_not_a_molcy_control_or_a_colour_is_refused[video3]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_what_is_not_a_molcy_control_or_a_colour_is_refused[video4]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_what_is_not_a_molcy_control_or_a_colour_is_refused[video5]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_previous_sample_only_matters_in_the_search_scene_and_the_variant_only_in_the_ensemble",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_the_model_tool_takes_the_colours_and_leaves_a_card_and_refuses_a_name_instead_of_a_code",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_the_model_tool_preserves_requested_time_limits_in_the_approved_spec",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_engine_failures.py::test_conceptual_provider_failure_returns_text",
+          "status": "passed",
+          "duration_s": 0.052
+        },
+        {
+          "test": "tests/conversation/test_engine_failures.py::test_properties_without_descriptors_returns_text",
+          "status": "passed",
+          "duration_s": 0.077
+        },
+        {
+          "test": "tests/conversation/test_engine_failures.py::test_incomplete_multicompare_returns_text",
+          "status": "passed",
+          "duration_s": 0.085
+        },
+        {
+          "test": "tests/conversation/test_engine_failures.py::test_druglikeness_without_descriptors_returns_text",
+          "status": "passed",
+          "duration_s": 0.051
+        },
+        {
+          "test": "tests/conversation/test_engine_failures.py::test_tool_error_path_returns_text",
+          "status": "passed",
+          "duration_s": 0.047
+        },
+        {
+          "test": "tests/conversation/test_engine_failures.py::test_conceptual_needs_a_configured_provider",
+          "status": "passed",
+          "duration_s": 0.048
+        },
+        {
+          "test": "tests/server/test_workflow_chat.py::test_asking_for_a_chain_leaves_one_card_and_runs_nothing",
+          "status": "passed",
+          "duration_s": 0.446
+        },
+        {
+          "test": "tests/server/test_workflow_chat.py::test_an_invalid_plan_is_refused_to_the_model_and_no_card_exists",
+          "status": "passed",
+          "duration_s": 0.726
+        },
+        {
+          "test": "tests/server/test_workflow_chat.py::test_a_wrong_digest_does_not_run_and_the_click_runs_the_whole_plan_once",
+          "status": "passed",
+          "duration_s": 0.544
+        },
+        {
+          "test": "tests/server/test_workflow_chat.py::test_cancelling_before_the_click_leaves_nothing_to_run",
+          "status": "passed",
+          "duration_s": 0.344
+        },
+        {
+          "test": "tests/server/test_workflow_chat.py::test_another_account_cannot_run_or_read_the_plan",
+          "status": "passed",
+          "duration_s": 0.377
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_the_plan_does_not_wait_for_the_render_and_the_delivery_is_completed_when_it_ends",
+          "status": "passed",
+          "duration_s": 0.106
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_review_is_declared_in_the_notebook_not_decided",
+          "status": "passed",
+          "duration_s": 0.041
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_a_render_that_failed_is_missing_in_the_zip_with_its_reason_and_the_rest_still_ships",
+          "status": "passed",
+          "duration_s": 0.122
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_preparation_that_raises_is_recorded_and_the_zip_declares_it",
+          "status": "passed",
+          "duration_s": 0.05
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_without_a_preparation_port_the_plan_says_so_instead_of_pretending",
+          "status": "passed",
+          "duration_s": 0.048
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_nothing_qualified_still_delivers_the_notebook_and_declares_the_rest",
+          "status": "passed",
+          "duration_s": 0.046
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_no_package_requested_means_no_zip",
+          "status": "passed",
+          "duration_s": 0.041
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_files_are_written_to_the_output_folder_when_one_is_given",
+          "status": "passed",
+          "duration_s": 0.058
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_a_plan_proposal_expires_and_the_pending_ones_are_capped",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_the_host_relay_waits_for_the_window_and_gives_up_as_unknown",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_summary_lists_counts_and_never_a_path_the_ui_must_open",
+          "status": "passed",
+          "duration_s": 0.035
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_preparation_is_audited_by_moldesign_and_its_package_goes_into_the_zip_untouched",
+          "status": "passed",
+          "duration_s": 0.553
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_a_blocked_audit_still_ships_and_says_it_is_blocked",
+          "status": "passed",
+          "duration_s": 0.52
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_when_the_window_cannot_audit_the_zip_declares_it_and_the_plan_still_ends",
+          "status": "passed",
+          "duration_s": 0.51
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_an_audit_for_another_molecule_is_not_accepted",
+          "status": "passed",
+          "duration_s": 0.45
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_a_package_that_moldesign_cannot_build_keeps_the_audit_and_declares_the_rest",
+          "status": "passed",
+          "duration_s": 0.505
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_the_result_endpoint_refuses_what_is_not_the_contract",
+          "status": "passed",
+          "duration_s": 0.057
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_the_case_status_endpoint_takes_only_the_read_only_answer",
+          "status": "passed",
+          "duration_s": 0.05
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_the_molcy_endpoint_takes_a_job_or_a_reason_and_nothing_else",
+          "status": "passed",
+          "duration_s": 0.045
+        },
+        {
+          "test": "tests/server/test_workflow_sources.py::test_each_molecule_of_the_plan_keeps_the_cid_it_came_from",
+          "status": "passed",
+          "duration_s": 0.147
+        },
+        {
+          "test": "tests/server/test_workflow_sources.py::test_a_failed_turn_says_why",
+          "status": "passed",
+          "duration_s": 0.311
+        },
+        {
+          "test": "tests/server/test_workflow_sources.py::test_a_turn_in_english_asks_the_model_for_english_and_the_plan_keeps_it",
+          "status": "passed",
+          "duration_s": 0.34
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestPromptInjection::test_poisoned_text_cannot_reassign_ownership",
+          "status": "passed",
+          "duration_s": 0.064
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestPromptInjection::test_other_owners_conversation_is_unusable",
+          "status": "passed",
+          "duration_s": 0.028
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestPromptInjection::test_tool_calls_have_no_identity_parameter",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestPromptInjection::test_two_owners_same_memory_stay_isolated",
+          "status": "passed",
+          "duration_s": 0.083
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestFugaEntreUsuarios::test_recall_search_never_crosses_owners",
+          "status": "passed",
+          "duration_s": 0.087
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestFugaEntreUsuarios::test_molecule_catalog_is_owner_scoped",
+          "status": "passed",
+          "duration_s": 0.032
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestFugaEntreUsuarios::test_deleting_foreign_conversation_deletes_nothing",
+          "status": "passed",
+          "duration_s": 0.028
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestFugaEntreUsuarios::test_message_index_is_owner_scoped",
+          "status": "passed",
+          "duration_s": 0.037
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestToolCallsInvalidos::test_unknown_molecule_data_abstains_without_numbers",
+          "status": "passed",
+          "duration_s": 0.046
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestToolCallsInvalidos::test_empty_tool_argument_abstains",
+          "status": "passed",
+          "duration_s": 0.02
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestToolCallsInvalidos::test_hallucinated_smiles_never_reaches_tools",
+          "status": "passed",
+          "duration_s": 0.046
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestToolCallsInvalidos::test_error_text_carries_no_values",
+          "status": "passed",
+          "duration_s": 0.049
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestLlamadasRemotas::test_offline_overrides_grants_at_engine_level",
+          "status": "passed",
+          "duration_s": 0.048
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestLlamadasRemotas::test_denial_is_actionable",
+          "status": "passed",
+          "duration_s": 0.048
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestAlucinacion::test_number_without_tool_is_marked",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestAlucinacion::test_number_backed_by_tool_is_clean",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_recorded_delivery.py::test_the_recorded_delivery_is_the_one_the_docs_quote_and_checks_against_its_manifest",
+          "status": "passed",
+          "duration_s": 0.007
+        },
+        {
+          "test": "tests/workflows/test_recorded_delivery.py::test_the_copies_next_to_it_are_the_bytes_inside_it",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_recorded_delivery.py::test_the_notebook_says_what_the_docs_say_about_the_run",
+          "status": "passed",
+          "duration_s": 0.001
+        }
+      ]
+    },
+    {
+      "repetition": 3,
+      "exit_code": 0,
+      "wall_s": 11.616358,
+      "checks": [
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_and_booleans_pass_within_their_range",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[5]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[0.1]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[-31]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[True]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[abc]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[NaN]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[None]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[value7]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[-9,5]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_numbers_outside_the_range_or_of_another_kind_are_refused[1e3]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_a_boolean_is_only_a_boolean[true]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_a_boolean_is_only_a_boolean[1]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_a_boolean_is_only_a_boolean[0]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_a_boolean_is_only_a_boolean[None]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_a_boolean_is_only_a_boolean[si]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop_number_boolean.py::test_a_number_schema_without_bounds_is_not_accepted",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_schema_1_without_schema_key_still_parses",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_bindings_require_schema_2",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_step_limits_per_schema",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/test_plan.py::test_malformed_or_forward_references_rejected[s2.task_id]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/test_plan.py::test_malformed_or_forward_references_rejected[s0.x]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/test_plan.py::test_malformed_or_forward_references_rejected[s9.nope]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/test_plan.py::test_malformed_or_forward_references_rejected[task_id]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/test_plan.py::test_malformed_or_forward_references_rejected[s1.]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_malformed_or_forward_references_rejected[s1.a b]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_malformed_or_forward_references_rejected[s1]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_undeclared_head_route_rejected",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/test_plan.py::test_binding_with_extra_keys_is_not_a_binding",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_resolve_walks_dicts_and_lists",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/test_plan.py::test_digest_covers_unresolved_bindings",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_block_declares_class_source_and_label",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_error_renders_as_abstention_without_numbers",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_flow_block_is_closed_and_splittable",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_verify_numbers_marks_unbacked_and_clears_backed",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_quotation_and_ordinals_are_not_fabrication",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_redact_keeps_quotable_and_verified",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_context_identifiers_survive_without_whitelisting_their_digits_as_measurements",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_a_modified_structure_is_not_protected_by_context",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_evidence.py::test_prompts_are_versioned_and_static",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_pubchem_is_queried_directly_after_account_permission",
+          "status": "passed",
+          "duration_s": 0.004
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_partial_properties_failure_preserves_identity",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_revoked_permission_prevents_further_requests",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_not_found_is_different_from_source_failure",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_permission_is_scoped_to_host_session[False-True-True]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_permission_is_scoped_to_host_session[True-True-False]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_permission_is_scoped_to_host_session[False-False-False]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_pubchem_owned.py::test_permission_is_scoped_to_host_session[None-True-False]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_cid_accepts_integer_and_decimal_string[9887712_0]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_cid_accepts_integer_and_decimal_string[9887712_1]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_cid_is_rejected[True]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_cid_is_rejected[0]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_cid_is_rejected[-1]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_cid_is_rejected[2.5]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_cid_is_rejected[1.5]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_cid_is_rejected[abc]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_cid_is_rejected[9999999999999]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_schema_error_gives_model_actionable_feedback_before_safe_retry",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_tool_schema_result_and_original_question_are_sent_in_one_loop",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_calls_do_not_execute[bad_call0]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_calls_do_not_execute[bad_call1]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_invalid_calls_do_not_execute[bad_call2]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_execution_failure_never_claims_no_action_or_retries",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_repeated_call_id_and_step_limit",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_six_step_budget_allows_four_tool_calls_and_model_summary",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_ten_step_budget_allows_complex_turn_and_summary",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_many_lookups_in_one_step_do_not_end_the_turn",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_tool_loop.py::test_an_absurd_number_of_calls_still_ends_the_turn",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_harness_reads_pubchem_directly_and_returns_result_to_model",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_case_result_comes_from_product_bridge[created]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_case_result_comes_from_product_bridge[exists]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_case_result_comes_from_product_bridge[failed]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_case_result_comes_from_product_bridge[unknown]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_structure_check_detects_transformation[CCO-same]",
+          "status": "passed",
+          "duration_s": 0.228
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_structure_check_detects_transformation[CC-changed]",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_absent_rdkit_does_not_confirm_structure_or_send_smiles",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_load_smiles_requires_valid_chemical_structure_and_host_ack",
+          "status": "passed",
+          "duration_s": 0.019
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_receptor_catalog_is_account_scoped_paginated_and_preserves_uncertainty",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_receptor_catalog_fails_closed_when_host_unavailable",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_random_receptor_samples_complete_catalog_and_excludes_unavailable_and_ambiguous",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_harness_tools.py::test_random_receptor_reports_no_available_candidates",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_the_result_is_read_from_the_backend_when_the_job_is_terminal_and_the_time_is_measured",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_a_job_that_never_ends_is_a_timeout_with_its_task_and_a_failed_job_keeps_its_error",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_a_missing_vina_number_is_not_invented",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_unknown_start_is_never_repeated_and_busy_load_is",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_the_window_is_asked_until_the_case_is_free_and_says_so_while_waiting",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_a_window_that_never_frees_gives_up_within_its_budget_and_an_unknown_answer_returns_at_once",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_a_run_that_ran_out_of_memory_is_repeated_once_after_a_pause_and_kept_if_it_works",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_running_out_of_memory_twice_fails_and_says_so",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_evaluation.py::test_any_other_failure_is_never_repeated",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_stops_at_the_first_molecule_that_meets_the_rule",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_failing_molecule_is_recorded_and_the_loop_goes_on",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_an_unexpected_exception_in_one_molecule_does_not_stop_the_others",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_failed_job_and_a_timeout_are_each_recorded_without_stopping",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_energy_alone_does_not_qualify_a_pose_the_physical_controls_reject",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_physical_check_not_evaluated_is_not_a_pass",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_without_the_physical_requirement_energy_is_enough",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_nobody_qualifies_means_nothing_is_saved_and_no_video",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_stop_all_evaluates_the_whole_list_and_keeps_the_lowest_energy",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_busy_is_retried_and_unknown_is_never_repeated",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_the_loop_asks_the_window_and_waits_for_each_run_to_close_before_loading_the_next",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_an_older_window_without_case_status_still_works_by_retrying_busy_loads",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_the_decision_is_made_on_vinas_number_and_a_qualifying_molecule_never_waits_for_the_window",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_window_that_never_frees_is_reported_as_busy_not_as_a_bad_molecule_and_the_loop_goes_on",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_the_wait_never_outlasts_the_plans_own_time",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_unknown_on_load_is_not_repeated",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_busy_receptor_assignment_is_retried_before_the_plan_gives_up",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_case_that_cannot_be_prepared_blocks_before_any_evaluation",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_an_existing_case_is_reused_and_said",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_the_time_budget_skips_what_is_left_and_still_keeps_what_it_found",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_cancellation_is_not_swallowed",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_video_is_not_requested_when_the_run_was_not_saved",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_follow_video_waits_for_the_render_to_finish",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_events_carry_each_molecule_for_the_live_table",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_the_digest_binds_every_parameter",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change0-negativo]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change1-negativo]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change2-negativo]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change3-n\\xfamero]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change4-n\\xfamero]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change5-entre 1 y]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change6-repite]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change7-espacios]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change8-smiles]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change9-entre 1 y]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change10-stop]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change11-pdb_id]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change12-case_name]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change13-control]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change14-video]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change15-budget_s]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change16-desconocidos]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_invalid_specs_say_which_field_failed[change17-package]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_video_turns_saving_on_and_the_card_says_everything_the_run_will_do",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_judge_reads_numbers_but_never_invents_a_pass",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_the_video_is_launched_by_the_molcy_tab_in_view_not_behind_the_window",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_iteration.py::test_a_tab_that_cannot_render_is_declared_with_its_reason_and_never_retried_behind_its_back",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_the_notebook_keeps_the_literal_request_and_every_molecule_with_its_numbers",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_the_notebook_is_the_same_bytes_for_the_same_record",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_when_nothing_qualified_the_notebook_says_nothing_was_selected",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_markdown_lists_the_exceptions_instead_of_hiding_them",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_the_pdf_is_deterministic_and_carries_the_text",
+          "status": "passed",
+          "duration_s": 0.513
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_the_deliverable_carries_all_three_pieces_and_verifies_against_its_manifest",
+          "status": "passed",
+          "duration_s": 0.005
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_the_preparation_package_goes_in_exactly_as_it_was_received",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_a_missing_video_and_a_missing_preparation_are_declared_with_the_reason",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_without_reportlab_the_pdf_is_declared_missing_not_faked",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_same_input_same_zip_bytes",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_file_names_cannot_escape_the_archive",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/workflows/test_notebook_and_deliverable.py::test_tampering_is_detected",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_the_run_record_copies_protocol_warnings_and_docked_species",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_what_the_run_did_not_persist_stays_unrecorded",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_a_huge_field_is_replaced_by_its_size_and_hash_not_cut",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_the_source_is_the_pubchem_lookup_whose_smiles_matches_literally",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_two_compounds_with_the_same_smiles_are_ambiguous",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_the_loop_keeps_the_record_and_the_source_of_each_molecule",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_the_notebook_says_where_each_smiles_came_from_and_what_each_run_recorded",
+          "status": "passed",
+          "duration_s": 0.124
+        },
+        {
+          "test": "tests/workflows/test_run_record.py::test_a_field_missing_in_one_run_is_not_counted_as_equal",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_the_presentation_reaches_molcys_schema_and_the_card",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_an_untouched_video_says_it_uses_molcys_automatic_presentation_and_a_change_changes_the_digest",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_what_is_not_a_molcy_control_or_a_colour_is_refused[video0]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_what_is_not_a_molcy_control_or_a_colour_is_refused[video1]",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_what_is_not_a_molcy_control_or_a_colour_is_refused[video2]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_what_is_not_a_molcy_control_or_a_colour_is_refused[video3]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_what_is_not_a_molcy_control_or_a_colour_is_refused[video4]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_what_is_not_a_molcy_control_or_a_colour_is_refused[video5]",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_previous_sample_only_matters_in_the_search_scene_and_the_variant_only_in_the_ensemble",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_the_model_tool_takes_the_colours_and_leaves_a_card_and_refuses_a_name_instead_of_a_code",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_video_presentation.py::test_the_model_tool_preserves_requested_time_limits_in_the_approved_spec",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/conversation/test_engine_failures.py::test_conceptual_provider_failure_returns_text",
+          "status": "passed",
+          "duration_s": 0.051
+        },
+        {
+          "test": "tests/conversation/test_engine_failures.py::test_properties_without_descriptors_returns_text",
+          "status": "passed",
+          "duration_s": 0.062
+        },
+        {
+          "test": "tests/conversation/test_engine_failures.py::test_incomplete_multicompare_returns_text",
+          "status": "passed",
+          "duration_s": 0.079
+        },
+        {
+          "test": "tests/conversation/test_engine_failures.py::test_druglikeness_without_descriptors_returns_text",
+          "status": "passed",
+          "duration_s": 0.059
+        },
+        {
+          "test": "tests/conversation/test_engine_failures.py::test_tool_error_path_returns_text",
+          "status": "passed",
+          "duration_s": 0.049
+        },
+        {
+          "test": "tests/conversation/test_engine_failures.py::test_conceptual_needs_a_configured_provider",
+          "status": "passed",
+          "duration_s": 0.046
+        },
+        {
+          "test": "tests/server/test_workflow_chat.py::test_asking_for_a_chain_leaves_one_card_and_runs_nothing",
+          "status": "passed",
+          "duration_s": 0.473
+        },
+        {
+          "test": "tests/server/test_workflow_chat.py::test_an_invalid_plan_is_refused_to_the_model_and_no_card_exists",
+          "status": "passed",
+          "duration_s": 0.878
+        },
+        {
+          "test": "tests/server/test_workflow_chat.py::test_a_wrong_digest_does_not_run_and_the_click_runs_the_whole_plan_once",
+          "status": "passed",
+          "duration_s": 0.614
+        },
+        {
+          "test": "tests/server/test_workflow_chat.py::test_cancelling_before_the_click_leaves_nothing_to_run",
+          "status": "passed",
+          "duration_s": 0.443
+        },
+        {
+          "test": "tests/server/test_workflow_chat.py::test_another_account_cannot_run_or_read_the_plan",
+          "status": "passed",
+          "duration_s": 0.447
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_the_plan_does_not_wait_for_the_render_and_the_delivery_is_completed_when_it_ends",
+          "status": "passed",
+          "duration_s": 0.129
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_review_is_declared_in_the_notebook_not_decided",
+          "status": "passed",
+          "duration_s": 0.057
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_a_render_that_failed_is_missing_in_the_zip_with_its_reason_and_the_rest_still_ships",
+          "status": "passed",
+          "duration_s": 0.121
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_preparation_that_raises_is_recorded_and_the_zip_declares_it",
+          "status": "passed",
+          "duration_s": 0.043
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_without_a_preparation_port_the_plan_says_so_instead_of_pretending",
+          "status": "passed",
+          "duration_s": 0.049
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_nothing_qualified_still_delivers_the_notebook_and_declares_the_rest",
+          "status": "passed",
+          "duration_s": 0.046
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_no_package_requested_means_no_zip",
+          "status": "passed",
+          "duration_s": 0.041
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_files_are_written_to_the_output_folder_when_one_is_given",
+          "status": "passed",
+          "duration_s": 0.056
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_a_plan_proposal_expires_and_the_pending_ones_are_capped",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_the_host_relay_waits_for_the_window_and_gives_up_as_unknown",
+          "status": "passed",
+          "duration_s": 0.002
+        },
+        {
+          "test": "tests/workflows/test_service.py::test_summary_lists_counts_and_never_a_path_the_ui_must_open",
+          "status": "passed",
+          "duration_s": 0.036
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_preparation_is_audited_by_moldesign_and_its_package_goes_into_the_zip_untouched",
+          "status": "passed",
+          "duration_s": 0.533
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_a_blocked_audit_still_ships_and_says_it_is_blocked",
+          "status": "passed",
+          "duration_s": 0.515
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_when_the_window_cannot_audit_the_zip_declares_it_and_the_plan_still_ends",
+          "status": "passed",
+          "duration_s": 0.496
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_an_audit_for_another_molecule_is_not_accepted",
+          "status": "passed",
+          "duration_s": 0.519
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_a_package_that_moldesign_cannot_build_keeps_the_audit_and_declares_the_rest",
+          "status": "passed",
+          "duration_s": 0.593
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_the_result_endpoint_refuses_what_is_not_the_contract",
+          "status": "passed",
+          "duration_s": 0.065
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_the_case_status_endpoint_takes_only_the_read_only_answer",
+          "status": "passed",
+          "duration_s": 0.051
+        },
+        {
+          "test": "tests/server/test_workflow_preparation.py::test_the_molcy_endpoint_takes_a_job_or_a_reason_and_nothing_else",
+          "status": "passed",
+          "duration_s": 0.05
+        },
+        {
+          "test": "tests/server/test_workflow_sources.py::test_each_molecule_of_the_plan_keeps_the_cid_it_came_from",
+          "status": "passed",
+          "duration_s": 0.158
+        },
+        {
+          "test": "tests/server/test_workflow_sources.py::test_a_failed_turn_says_why",
+          "status": "passed",
+          "duration_s": 0.33
+        },
+        {
+          "test": "tests/server/test_workflow_sources.py::test_a_turn_in_english_asks_the_model_for_english_and_the_plan_keeps_it",
+          "status": "passed",
+          "duration_s": 0.378
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestPromptInjection::test_poisoned_text_cannot_reassign_ownership",
+          "status": "passed",
+          "duration_s": 0.082
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestPromptInjection::test_other_owners_conversation_is_unusable",
+          "status": "passed",
+          "duration_s": 0.03
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestPromptInjection::test_tool_calls_have_no_identity_parameter",
+          "status": "passed",
+          "duration_s": 0.0
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestPromptInjection::test_two_owners_same_memory_stay_isolated",
+          "status": "passed",
+          "duration_s": 0.082
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestFugaEntreUsuarios::test_recall_search_never_crosses_owners",
+          "status": "passed",
+          "duration_s": 0.091
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestFugaEntreUsuarios::test_molecule_catalog_is_owner_scoped",
+          "status": "passed",
+          "duration_s": 0.034
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestFugaEntreUsuarios::test_deleting_foreign_conversation_deletes_nothing",
+          "status": "passed",
+          "duration_s": 0.028
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestFugaEntreUsuarios::test_message_index_is_owner_scoped",
+          "status": "passed",
+          "duration_s": 0.035
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestToolCallsInvalidos::test_unknown_molecule_data_abstains_without_numbers",
+          "status": "passed",
+          "duration_s": 0.045
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestToolCallsInvalidos::test_empty_tool_argument_abstains",
+          "status": "passed",
+          "duration_s": 0.021
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestToolCallsInvalidos::test_hallucinated_smiles_never_reaches_tools",
+          "status": "passed",
+          "duration_s": 0.048
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestToolCallsInvalidos::test_error_text_carries_no_values",
+          "status": "passed",
+          "duration_s": 0.051
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestLlamadasRemotas::test_offline_overrides_grants_at_engine_level",
+          "status": "passed",
+          "duration_s": 0.048
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestLlamadasRemotas::test_denial_is_actionable",
+          "status": "passed",
+          "duration_s": 0.049
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestAlucinacion::test_number_without_tool_is_marked",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/adversarial/test_gate.py::TestAlucinacion::test_number_backed_by_tool_is_clean",
+          "status": "passed",
+          "duration_s": 0.001
+        },
+        {
+          "test": "tests/workflows/test_recorded_delivery.py::test_the_recorded_delivery_is_the_one_the_docs_quote_and_checks_against_its_manifest",
+          "status": "passed",
+          "duration_s": 0.008
+        },
+        {
+          "test": "tests/workflows/test_recorded_delivery.py::test_the_copies_next_to_it_are_the_bytes_inside_it",
+          "status": "passed",
+          "duration_s": 0.003
+        },
+        {
+          "test": "tests/workflows/test_recorded_delivery.py::test_the_notebook_says_what_the_docs_say_about_the_run",
+          "status": "passed",
+          "duration_s": 0.001
+        }
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "closed-tool-schemas",
+      "difficulty": "easy",
+      "metric": "tool_validation",
+      "tests": [
+        "tests/conversation/test_tool_loop_number_boolean.py"
+      ],
+      "collected": true,
+      "counts_by_repetition": [
+        {
+          "passed": 17,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 17,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 17,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "passed": true,
+      "test_duration_s": {
+        "median": 0.008,
+        "min": 0.005,
+        "max": 0.017
+      }
+    },
+    {
+      "id": "plan-contract",
+      "difficulty": "easy",
+      "metric": "plan_validation",
+      "tests": [
+        "tests/test_plan.py"
+      ],
+      "collected": true,
+      "counts_by_repetition": [
+        {
+          "passed": 14,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 14,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 14,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "passed": true,
+      "test_duration_s": {
+        "median": 0.008,
+        "min": 0.003,
+        "max": 0.01
+      }
+    },
+    {
+      "id": "evidence-and-number-guards",
+      "difficulty": "easy",
+      "metric": "traceability",
+      "tests": [
+        "tests/conversation/test_evidence.py"
+      ],
+      "collected": true,
+      "counts_by_repetition": [
+        {
+          "passed": 9,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 9,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 9,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "passed": true,
+      "test_duration_s": {
+        "median": 0.002,
+        "min": 0.001,
+        "max": 0.006
+      }
+    },
+    {
+      "id": "pubchem-absence-and-permissions",
+      "difficulty": "easy",
+      "metric": "error_handling",
+      "tests": [
+        "tests/conversation/test_pubchem_owned.py"
+      ],
+      "collected": true,
+      "counts_by_repetition": [
+        {
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "passed": true,
+      "test_duration_s": {
+        "median": 0.017,
+        "min": 0.014,
+        "max": 0.018
+      }
+    },
+    {
+      "id": "tool-budget-and-protocol",
+      "difficulty": "moderate",
+      "metric": "tool_validation",
+      "tests": [
+        "tests/conversation/test_tool_loop.py"
+      ],
+      "collected": true,
+      "counts_by_repetition": [
+        {
+          "passed": 20,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 20,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 20,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "passed": true,
+      "test_duration_s": {
+        "median": 0.019,
+        "min": 0.017,
+        "max": 0.029
+      }
+    },
+    {
+      "id": "host-tools-and-identity",
+      "difficulty": "moderate",
+      "metric": "traceability",
+      "tests": [
+        "tests/conversation/test_harness_tools.py"
+      ],
+      "collected": true,
+      "counts_by_repetition": [
+        {
+          "passed": 13,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 13,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 13,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "passed": true,
+      "test_duration_s": {
+        "median": 0.276,
+        "min": 0.268,
+        "max": 0.289
+      }
+    },
+    {
+      "id": "evaluation-errors-and-timeouts",
+      "difficulty": "moderate",
+      "metric": "error_handling",
+      "tests": [
+        "tests/workflows/test_evaluation.py"
+      ],
+      "collected": true,
+      "counts_by_repetition": [
+        {
+          "passed": 9,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 9,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 9,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "passed": true,
+      "test_duration_s": {
+        "median": 0.012,
+        "min": 0.01,
+        "max": 0.015
+      }
+    },
+    {
+      "id": "stop-rules-and-recovery",
+      "difficulty": "moderate",
+      "metric": "stopping_policy",
+      "tests": [
+        "tests/workflows/test_iteration.py"
+      ],
+      "collected": true,
+      "counts_by_repetition": [
+        {
+          "passed": 47,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 47,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 47,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "passed": true,
+      "test_duration_s": {
+        "median": 0.066,
+        "min": 0.062,
+        "max": 0.077
+      }
+    },
+    {
+      "id": "notebook-and-zip",
+      "difficulty": "moderate",
+      "metric": "delivery_integrity",
+      "tests": [
+        "tests/workflows/test_notebook_and_deliverable.py"
+      ],
+      "collected": true,
+      "counts_by_repetition": [
+        {
+          "passed": 12,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 12,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 12,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "passed": true,
+      "test_duration_s": {
+        "median": 0.536,
+        "min": 0.509,
+        "max": 1.159
+      }
+    },
+    {
+      "id": "scientific-record-provenance",
+      "difficulty": "moderate",
+      "metric": "traceability",
+      "tests": [
+        "tests/workflows/test_run_record.py"
+      ],
+      "collected": true,
+      "counts_by_repetition": [
+        {
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "passed": true,
+      "test_duration_s": {
+        "median": 0.132,
+        "min": 0.11,
+        "max": 0.14
+      }
+    },
+    {
+      "id": "video-controls-and-digest",
+      "difficulty": "moderate",
+      "metric": "plan_validation",
+      "tests": [
+        "tests/workflows/test_video_presentation.py"
+      ],
+      "collected": true,
+      "counts_by_repetition": [
+        {
+          "passed": 11,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 11,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 11,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "passed": true,
+      "test_duration_s": {
+        "median": 0.008,
+        "min": 0.006,
+        "max": 0.011
+      }
+    },
+    {
+      "id": "model-provider-failures",
+      "difficulty": "moderate",
+      "metric": "error_handling",
+      "tests": [
+        "tests/conversation/test_engine_failures.py"
+      ],
+      "collected": true,
+      "counts_by_repetition": [
+        {
+          "passed": 6,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 6,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 6,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "passed": true,
+      "test_duration_s": {
+        "median": 0.346,
+        "min": 0.309,
+        "max": 0.36
+      }
+    },
+    {
+      "id": "approval-account-isolation-and-once-only",
+      "difficulty": "hard",
+      "metric": "approval_safety",
+      "tests": [
+        "tests/server/test_workflow_chat.py"
+      ],
+      "collected": true,
+      "counts_by_repetition": [
+        {
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "passed": true,
+      "test_duration_s": {
+        "median": 2.575,
+        "min": 2.437,
+        "max": 2.855
+      }
+    },
+    {
+      "id": "async-render-and-partial-delivery",
+      "difficulty": "hard",
+      "metric": "delivery_integrity",
+      "tests": [
+        "tests/workflows/test_service.py"
+      ],
+      "collected": true,
+      "counts_by_repetition": [
+        {
+          "passed": 11,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 11,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 11,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "passed": true,
+      "test_duration_s": {
+        "median": 0.55,
+        "min": 0.509,
+        "max": 0.581
+      }
+    },
+    {
+      "id": "preparation-blocks-and-host-contract",
+      "difficulty": "hard",
+      "metric": "delivery_integrity",
+      "tests": [
+        "tests/server/test_workflow_preparation.py"
+      ],
+      "collected": true,
+      "counts_by_repetition": [
+        {
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "passed": true,
+      "test_duration_s": {
+        "median": 2.822,
+        "min": 2.69,
+        "max": 2.906
+      }
+    },
+    {
+      "id": "lookup-to-plan-provenance",
+      "difficulty": "hard",
+      "metric": "traceability",
+      "tests": [
+        "tests/server/test_workflow_sources.py"
+      ],
+      "collected": true,
+      "counts_by_repetition": [
+        {
+          "passed": 3,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "passed": true,
+      "test_duration_s": {
+        "median": 0.866,
+        "min": 0.798,
+        "max": 0.947
+      }
+    },
+    {
+      "id": "adversarial-execution-gates",
+      "difficulty": "hard",
+      "metric": "approval_safety",
+      "tests": [
+        "tests/adversarial/test_gate.py"
+      ],
+      "collected": true,
+      "counts_by_repetition": [
+        {
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "passed": true,
+      "test_duration_s": {
+        "median": 0.646,
+        "min": 0.617,
+        "max": 0.678
+      }
+    },
+    {
+      "id": "real-vmat2-archive-integrity",
+      "difficulty": "hard",
+      "metric": "delivery_integrity",
+      "tests": [
+        "tests/workflows/test_recorded_delivery.py"
+      ],
+      "collected": true,
+      "counts_by_repetition": [
+        {
+          "passed": 3,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "passed": true,
+      "test_duration_s": {
+        "median": 0.01,
+        "min": 0.01,
+        "max": 0.012
+      }
+    }
+  ],
+  "summary": {
+    "scenarios_passed": 18,
+    "scenarios_total": 18,
+    "checks_per_repetition": [
+      {
+        "passed": 220,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "passed": 220,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "passed": 220,
+        "failed": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "delivery": {
+    "file": "synthetic-delivery.zip",
+    "sha256": "a199c7978555cfe5c75cd478c013fe3f12ee90895e44cf3f6031f97b135ff8be",
+    "verification_errors": [],
+    "warning": "Synthetic scores and placeholder video; not a scientific experiment."
+  }
+}

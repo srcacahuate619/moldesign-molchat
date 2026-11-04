@@ -316,10 +316,12 @@ async def test_a_busy_receptor_assignment_is_retried_before_the_plan_gives_up() 
 
 async def test_a_case_that_cannot_be_prepared_blocks_before_any_evaluation() -> None:
     host = FakeHost(receptor="receptor_not_found")
-    out = await runner(IterationSpec.from_dict(spec_dict()), host, FakePlatform(SCORES)).run()
+    events: list[dict[str, Any]] = []
+    out = await runner(IterationSpec.from_dict(spec_dict()), host, FakePlatform(SCORES), events=events).run()
     assert out.state == "blocked" and host.evaluations == 0
     assert all(r.status == "skipped" for r in out.records)
     assert any("asignar el receptor" in n for n in out.notes)
+    assert [e["record"]["status"] for e in events if e["event"] == "molecule"] == ["skipped"] * 4
 
 
 async def test_an_existing_case_is_reused_and_said() -> None:
@@ -336,11 +338,13 @@ async def test_the_time_budget_skips_what_is_left_and_still_keeps_what_it_found(
             clock.now += 50
             return await super().job(task_id)
 
-    out = await runner(spec, FakeHost(), Slow(SCORES, clock=clock), clock).run()
+    events: list[dict[str, Any]] = []
+    out = await runner(spec, FakeHost(), Slow(SCORES, clock=clock), clock, events=events).run()
     assert out.state == "budget_exhausted"
     assert out.records[0].status == "evaluated" and out.records[1].status == "evaluated"
     assert out.records[2].status == "skipped" and "tiempo" in out.records[2].reason
     assert out.selected == 2  # what was found before the budget ran out is kept
+    assert [e["record"]["status"] for e in events if e["event"] == "molecule"] == ["evaluated", "evaluated", "skipped", "skipped"]
 
 
 async def test_cancellation_is_not_swallowed() -> None:
@@ -373,7 +377,10 @@ async def test_events_carry_each_molecule_for_the_live_table() -> None:
     events: list[dict[str, Any]] = []
     await runner(IterationSpec.from_dict(spec_dict()), FakeHost(), FakePlatform(SCORES), events=events).run()
     kinds = [e["event"] for e in events]
-    assert kinds[0] == "started" and kinds[-1] == "finished" and kinds.count("molecule") == 2
+    assert kinds[0] == "started" and kinds[-1] == "finished" and kinds.count("molecule") == 4
+    shown = [e["record"] for e in events if e["event"] == "molecule"]
+    assert [(r["index"], r["status"]) for r in shown] == [(1, "evaluated"), (2, "evaluated"), (3, "skipped"), (4, "skipped")]
+    assert all(r["task_id"] is None and r["affinity_kcal"] is None for r in shown[2:])
     assert all(e["type"] == "workflow" for e in events)
 
 

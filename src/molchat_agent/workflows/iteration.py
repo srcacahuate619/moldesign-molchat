@@ -399,16 +399,19 @@ class IterationRunner:
             for record in out.records:
                 record.status, record.reason = "skipped", tr("El caso no quedó preparado: no se evaluó nada.",
                                                              "The case was not set up: nothing was docked.")
+                self.emit("molecule", record=record.as_dict())
             self.emit("finished", state=out.state)
             return out
         qualifiers: list[MoleculeRecord] = []
         for record in out.records:
             if qualifiers and spec.stop == "first":
                 record.status, record.reason = "skipped", tr("Ya se cumplió la regla de parada.", "The stop rule was already met.")
+                self.emit("molecule", record=record.as_dict())
                 continue
             if self._clock() - started >= spec.budget_s:
                 record.status, record.reason = "skipped", tr("Se agotó el tiempo total del plan.", "The plan's total time ran out.")
                 out.state = "budget_exhausted"
+                self.emit("molecule", record=record.as_dict())
                 continue
             await self._run_one(record)
             shown = record.as_dict()

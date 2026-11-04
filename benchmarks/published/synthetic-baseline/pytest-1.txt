@@ -1,0 +1,156 @@
+........................................................................ [ 32%]
+........................................................................ [ 65%]
+........................................................................ [ 98%]
+...                                                                      [100%]
+============================== warnings summary ===============================
+tests/conversation/test_tool_loop_number_boolean.py::test_numbers_and_booleans_pass_within_their_range
+  [home]\AppData\Roaming\Python\Python314\site-packages\pytest_asyncio\plugin.py:1216: DeprecationWarning: 'asyncio.get_event_loop_policy' is deprecated and slated for removal in Python 3.16
+    return asyncio.get_event_loop_policy()
+
+tests/conversation/test_pubchem_owned.py: 8 warnings
+tests/conversation/test_tool_loop.py: 11 warnings
+tests/conversation/test_harness_tools.py: 13 warnings
+tests/workflows/test_evaluation.py: 9 warnings
+tests/workflows/test_iteration.py: 26 warnings
+tests/workflows/test_run_record.py: 2 warnings
+tests/workflows/test_video_presentation.py: 1 warning
+tests/conversation/test_engine_failures.py: 6 warnings
+tests/server/test_workflow_chat.py: 5 warnings
+tests/workflows/test_service.py: 9 warnings
+tests/server/test_workflow_preparation.py: 8 warnings
+tests/server/test_workflow_sources.py: 3 warnings
+tests/adversarial/test_gate.py: 10 warnings
+  [home]\AppData\Roaming\Python\Python314\site-packages\pytest_asyncio\plugin.py:874: DeprecationWarning: 'asyncio.get_event_loop_policy' is deprecated and slated for removal in Python 3.16
+    _restore_event_loop_policy(asyncio.get_event_loop_policy()),
+
+tests/conversation/test_pubchem_owned.py: 8 warnings
+tests/conversation/test_tool_loop.py: 11 warnings
+tests/conversation/test_harness_tools.py: 13 warnings
+tests/workflows/test_evaluation.py: 9 warnings
+tests/workflows/test_iteration.py: 26 warnings
+tests/workflows/test_run_record.py: 2 warnings
+tests/workflows/test_video_presentation.py: 1 warning
+tests/conversation/test_engine_failures.py: 6 warnings
+tests/server/test_workflow_chat.py: 5 warnings
+tests/workflows/test_service.py: 9 warnings
+tests/server/test_workflow_preparation.py: 8 warnings
+tests/server/test_workflow_sources.py: 3 warnings
+tests/adversarial/test_gate.py: 10 warnings
+  [home]\AppData\Roaming\Python\Python314\site-packages\pytest_asyncio\plugin.py:772: DeprecationWarning: 'asyncio.get_event_loop_policy' is deprecated and slated for removal in Python 3.16
+    old_loop_policy = asyncio.get_event_loop_policy()
+
+tests/conversation/test_pubchem_owned.py: 8 warnings
+tests/conversation/test_tool_loop.py: 11 warnings
+tests/conversation/test_harness_tools.py: 13 warnings
+tests/workflows/test_evaluation.py: 9 warnings
+tests/workflows/test_iteration.py: 26 warnings
+tests/workflows/test_run_record.py: 2 warnings
+tests/workflows/test_video_presentation.py: 1 warning
+tests/conversation/test_engine_failures.py: 6 warnings
+tests/server/test_workflow_chat.py: 5 warnings
+tests/workflows/test_service.py: 9 warnings
+tests/server/test_workflow_preparation.py: 8 warnings
+tests/server/test_workflow_sources.py: 3 warnings
+tests/adversarial/test_gate.py: 10 warnings
+  [home]\AppData\Roaming\Python\Python314\site-packages\pytest_asyncio\plugin.py:777: DeprecationWarning: 'asyncio.set_event_loop_policy' is deprecated and slated for removal in Python 3.16
+    asyncio.set_event_loop_policy(policy)
+
+tests/conversation/test_pubchem_owned.py: 8 warnings
+tests/conversation/test_tool_loop.py: 11 warnings
+tests/conversation/test_harness_tools.py: 13 warnings
+tests/workflows/test_evaluation.py: 9 warnings
+tests/workflows/test_iteration.py: 26 warnings
+tests/workflows/test_run_record.py: 2 warnings
+tests/workflows/test_video_presentation.py: 1 warning
+tests/conversation/test_engine_failures.py: 6 warnings
+tests/server/test_workflow_chat.py: 5 warnings
+tests/workflows/test_service.py: 9 warnings
+tests/server/test_workflow_preparation.py: 8 warnings
+tests/server/test_workflow_sources.py: 3 warnings
+tests/adversarial/test_gate.py: 10 warnings
+  [home]\AppData\Roaming\Python\Python314\site-packages\pytest_asyncio\plugin.py:1183: DeprecationWarning: 'asyncio.get_event_loop_policy' is deprecated and slated for removal in Python 3.16
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+
+tests/conversation/test_pubchem_owned.py: 8 warnings
+tests/conversation/test_tool_loop.py: 11 warnings
+tests/conversation/test_harness_tools.py: 13 warnings
+tests/workflows/test_evaluation.py: 9 warnings
+tests/workflows/test_iteration.py: 26 warnings
+tests/workflows/test_run_record.py: 2 warnings
+tests/workflows/test_video_presentation.py: 1 warning
+tests/conversation/test_engine_failures.py: 6 warnings
+tests/server/test_workflow_chat.py: 5 warnings
+tests/workflows/test_service.py: 9 warnings
+tests/server/test_workflow_preparation.py: 8 warnings
+tests/server/test_workflow_sources.py: 3 warnings
+tests/adversarial/test_gate.py: 10 warnings
+  [home]\AppData\Roaming\Python\Python314\site-packages\pytest_asyncio\plugin.py:889: DeprecationWarning: 'asyncio.get_event_loop_policy' is deprecated and slated for removal in Python 3.16
+    policy = asyncio.get_event_loop_policy()
+
+tests/conversation/test_pubchem_owned.py: 8 warnings
+tests/conversation/test_tool_loop.py: 11 warnings
+tests/conversation/test_harness_tools.py: 13 warnings
+tests/workflows/test_evaluation.py: 9 warnings
+tests/workflows/test_iteration.py: 26 warnings
+tests/workflows/test_run_record.py: 2 warnings
+tests/workflows/test_video_presentation.py: 1 warning
+tests/conversation/test_engine_failures.py: 6 warnings
+tests/server/test_workflow_chat.py: 5 warnings
+tests/workflows/test_service.py: 9 warnings
+tests/server/test_workflow_preparation.py: 8 warnings
+tests/server/test_workflow_sources.py: 3 warnings
+tests/adversarial/test_gate.py: 10 warnings
+  [home]\AppData\Roaming\Python\Python314\site-packages\pytest_asyncio\plugin.py:794: DeprecationWarning: 'asyncio.set_event_loop_policy' is deprecated and slated for removal in Python 3.16
+    asyncio.set_event_loop_policy(old_loop_policy)
+
+tests/conversation/test_pubchem_owned.py: 8 warnings
+tests/conversation/test_tool_loop.py: 11 warnings
+tests/conversation/test_harness_tools.py: 13 warnings
+tests/workflows/test_evaluation.py: 9 warnings
+tests/workflows/test_iteration.py: 26 warnings
+tests/workflows/test_run_record.py: 2 warnings
+tests/workflows/test_video_presentation.py: 1 warning
+tests/conversation/test_engine_failures.py: 6 warnings
+tests/server/test_workflow_chat.py: 5 warnings
+tests/workflows/test_service.py: 9 warnings
+tests/server/test_workflow_preparation.py: 8 warnings
+tests/server/test_workflow_sources.py: 3 warnings
+tests/adversarial/test_gate.py: 10 warnings
+  [home]\AppData\Roaming\Python\Python314\site-packages\pytest_asyncio\plugin.py:942: DeprecationWarning: 'asyncio.get_event_loop_policy' is deprecated and slated for removal in Python 3.16
+    policy = asyncio.get_event_loop_policy()
+
+tests/conversation/test_pubchem_owned.py: 8 warnings
+tests/conversation/test_tool_loop.py: 11 warnings
+tests/conversation/test_harness_tools.py: 13 warnings
+tests/workflows/test_evaluation.py: 9 warnings
+tests/workflows/test_iteration.py: 26 warnings
+tests/workflows/test_run_record.py: 2 warnings
+tests/workflows/test_video_presentation.py: 1 warning
+tests/conversation/test_engine_failures.py: 6 warnings
+tests/server/test_workflow_chat.py: 5 warnings
+tests/workflows/test_service.py: 9 warnings
+tests/server/test_workflow_preparation.py: 8 warnings
+tests/server/test_workflow_sources.py: 3 warnings
+tests/adversarial/test_gate.py: 10 warnings
+  [home]\AppData\Roaming\Python\Python314\site-packages\pytest_asyncio\plugin.py:966: DeprecationWarning: 'asyncio.set_event_loop_policy' is deprecated and slated for removal in Python 3.16
+    asyncio.set_event_loop_policy(previous_policy)
+
+tests/conversation/test_pubchem_owned.py: 8 warnings
+tests/conversation/test_tool_loop.py: 11 warnings
+tests/conversation/test_harness_tools.py: 13 warnings
+tests/workflows/test_evaluation.py: 9 warnings
+tests/workflows/test_iteration.py: 26 warnings
+tests/workflows/test_run_record.py: 2 warnings
+tests/workflows/test_video_presentation.py: 1 warning
+tests/conversation/test_engine_failures.py: 6 warnings
+tests/server/test_workflow_chat.py: 5 warnings
+tests/workflows/test_service.py: 9 warnings
+tests/server/test_workflow_preparation.py: 8 warnings
+tests/server/test_workflow_sources.py: 3 warnings
+tests/adversarial/test_gate.py: 10 warnings
+  [home]\AppData\Roaming\Python\Python314\site-packages\pytest_asyncio\plugin.py:978: DeprecationWarning: 'asyncio.get_event_loop_policy' is deprecated and slated for removal in Python 3.16
+    policy = asyncio.get_event_loop_policy()
+
+-- Docs: http[local-path]
+- generated xml file: [repository]\benchmarks\published\synthetic\pytest-1.xml -
+219 passed, 1000 warnings in 11.58s

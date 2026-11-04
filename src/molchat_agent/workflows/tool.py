@@ -27,6 +27,8 @@ ITERATION_GUIDANCE = (
     "preparation=true si pidió la auditoría en "
     "Preparación y package=true si pidió juntar o entregar todo en un único archivo/ZIP; no actives lo que no pidió. "
     "stop=first (por defecto) detiene la iteración en la primera molécula que cumple; usa all solo si pidió evaluarlas todas. "
+    "Si indicó límites de tiempo, conserva per_molecule_timeout_s (30 a 1800 segundos) y budget_s (60 a 7200 segundos); "
+    "no los sustituyas por los valores predeterminados. "
     "La herramienta no ejecuta nada: deja una tarjeta que la persona aprueba una vez; después el plan corre sin más "
     "intervención. Nunca digas que se evaluó, guardó o generó algo: di qué quedó pendiente de su aprobación. "
     "No llames «cribado» a esto: en MolDesign el cribado es el módulo de lotes y esto es otra cosa; di «iteración» o "
@@ -70,7 +72,9 @@ def propose_iteration_tool(user_text: str, propose: Callable[[IterationSpec], di
             "labels": {"type": "boolean"}, "contacts": {"type": "boolean"}, "previous_sample": {"type": "boolean"},
             "ensemble_variant": {"type": "string", "enum": list(ENSEMBLE_VARIANTS)}},
             "required": ["scene"], "additionalProperties": False},
-        "preparation": {"type": "boolean"}, "package": {"type": "boolean"}},
+        "preparation": {"type": "boolean"}, "package": {"type": "boolean"},
+        "per_molecule_timeout_s": {"type": "integer", "minimum": 30, "maximum": 1800},
+        "budget_s": {"type": "integer", "minimum": 60, "maximum": 7200}},
         "required": ["case_name", "pdb_id", "molecules", "threshold_kcal"], "additionalProperties": False}
     return Tool("propose_iteration",
                 "Prepara una iteración automática: evalúa una lista de moléculas una por una en un caso, se detiene según un umbral "

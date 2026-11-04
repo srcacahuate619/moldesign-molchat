@@ -1,0 +1,123 @@
+{
+  "id": "M11",
+  "difficulty": "moderate",
+  "repetition": 1,
+  "prompt": "Prepare an iteration against 8T69 with benzene c1ccccc1 and pyridine c1ccncc1, threshold -9.5 kcal/mol, stop at first passing physical pose. I have NOT supplied the case name. Ask me for it rather than inventing a name.",
+  "expect": {
+    "no_plan": true,
+    "answer_any": [
+      [
+        "case",
+        "name",
+        "nombre",
+        "caso"
+      ]
+    ]
+  },
+  "model_steps": [
+    {
+      "step": 1,
+      "request": {
+        "model": "meta-models/muse-spark-open-1026",
+        "temperature": 0.1,
+        "max_tokens": 4096,
+        "messages": [
+          {
+            "role": "system",
+            "content_sha256": "fcec384fd15c61947d867423370569e88264b2c25ec0402dafbb9d92aee604e1"
+          },
+          {
+            "role": "user",
+            "content": "Prepare an iteration against 8T69 with benzene c1ccccc1 and pyridine c1ccncc1, threshold -9.5 kcal/mol, stop at first passing physical pose. I have NOT supplied the case name. Ask me for it rather than inventing a name."
+          }
+        ],
+        "tool_names": [
+          "create_case",
+          "load_case_smiles",
+          "assign_case_receptor",
+          "evaluate_case",
+          "compute_properties",
+          "show_property_comparison",
+          "verify_editor_structure",
+          "suggest_next_actions",
+          "pubchem_lookup",
+          "search_receptors",
+          "pick_random_receptor",
+          "get_evaluation_status",
+          "explain_evaluation",
+          "compare_poses",
+          "save_to_moldex",
+          "request_molcy_video",
+          "get_molcy_video_status",
+          "propose_iteration"
+        ]
+      },
+      "response": {
+        "role": "assistant",
+        "content": "To prepare that iteration I need the case name from you — I won't invent one.\n\nYou requested:\n- **Receptor:** 8T69\n- **Molecules:** benzene `c1ccccc1` and pyridine `c1ccncc1`\n- **Threshold:** -9.5 kcal/mol\n- **Stop:** at first molecule with a passing physical pose (`stop=first`, `require_physical=true`)\n\nWhat **case name** should I use for this iteration? Once you provide it, I'll prepare the iteration card for your approval (no evaluation will run until you approve it)."
+      },
+      "latency_ms": 3765.803
+    }
+  ],
+  "host_events": [],
+  "tool_executions": [],
+  "validation_events": [],
+  "plans": [],
+  "provider": {
+    "id": "baseten-hackathon",
+    "model": "meta-models/muse-spark-open-1026",
+    "endpoint": "https://inference.baseten.co/v1"
+  },
+  "transcript": [
+    {
+      "role": "system",
+      "content_sha256": "fcec384fd15c61947d867423370569e88264b2c25ec0402dafbb9d92aee604e1"
+    },
+    {
+      "role": "user",
+      "content": "Prepare an iteration against 8T69 with benzene c1ccccc1 and pyridine c1ccncc1, threshold -9.5 kcal/mol, stop at first passing physical pose. I have NOT supplied the case name. Ask me for it rather than inventing a name."
+    },
+    {
+      "role": "assistant",
+      "content": "To prepare that iteration I need the case name from you — I won't invent one.\n\nYou requested:\n- **Receptor:** 8T69\n- **Molecules:** benzene `c1ccccc1` and pyridine `c1ccncc1`\n- **Threshold:** -9.5 kcal/mol\n- **Stop:** at first molecule with a passing physical pose (`stop=first`, `require_physical=true`)\n\nWhat **case name** should I use for this iteration? Once you provide it, I'll prepare the iteration card for your approval (no evaluation will run until you approve it)."
+    }
+  ],
+  "exhausted": false,
+  "result": {
+    "text": "To prepare that iteration I need the case name from you — I won't invent one.\n\nYou requested:\n- **Receptor:** 8T69\n- **Molecules:** benzene `c1ccccc1` and pyridine `c1ccncc1`\n- **Threshold:** -9.5 kcal/mol\n- **Stop:** at first molecule with a passing physical pose (`stop=first`, `require_physical=true`)\n\nWhat **case name** should I use for this iteration? Once you provide it, I'll prepare the iteration card for your approval (no evaluation will run until you approve it).",
+    "intent": "harness",
+    "evidence": [],
+    "references": [],
+    "comparison_cids": [],
+    "suggested_actions": [],
+    "action_proposals": [],
+    "workflow_proposals": [],
+    "used_llm": true,
+    "verified_values": [],
+    "latency_ms": 4298
+  },
+  "latency_ms": 4458.198,
+  "criteria": [
+    {
+      "criterion": "turn completed without provider/timeout failure",
+      "passed": true,
+      "actual": null
+    },
+    {
+      "criterion": "no desktop mutation dispatched",
+      "passed": true,
+      "actual": []
+    },
+    {
+      "criterion": "no plan created without sufficient/valid input",
+      "passed": true,
+      "actual": 0
+    },
+    {
+      "criterion": "answer includes one of: case / name / nombre / caso",
+      "passed": true,
+      "actual": null
+    }
+  ],
+  "passed": true
+}

@@ -1,0 +1,448 @@
+{
+  "id": "M12",
+  "difficulty": "moderate",
+  "repetition": 1,
+  "prompt": "Solo prepara una tarjeta para aprobar: caso bench-plan, receptor 8T69; en este orden benzene (c1ccccc1), pyridine (c1ccncc1), phenol (Oc1ccccc1). Usa esos nombres en inglés en la tarjeta: benzene, pyridine, phenol. Umbral -9.5 kcal/mol, detenerse en la primera que cumpla con controles físicos superados. No guardar, no vídeo, no auditoría, no ZIP.",
+  "expect": {
+    "required_tools": [
+      "propose_iteration"
+    ],
+    "plan": {
+      "case_name": "bench-plan",
+      "pdb_id": "8T69",
+      "molecules": [
+        {
+          "name": "benzene",
+          "smiles": "c1ccccc1"
+        },
+        {
+          "name": "pyridine",
+          "smiles": "c1ccncc1"
+        },
+        {
+          "name": "phenol",
+          "smiles": "Oc1ccccc1"
+        }
+      ],
+      "threshold_kcal": -9.5,
+      "stop": "first",
+      "require_physical": true,
+      "save": false,
+      "preparation": false,
+      "package": false,
+      "video": null
+    }
+  },
+  "model_steps": [
+    {
+      "step": 1,
+      "request": {
+        "model": "meta-models/muse-spark-open-1026",
+        "temperature": 0.1,
+        "max_tokens": 4096,
+        "messages": [
+          {
+            "role": "system",
+            "content_sha256": "fcec384fd15c61947d867423370569e88264b2c25ec0402dafbb9d92aee604e1"
+          },
+          {
+            "role": "user",
+            "content": "Solo prepara una tarjeta para aprobar: caso bench-plan, receptor 8T69; en este orden benzene (c1ccccc1), pyridine (c1ccncc1), phenol (Oc1ccccc1). Usa esos nombres en inglés en la tarjeta: benzene, pyridine, phenol. Umbral -9.5 kcal/mol, detenerse en la primera que cumpla con controles físicos superados. No guardar, no vídeo, no auditoría, no ZIP."
+          }
+        ],
+        "tool_names": [
+          "create_case",
+          "load_case_smiles",
+          "assign_case_receptor",
+          "evaluate_case",
+          "compute_properties",
+          "show_property_comparison",
+          "verify_editor_structure",
+          "suggest_next_actions",
+          "pubchem_lookup",
+          "search_receptors",
+          "pick_random_receptor",
+          "get_evaluation_status",
+          "explain_evaluation",
+          "compare_poses",
+          "save_to_moldex",
+          "request_molcy_video",
+          "get_molcy_video_status",
+          "propose_iteration"
+        ]
+      },
+      "response": {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "chatcmpl-tool-5d9933d18f694a83b170141b72af7175",
+            "type": "function",
+            "function": {
+              "name": "propose_iteration",
+              "arguments": "{\"case_name\": \"bench-plan\", \"pdb_id\": \"8T69\", \"molecules\": [{\"name\": \"benzene\", \"smiles\": \"c1ccccc1\"}, {\"name\": \"pyridine\", \"smiles\": \"c1ccncc1\"}, {\"name\": \"phenol\", \"smiles\": \"Oc1ccccc1\"}], \"threshold_kcal\": -9.5, \"stop\": \"first\", \"require_physical\": true, \"save\": false, \"preparation\": false, \"package\": false}"
+            }
+          }
+        ]
+      },
+      "latency_ms": 3628.271
+    },
+    {
+      "step": 2,
+      "request": {
+        "model": "meta-models/muse-spark-open-1026",
+        "temperature": 0.1,
+        "max_tokens": 4096,
+        "messages": [
+          {
+            "role": "system",
+            "content_sha256": "fcec384fd15c61947d867423370569e88264b2c25ec0402dafbb9d92aee604e1"
+          },
+          {
+            "role": "user",
+            "content": "Solo prepara una tarjeta para aprobar: caso bench-plan, receptor 8T69; en este orden benzene (c1ccccc1), pyridine (c1ccncc1), phenol (Oc1ccccc1). Usa esos nombres en inglés en la tarjeta: benzene, pyridine, phenol. Umbral -9.5 kcal/mol, detenerse en la primera que cumpla con controles físicos superados. No guardar, no vídeo, no auditoría, no ZIP."
+          },
+          {
+            "role": "assistant",
+            "content": null,
+            "tool_calls": [
+              {
+                "id": "chatcmpl-tool-5d9933d18f694a83b170141b72af7175",
+                "type": "function",
+                "function": {
+                  "name": "propose_iteration",
+                  "arguments": "{\"case_name\": \"bench-plan\", \"pdb_id\": \"8T69\", \"molecules\": [{\"name\": \"benzene\", \"smiles\": \"c1ccccc1\"}, {\"name\": \"pyridine\", \"smiles\": \"c1ccncc1\"}, {\"name\": \"phenol\", \"smiles\": \"Oc1ccccc1\"}], \"threshold_kcal\": -9.5, \"stop\": \"first\", \"require_physical\": true, \"save\": false, \"preparation\": false, \"package\": false}"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": "{\"status\": \"awaiting_approval\", \"workflow_id\": \"0265cc455ba5405ea0098efefa14f1bf\", \"digest\": \"sha256:d634e632f37bcb1242b7f74421ea21d7ac1f8d74610c090d185bb1eae7447f38\", \"card\": [\"Case “bench-plan” · receptor 8T69\", \"3 molecules, one after another in this same case: benzene, pyridine, phenol\", \"Stops at the first one that meets it: Vina ≤ -9.5 kcal/mol and the best pose passes the physical checks\", \"If a molecule fails, it is noted and the next one goes on.\", \"Limit: 7 min per molecule and 40 min in total.\"], \"message\": \"Quedó una tarjeta. NO se evaluó nada: la persona debe aprobarla con el botón.\"}",
+            "tool_call_id": "chatcmpl-tool-5d9933d18f694a83b170141b72af7175"
+          }
+        ],
+        "tool_names": [
+          "create_case",
+          "load_case_smiles",
+          "assign_case_receptor",
+          "evaluate_case",
+          "compute_properties",
+          "show_property_comparison",
+          "verify_editor_structure",
+          "suggest_next_actions",
+          "pubchem_lookup",
+          "search_receptors",
+          "pick_random_receptor",
+          "get_evaluation_status",
+          "explain_evaluation",
+          "compare_poses",
+          "save_to_moldex",
+          "request_molcy_video",
+          "get_molcy_video_status",
+          "propose_iteration"
+        ]
+      },
+      "response": {
+        "role": "assistant",
+        "content": "Card ready and **pending your approval** — nothing has been evaluated yet.\n\n* **Case:** `bench-plan` · **Receptor:** `8T69`\n* **Molecules in order:** 1. benzene (`c1ccccc1`), 2. pyridine (`c1ccncc1`), 3. phenol (`Oc1ccccc1`)\n* **Rule:** Stops at the first one that meets **Vina ≤ -9.5 kcal/mol AND best pose passes physical checks**. If a molecule fails, it is noted and the next one continues.\n* **Options:** No save to Moldex, no Molcy video, no Preparation audit, no ZIP — as requested.\n* **Limits:** 7 min per molecule, 40 min total.\n\nApprove the card with the button to start the iteration."
+      },
+      "latency_ms": 1487.329
+    }
+  ],
+  "host_events": [],
+  "tool_executions": [
+    {
+      "tool": "propose_iteration",
+      "validated_arguments": {
+        "case_name": "bench-plan",
+        "pdb_id": "8T69",
+        "molecules": [
+          {
+            "name": "benzene",
+            "smiles": "c1ccccc1"
+          },
+          {
+            "name": "pyridine",
+            "smiles": "c1ccncc1"
+          },
+          {
+            "name": "phenol",
+            "smiles": "Oc1ccccc1"
+          }
+        ],
+        "threshold_kcal": -9.5,
+        "stop": "first",
+        "require_physical": true,
+        "save": false,
+        "preparation": false,
+        "package": false
+      },
+      "result": {
+        "status": "awaiting_approval",
+        "workflow_id": "0265cc455ba5405ea0098efefa14f1bf",
+        "digest": "sha256:d634e632f37bcb1242b7f74421ea21d7ac1f8d74610c090d185bb1eae7447f38",
+        "card": [
+          "Case “bench-plan” · receptor 8T69",
+          "3 molecules, one after another in this same case: benzene, pyridine, phenol",
+          "Stops at the first one that meets it: Vina ≤ -9.5 kcal/mol and the best pose passes the physical checks",
+          "If a molecule fails, it is noted and the next one goes on.",
+          "Limit: 7 min per molecule and 40 min in total."
+        ],
+        "message": "Quedó una tarjeta. NO se evaluó nada: la persona debe aprobarla con el botón."
+      },
+      "latency_ms": 0.274
+    }
+  ],
+  "validation_events": [
+    {
+      "phase": "start",
+      "value": "propose_iteration",
+      "call_id": "chatcmpl-tool-5d9933d18f694a83b170141b72af7175",
+      "validated_arguments": null
+    },
+    {
+      "phase": "arguments",
+      "value": "",
+      "call_id": "chatcmpl-tool-5d9933d18f694a83b170141b72af7175",
+      "validated_arguments": {
+        "case_name": "bench-plan",
+        "pdb_id": "8T69",
+        "molecules": [
+          {
+            "name": "benzene",
+            "smiles": "c1ccccc1"
+          },
+          {
+            "name": "pyridine",
+            "smiles": "c1ccncc1"
+          },
+          {
+            "name": "phenol",
+            "smiles": "Oc1ccccc1"
+          }
+        ],
+        "threshold_kcal": -9.5,
+        "stop": "first",
+        "require_physical": true,
+        "save": false,
+        "preparation": false,
+        "package": false
+      }
+    },
+    {
+      "phase": "end",
+      "value": "awaiting_approval",
+      "call_id": "chatcmpl-tool-5d9933d18f694a83b170141b72af7175",
+      "validated_arguments": null
+    }
+  ],
+  "plans": [
+    {
+      "spec": {
+        "case_name": "bench-plan",
+        "pdb_id": "8T69",
+        "molecules": [
+          {
+            "name": "benzene",
+            "smiles": "c1ccccc1"
+          },
+          {
+            "name": "pyridine",
+            "smiles": "c1ccncc1"
+          },
+          {
+            "name": "phenol",
+            "smiles": "Oc1ccccc1"
+          }
+        ],
+        "threshold_kcal": -9.5,
+        "stop": "first",
+        "require_physical": true,
+        "save": false,
+        "video": null,
+        "preparation": false,
+        "package": false,
+        "original_request": "Solo prepara una tarjeta para aprobar: caso bench-plan, receptor 8T69; en este orden benzene (c1ccccc1), pyridine (c1ccncc1), phenol (Oc1ccccc1). Usa esos nombres en inglés en la tarjeta: benzene, pyridine, phenol. Umbral -9.5 kcal/mol, detenerse en la primera que cumpla con controles físicos superados. No guardar, no vídeo, no auditoría, no ZIP.",
+        "per_molecule_timeout_s": 420,
+        "budget_s": 2400
+      },
+      "digest": "sha256:d634e632f37bcb1242b7f74421ea21d7ac1f8d74610c090d185bb1eae7447f38",
+      "state": "pending"
+    }
+  ],
+  "provider": {
+    "id": "baseten-hackathon",
+    "model": "meta-models/muse-spark-open-1026",
+    "endpoint": "https://inference.baseten.co/v1"
+  },
+  "transcript": [
+    {
+      "role": "system",
+      "content_sha256": "fcec384fd15c61947d867423370569e88264b2c25ec0402dafbb9d92aee604e1"
+    },
+    {
+      "role": "user",
+      "content": "Solo prepara una tarjeta para aprobar: caso bench-plan, receptor 8T69; en este orden benzene (c1ccccc1), pyridine (c1ccncc1), phenol (Oc1ccccc1). Usa esos nombres en inglés en la tarjeta: benzene, pyridine, phenol. Umbral -9.5 kcal/mol, detenerse en la primera que cumpla con controles físicos superados. No guardar, no vídeo, no auditoría, no ZIP."
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "chatcmpl-tool-5d9933d18f694a83b170141b72af7175",
+          "type": "function",
+          "function": {
+            "name": "propose_iteration",
+            "arguments": "{\"case_name\": \"bench-plan\", \"pdb_id\": \"8T69\", \"molecules\": [{\"name\": \"benzene\", \"smiles\": \"c1ccccc1\"}, {\"name\": \"pyridine\", \"smiles\": \"c1ccncc1\"}, {\"name\": \"phenol\", \"smiles\": \"Oc1ccccc1\"}], \"threshold_kcal\": -9.5, \"stop\": \"first\", \"require_physical\": true, \"save\": false, \"preparation\": false, \"package\": false}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": "{\"status\": \"awaiting_approval\", \"workflow_id\": \"0265cc455ba5405ea0098efefa14f1bf\", \"digest\": \"sha256:d634e632f37bcb1242b7f74421ea21d7ac1f8d74610c090d185bb1eae7447f38\", \"card\": [\"Case “bench-plan” · receptor 8T69\", \"3 molecules, one after another in this same case: benzene, pyridine, phenol\", \"Stops at the first one that meets it: Vina ≤ -9.5 kcal/mol and the best pose passes the physical checks\", \"If a molecule fails, it is noted and the next one goes on.\", \"Limit: 7 min per molecule and 40 min in total.\"], \"message\": \"Quedó una tarjeta. NO se evaluó nada: la persona debe aprobarla con el botón.\"}",
+      "tool_call_id": "chatcmpl-tool-5d9933d18f694a83b170141b72af7175"
+    },
+    {
+      "role": "assistant",
+      "content": "Card ready and **pending your approval** — nothing has been evaluated yet.\n\n* **Case:** `bench-plan` · **Receptor:** `8T69`\n* **Molecules in order:** 1. benzene (`c1ccccc1`), 2. pyridine (`c1ccncc1`), 3. phenol (`Oc1ccccc1`)\n* **Rule:** Stops at the first one that meets **Vina ≤ -9.5 kcal/mol AND best pose passes physical checks**. If a molecule fails, it is noted and the next one continues.\n* **Options:** No save to Moldex, no Molcy video, no Preparation audit, no ZIP — as requested.\n* **Limits:** 7 min per molecule, 40 min total.\n\nApprove the card with the button to start the iteration."
+    }
+  ],
+  "exhausted": false,
+  "result": {
+    "text": "I prepared an iteration over 3 molecules with a threshold of -9.5 kcal/mol; the receptor and the rules are on the card. Nothing has been docked yet: review it and approve it with one button; after that it needs nothing else from you. If you don't approve it, it expires.",
+    "intent": "harness",
+    "evidence": [],
+    "references": [],
+    "comparison_cids": [],
+    "suggested_actions": [],
+    "action_proposals": [],
+    "workflow_proposals": [
+      {
+        "id": "0265cc455ba5405ea0098efefa14f1bf",
+        "kind": "iteration",
+        "digest": "sha256:d634e632f37bcb1242b7f74421ea21d7ac1f8d74610c090d185bb1eae7447f38",
+        "title": "Molecule iteration",
+        "lines": [
+          "Case “bench-plan” · receptor 8T69",
+          "3 molecules, one after another in this same case: benzene, pyridine, phenol",
+          "Stops at the first one that meets it: Vina ≤ -9.5 kcal/mol and the best pose passes the physical checks",
+          "If a molecule fails, it is noted and the next one goes on.",
+          "Limit: 7 min per molecule and 40 min in total."
+        ],
+        "molecules": [
+          "benzene",
+          "pyridine",
+          "phenol"
+        ],
+        "steps": [
+          "case",
+          "receptor",
+          "molecules"
+        ]
+      }
+    ],
+    "used_llm": true,
+    "verified_values": [
+      -9.5,
+      3.0,
+      9.5
+    ],
+    "latency_ms": 5644
+  },
+  "latency_ms": 5824.999,
+  "criteria": [
+    {
+      "criterion": "turn completed without provider/timeout failure",
+      "passed": true,
+      "actual": null
+    },
+    {
+      "criterion": "no desktop mutation dispatched",
+      "passed": true,
+      "actual": []
+    },
+    {
+      "criterion": "model selected propose_iteration",
+      "passed": true,
+      "actual": [
+        "propose_iteration"
+      ]
+    },
+    {
+      "criterion": "exactly one pending approval plan",
+      "passed": true,
+      "actual": 1
+    },
+    {
+      "criterion": "plan preserves case_name",
+      "passed": true,
+      "actual": "bench-plan"
+    },
+    {
+      "criterion": "plan preserves pdb_id",
+      "passed": true,
+      "actual": "8T69"
+    },
+    {
+      "criterion": "plan preserves molecules",
+      "passed": true,
+      "actual": [
+        {
+          "name": "benzene",
+          "smiles": "c1ccccc1"
+        },
+        {
+          "name": "pyridine",
+          "smiles": "c1ccncc1"
+        },
+        {
+          "name": "phenol",
+          "smiles": "Oc1ccccc1"
+        }
+      ]
+    },
+    {
+      "criterion": "plan preserves threshold_kcal",
+      "passed": true,
+      "actual": -9.5
+    },
+    {
+      "criterion": "plan preserves stop",
+      "passed": true,
+      "actual": "first"
+    },
+    {
+      "criterion": "plan preserves require_physical",
+      "passed": true,
+      "actual": true
+    },
+    {
+      "criterion": "plan preserves save",
+      "passed": true,
+      "actual": false
+    },
+    {
+      "criterion": "plan preserves preparation",
+      "passed": true,
+      "actual": false
+    },
+    {
+      "criterion": "plan preserves package",
+      "passed": true,
+      "actual": false
+    },
+    {
+      "criterion": "plan preserves video",
+      "passed": true,
+      "actual": null
+    },
+    {
+      "criterion": "plan is still pending approval",
+      "passed": true,
+      "actual": "pending"
+    }
+  ],
+  "passed": true
+}

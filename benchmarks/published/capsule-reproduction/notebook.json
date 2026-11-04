@@ -1,0 +1,1086 @@
+{
+  "approved_at": "2026-11-04T04:14:27+00:00",
+  "case": "benchmark-vmat2-reproduction",
+  "comparability": {
+    "different": [],
+    "not_recorded": [],
+    "runs": 2,
+    "same": [
+      {
+        "field": "prepared receptor",
+        "value": "8fc027cae876631f30518b27823ce175e844bbe9e7bc10554653a7766e21468d"
+      },
+      {
+        "field": "Vina version",
+        "value": "1.2.7"
+      },
+      {
+        "field": "engine",
+        "value": "vina"
+      },
+      {
+        "field": "exhaustiveness",
+        "value": 8
+      },
+      {
+        "field": "poses",
+        "value": 9
+      },
+      {
+        "field": "seed",
+        "value": 42
+      },
+      {
+        "field": "box center",
+        "value": [
+          127.862,
+          123.474,
+          104.225
+        ]
+      },
+      {
+        "field": "box size",
+        "value": [
+          30.0,
+          30.0,
+          30.0
+        ]
+      }
+    ]
+  },
+  "deliverable": {
+    "message": "This notebook is part of the delivery.",
+    "status": "building"
+  },
+  "finished_at": "2026-11-04T04:19:25+00:00",
+  "iteration_schema": "moldesign.molchat.iteration/1",
+  "lang": "en",
+  "limits": "The Vina energy is that of Vina's best pose: it is not a free energy, nor a Ki, nor a measure of activity. An iteration over a few molecules does not rank drugs. The physical checks are PoseBusters' as MolDesign declares them.",
+  "molecules": [
+    {
+      "n": 1,
+      "name": "aspirin",
+      "physical_controls": "passed",
+      "reading": "does not reach the threshold",
+      "reason": "Vina -6.867 kcal/mol does not reach the -10.5 threshold.",
+      "run": {
+        "protocol": {
+          "box_center": [
+            127.862,
+            123.474,
+            104.225
+          ],
+          "box_size": [
+            30.0,
+            30.0,
+            30.0
+          ],
+          "conformers": 1,
+          "engine": "vina",
+          "exhaustiveness": 8,
+          "num_poses": 9,
+          "requested": null,
+          "seed": 42
+        },
+        "raw": {
+          "docking_protocol": {
+            "conformer_warnings": [],
+            "conformers_generated": 1,
+            "conformers_requested": 1,
+            "contract": "docking_protocol/v2",
+            "engine": "vina",
+            "execution_provenance": {
+              "app_version": "1.0.4",
+              "box_center": [
+                127.862,
+                123.474,
+                104.225
+              ],
+              "box_size": [
+                30.0,
+                30.0,
+                30.0
+              ],
+              "cpu": 4,
+              "git_commit": null,
+              "ligand_input_path": "ligands/f244818747080c0ec0dd16c2ca3fca3e2800d28abcf34c2a914caca51411fa8f/conformer.sdf",
+              "ligand_input_sha256": "0f06b8e3d194de6f0c085b6f0439a4b8095b4015992c6c1d32a2b237593b46d6",
+              "ligand_pdbqt_path": "ligands/f244818747080c0ec0dd16c2ca3fca3e2800d28abcf34c2a914caca51411fa8f/vina_input.pdbqt",
+              "ligand_pdbqt_sha256": "d0f85a7e391d170b1ee9388b2f6da7ce1a4050aa766afdf7cc85bb9917a0f69d",
+              "log_path": "runs/docking/f244818747080c0ec0dd16c2ca3fca3e2800d28abcf34c2a914caca51411fa8f/8T69/6f222f3b7038f483962f8b9995ee88631a4ffa2ca9ac5f8c75f122d0bdccc71d/1a087595bea04fc19077b67fb49d08e8/vina.log",
+              "log_sha256": "324fc043372133f9710fd5853b9a3ccadb00f3c9834b5744d581079408b8d695",
+              "poses_sha256": "2ce658ffb74709a1e6772e7462fd25833d5b94fd4906612f331a31cf0853aef0",
+              "receptor_prep": {
+                "backbone_gaps": [
+                  {
+                    "after": "TYR 49",
+                    "before": "ASP 123",
+                    "c_n_distance_A": 20.83,
+                    "chain": "A",
+                    "distance_to_box_A": 1.881,
+                    "missing_declared": 73,
+                    "site_critical": true
+                  }
+                ],
+                "chain": "A",
+                "cofactor_templates_sha256": "11e19414717c112df6a7c598973d0199a7be1f590d8773fc75ce70dd94681fbd",
+                "cofactors_outside_site": [],
+                "cofactors_whitelist": [],
+                "meeko_parameterized_json_sha256": "9351e96b23fb22651a7987a81514d58201838624c852748354931e01e995dcc9",
+                "prepared_chains": [
+                  "A"
+                ],
+                "protonation_method": "Meeko 0.7.1; template-based assignment, with no experimental pH declared",
+                "recipe_hash": "c83e542ca8f3085b0d2eaea4ec2ecb86bdfb1cb759c2152e258c5c3800c5153b",
+                "removed_residues": [],
+                "site_chains": [
+                  "A"
+                ],
+                "source": "meeko_report",
+                "species_diff": {
+                  "near_site": {
+                    "margin_A": 6.0,
+                    "preserved": [],
+                    "protein_residues_removed": {},
+                    "removed": [
+                      {
+                        "category": "site_ligand",
+                        "chain": "A",
+                        "distance_to_box_A": 0.0,
+                        "insertion_code": "",
+                        "name": "YHL",
+                        "residue_number": "901"
+                      }
+                    ]
+                  },
+                  "preserved": {
+                    "atom_records": 2900,
+                    "metals": 0,
+                    "organic_cofactors": 0,
+                    "waters": 0
+                  },
+                  "reason": "The source contains 1 chain(s); the run's receptor retains only 'A'.",
+                  "removed": {
+                    "metals": 0,
+                    "organic_cofactors": 0,
+                    "other_hetatm": 23,
+                    "waters": 0
+                  },
+                  "removed_species": [
+                    {
+                      "atom_count": 23,
+                      "category": "other_heteroatom",
+                      "residue_code": "YHL"
+                    }
+                  ],
+                  "route_input": {
+                    "atom_records": 2900,
+                    "chains": [
+                      "A"
+                    ],
+                    "hetatm_records": 0,
+                    "metals": 0,
+                    "organic_cofactors": 0,
+                    "other_hetatm": 0,
+                    "waters": 0
+                  },
+                  "site_ligand": "YHL",
+                  "source": {
+                    "atom_records": 2900,
+                    "chains": [
+                      "A"
+                    ],
+                    "hetatm_records": 23,
+                    "metals": 0,
+                    "organic_cofactors": 0,
+                    "other_hetatm": 23,
+                    "waters": 0
+                  },
+                  "state": "evaluado"
+                },
+                "truncated_sidechains": []
+              },
+              "receptor_sha256": "8fc027cae876631f30518b27823ce175e844bbe9e7bc10554653a7766e21468d",
+              "receta_receptor": 7,
+              "search_trace": {
+                "archive_path": "runs/vina-search/2501e6b7ee98885ed726158c5ac4ca618104dab6e371813f8f25d1bc1888f1ed.zip",
+                "archive_sha256": "2501e6b7ee98885ed726158c5ac4ca618104dab6e371813f8f25d1bc1888f1ed",
+                "instrumentation": {
+                  "binary_sha256": "0e0125909e6db01f7a9ca54ff310409151bf9132c08239dcd1970e10e0aac386",
+                  "capture": "vina_monte_carlo_bfgs_interno",
+                  "upstream_commit": "8eb40404f4f45608acb3b01427587ac049f27c1f",
+                  "version": "1.2.7"
+                },
+                "ligand_pdbqt_sha256": "d0f85a7e391d170b1ee9388b2f6da7ce1a4050aa766afdf7cc85bb9917a0f69d",
+                "poses_sdf_sha256": "2ce658ffb74709a1e6772e7462fd25833d5b94fd4906612f331a31cf0853aef0",
+                "receptor_sha256": "8fc027cae876631f30518b27823ce175e844bbe9e7bc10554653a7766e21468d",
+                "replicas": 8,
+                "schema": "moldesign.vina-search/1",
+                "snapshots": 62,
+                "steps": 128520
+              },
+              "toolchain": {
+                "dimorphite_dl": "2.0.2",
+                "meeko": "0.7.1",
+                "rdkit": "2025.9.6",
+                "vina": "1.2.7"
+              }
+            },
+            "exhaustiveness": 8,
+            "num_poses": 9,
+            "reference_residues": {
+              "catalog_count": 15,
+              "catalog_source": "auto_pocket_top15",
+              "count": 15,
+              "residues": [
+                "A:ALA337",
+                "A:ARG189",
+                "A:ASN34",
+                "A:GLU312",
+                "A:ILE308",
+                "A:LEU228",
+                "A:LEU37",
+                "A:PHE135",
+                "A:PHE334",
+                "A:PHE429",
+                "A:SER338",
+                "A:THR38",
+                "A:TYR341",
+                "A:TYR433",
+                "A:VAL232"
+              ],
+              "source": "selected"
+            },
+            "seed": 42
+          },
+          "ligand_state": {
+            "cambio_respecto_a_la_entrada": true,
+            "carga_formal_neta": -1,
+            "conformero": {
+              "campo_fuerza_final": "MMFF94",
+              "estrategia_embebido": "ETKDGv3",
+              "intentos_etkdg": 1,
+              "mitigaciones": [],
+              "optimizacion_convergida": true,
+              "rdkit_version": "2025.09.6",
+              "sdf_sha256": "0f06b8e3d194de6f0c085b6f0439a4b8095b4015992c6c1d32a2b237593b46d6",
+              "semilla": 42
+            },
+            "estereoquimica": {
+              "centros_sin_asignar": 0,
+              "declarada_por_el_usuario": true,
+              "dobles_sin_asignar": 0,
+              "dobles_sin_clasificar_3d": 0,
+              "motor": "RDKit AssignStereochemistryFrom3D 2025.09.6",
+              "perdida_en_la_especie_acoplada": {
+                "centros": 0,
+                "dobles": 0
+              },
+              "semilla": 42,
+              "smiles_3d_efectivo": "CC(=O)Oc1ccccc1C(=O)[O-]"
+            },
+            "formula_acoplada": "C9H7O4-",
+            "identidad_acoplada": {
+              "canonical_smiles": "CC(=O)Oc1ccccc1C(=O)[O-]",
+              "rdkit_version": "2025.09.6",
+              "sha256": "f00e774e13bde80814816490b10f978d2f6b6a20b36e870930bae799958d7f8c",
+              "version": 2
+            },
+            "identidad_entrada": {
+              "canonical_smiles": "CC(=O)Oc1ccccc1C(=O)O",
+              "rdkit_version": "2025.09.6",
+              "sha256": "c39c02acacac4fe9e43f959491a419d62855f1178a9c6cb9cf868d27dadec3d9",
+              "version": 2
+            },
+            "protonacion": {
+              "alternativas": 1,
+              "aplicada": true,
+              "aviso_de_ph": null,
+              "candidatos_sha256": "f244818747080c0ec0dd16c2ca3fca3e2800d28abcf34c2a914caca51411fa8f",
+              "motivo": null,
+              "motor": "dimorphite-dl",
+              "parametros": {
+                "max_variants": 128,
+                "ph_max": 7.4,
+                "ph_min": 7.4,
+                "precision": 1.0
+              },
+              "ph": 7.4,
+              "ph_solicitado": null,
+              "recortado": false,
+              "seleccion": {
+                "aniones_esperados": 1,
+                "cationes_esperados": 0,
+                "clases_sin_pka": [],
+                "criterio": "cargas_esperadas_ph_7.4",
+                "desajuste": 0,
+                "empatados": 1,
+                "motivo": "The formal-charge counts for each microstate are compared with the centers Henderson–Hasselbalch predicts to be ionized at pH 7.4, using this module's class-based pKa values. Ties are broken by alphabetical SMILES order, not by dimorphite-dl order, which is not reproducible across runs.",
+                "ph": 7.4,
+                "quimica_resuelta": true,
+                "revision_biguanida": false
+              },
+              "version_motor": "2.0.2"
+            },
+            "smiles_acoplado": "CC(=O)Oc1ccccc1C(=O)[O-]",
+            "smiles_entrada": "CC(=O)Oc1ccccc1C(=O)O",
+            "tautomeria": {
+              "alternativas": null,
+              "aplicada": false,
+              "aviso_de_modo": null,
+              "declaracion": {
+                "atomos_tautomericos": [
+                  0,
+                  2
+                ],
+                "candidatos": [
+                  {
+                    "es_canonico": false,
+                    "es_entrada": false,
+                    "id": "T0",
+                    "smiles": "C=C(O)Oc1ccccc1C(=O)[O-]"
+                  },
+                  {
+                    "es_canonico": true,
+                    "es_entrada": true,
+                    "id": "T1",
+                    "smiles": "CC(=O)Oc1ccccc1C(=O)[O-]"
+                  }
+                ],
+                "enumeracion_completa": true,
+                "estado": "MULTIESTADO_REQUERIDO",
+                "motivo": "2 tautomers enumerated, and none were excluded based on evidence; the docked species is identified separately",
+                "motor": "RDKit rdMolStandardize.TautomerEnumerator 2025.09.6 (tautomerRemoveSp3Stereo=False, maxTautomers=32)",
+                "n_candidatos": 2,
+                "poblaciones": null,
+                "poblaciones_motivo": "No validated population model is available, so no candidate is excluded. The RDKit canonical form is a reproducible representation, not the dominant state.",
+                "smiles_canonico": "CC(=O)Oc1ccccc1C(=O)[O-]",
+                "smiles_entrada": "CC(=O)Oc1ccccc1C(=O)[O-]",
+                "version": 1
+              },
+              "declaracion_entrada": {
+                "atomos_tautomericos": [
+                  0,
+                  2,
+                  11,
+                  12
+                ],
+                "candidatos": [
+                  {
+                    "es_canonico": false,
+                    "es_entrada": false,
+                    "id": "T0",
+                    "smiles": "C=C(O)Oc1ccccc1C(=O)O"
+                  },
+                  {
+                    "es_canonico": true,
+                    "es_entrada": true,
+                    "id": "T1",
+                    "smiles": "CC(=O)Oc1ccccc1C(=O)O"
+                  }
+                ],
+                "enumeracion_completa": true,
+                "estado": "MULTIESTADO_REQUERIDO",
+                "motivo": "2 tautomers enumerated, and none were excluded based on evidence; the docked species is identified separately",
+                "motor": "RDKit rdMolStandardize.TautomerEnumerator 2025.09.6 (tautomerRemoveSp3Stereo=False, maxTautomers=32)",
+                "n_candidatos": 2,
+                "poblaciones": null,
+                "poblaciones_motivo": "No validated population model is available, so no candidate is excluded. The RDKit canonical form is a reproducible representation, not the dominant state.",
+                "smiles_canonico": "CC(=O)Oc1ccccc1C(=O)O",
+                "smiles_entrada": "CC(=O)Oc1ccccc1C(=O)O",
+                "tautomero_acoplado": "entrada",
+                "version": 1
+              },
+              "modo": "entrada",
+              "motivo": "se respeta el tautómero de la entrada (tautomero=entrada)",
+              "motor": null
+            }
+          }
+        },
+        "receptor_calibration": {
+          "advertencia": "",
+          "motivo": "",
+          "nivel": "calibrado",
+          "requiere_advertencia": false,
+          "respaldo": {
+            "endpoint": "Ki",
+            "ic95": [
+              0.216,
+              0.5404
+            ],
+            "n": 89,
+            "panel": "US11718618B2 Example 11",
+            "protocolo": {
+              "exhaustiveness": 8,
+              "num_poses": 9,
+              "semilla": 42
+            },
+            "receptor_sha256": "8fc027cae876631f30518b27823ce175e844bbe9e7bc10554653a7766e21468d",
+            "rho": 0.3918
+          },
+          "resumen": "Calibrated for this receptor (measured Spearman ρ)",
+          "rho_registrada_sin_respaldo": null,
+          "spearman_rho": 0.3918,
+          "structural_family": "transporter",
+          "tiene_pipeline_de_familia": false
+        },
+        "receptor_sha256": "8fc027cae876631f30518b27823ce175e844bbe9e7bc10554653a7766e21468d",
+        "source": "MolDesign GET /evaluation/status",
+        "species": {
+          "docked_smiles_3d": "CC(=O)Oc1ccccc1C(=O)[O-]",
+          "input_smiles": "CC(=O)Oc1ccccc1C(=O)O",
+          "protonation": {
+            "alternatives": 1,
+            "applied": true,
+            "ph": 7.4,
+            "reason": null
+          },
+          "stereo": {
+            "declared_by_user": true,
+            "lost_in_docked_species": {
+              "centros": 0,
+              "dobles": 0
+            },
+            "unassigned_centers": 0,
+            "unassigned_double_bonds": 0
+          },
+          "tautomer": {
+            "alternatives": null,
+            "applied": false,
+            "reason": "se respeta el tautómero de la entrada (tautomero=entrada)"
+          }
+        },
+        "vina_version": "1.2.7",
+        "warnings": [
+          {
+            "code": "RECEPTOR_PROTONACION_DECLARADA",
+            "message": "Meeko-assigned histidine templates: A:353=HIE, A:414=HIE. The assignment is template-based and does not validate the experimental microstate or a specific pH.",
+            "severity": "precaucion"
+          },
+          {
+            "code": "SITIO_DESOLVATADO",
+            "message": "Desolvated preparation: the deposited structure had no crystallographic waters inside the docking box, so none were removed from the site during preparation.",
+            "severity": "info"
+          },
+          {
+            "code": null,
+            "message": "Ligand efficiency LE=0.53. With 13 heavy atoms, the 0.45 threshold is crossed by any affinity better than -5.9 kcal/mol, so exceeding it does not distinguish good binding from mediocre binding. In this mass range (< 300 Da, Rule of Three), efficiency per atom is high by construction: it can compare molecules of the same size, but cannot serve as a verdict.",
+            "severity": "legacy"
+          },
+          {
+            "code": "ESPECIE_ACOPLADA_DISTINTA",
+            "message": "The docked species differs from the input: CC(=O)Oc1ccccc1C(=O)O → CC(=O)Oc1ccccc1C(=O)[O-]. Unevaluated alternatives remain a source of chemical uncertainty.",
+            "severity": "precaucion"
+          }
+        ]
+      },
+      "seconds": 9.0,
+      "smiles": "CC(=O)OC1=CC=CC=C1C(=O)O",
+      "source": {
+        "cid": 2244,
+        "database": "PubChem",
+        "match": "exact",
+        "name": "Aspirin",
+        "pubchem_smiles": "CC(=O)OC1=CC=CC=C1C(=O)O",
+        "query": "aspirin",
+        "url": "https://pubchem.ncbi.nlm.nih.gov/compound/2244"
+      },
+      "status": "docked",
+      "status_code": "evaluated",
+      "task_id": "4ab50a93-e952-4955-af12-f93ca06ebee8",
+      "timing": {
+        "case_state_before": "idle",
+        "to_result_s": 6.1,
+        "to_start_s": 2.8,
+        "waiting_case_s": 0.1
+      },
+      "vina_kcal_mol": -6.867
+    },
+    {
+      "n": 2,
+      "name": "ketanserin",
+      "physical_controls": "passed",
+      "reading": "meets the rule",
+      "reason": "Vina -11.2 kcal/mol and physical checks passed.",
+      "run": {
+        "protocol": {
+          "box_center": [
+            127.862,
+            123.474,
+            104.225
+          ],
+          "box_size": [
+            30.0,
+            30.0,
+            30.0
+          ],
+          "conformers": 1,
+          "engine": "vina",
+          "exhaustiveness": 8,
+          "num_poses": 9,
+          "requested": null,
+          "seed": 42
+        },
+        "raw": {
+          "docking_protocol": {
+            "conformer_warnings": [],
+            "conformers_generated": 1,
+            "conformers_requested": 1,
+            "contract": "docking_protocol/v2",
+            "engine": "vina",
+            "execution_provenance": {
+              "app_version": "1.0.4",
+              "box_center": [
+                127.862,
+                123.474,
+                104.225
+              ],
+              "box_size": [
+                30.0,
+                30.0,
+                30.0
+              ],
+              "cpu": 4,
+              "git_commit": null,
+              "ligand_input_path": "ligands/cafc0dda8fee0384fef8884706d1c4d56c9480a92971a496f76297991eb8c66c/conformer.sdf",
+              "ligand_input_sha256": "21ba454238cb3283286277314af22a3d9d5c9b367110bf002cb386a0444cb7e7",
+              "ligand_pdbqt_path": "ligands/cafc0dda8fee0384fef8884706d1c4d56c9480a92971a496f76297991eb8c66c/vina_input.pdbqt",
+              "ligand_pdbqt_sha256": "239227c19f9eea373b5bb68afc020aaecf16d326c20cc39a3329963fcb220e39",
+              "log_path": "runs/docking/cafc0dda8fee0384fef8884706d1c4d56c9480a92971a496f76297991eb8c66c/8T69/23f02dcfb8d6e98a4ac6e1e41e6dda534d79bff6c33eb01aa55b30bde7b4e344/6ed0a9db91814299ae8bdf0fcb907e71/vina.log",
+              "log_sha256": "d796e230be736b079f2775b652b0392e51934c4ba9fb250bd5cc0730d50ff6ab",
+              "poses_sha256": "8bc2ae1b67fdcf649be8b9c42f14724615bf13c1b015caee8e24e11a21498cf3",
+              "receptor_prep": {
+                "backbone_gaps": [
+                  {
+                    "after": "TYR 49",
+                    "before": "ASP 123",
+                    "c_n_distance_A": 20.83,
+                    "chain": "A",
+                    "distance_to_box_A": 1.881,
+                    "missing_declared": 73,
+                    "site_critical": true
+                  }
+                ],
+                "chain": "A",
+                "cofactor_templates_sha256": "11e19414717c112df6a7c598973d0199a7be1f590d8773fc75ce70dd94681fbd",
+                "cofactors_outside_site": [],
+                "cofactors_whitelist": [],
+                "meeko_parameterized_json_sha256": "9351e96b23fb22651a7987a81514d58201838624c852748354931e01e995dcc9",
+                "prepared_chains": [
+                  "A"
+                ],
+                "protonation_method": "Meeko 0.7.1; template-based assignment, with no experimental pH declared",
+                "recipe_hash": "c83e542ca8f3085b0d2eaea4ec2ecb86bdfb1cb759c2152e258c5c3800c5153b",
+                "removed_residues": [],
+                "site_chains": [
+                  "A"
+                ],
+                "source": "meeko_report",
+                "species_diff": {
+                  "near_site": {
+                    "margin_A": 6.0,
+                    "preserved": [],
+                    "protein_residues_removed": {},
+                    "removed": [
+                      {
+                        "category": "site_ligand",
+                        "chain": "A",
+                        "distance_to_box_A": 0.0,
+                        "insertion_code": "",
+                        "name": "YHL",
+                        "residue_number": "901"
+                      }
+                    ]
+                  },
+                  "preserved": {
+                    "atom_records": 2900,
+                    "metals": 0,
+                    "organic_cofactors": 0,
+                    "waters": 0
+                  },
+                  "reason": "The source contains 1 chain(s); the run's receptor retains only 'A'.",
+                  "removed": {
+                    "metals": 0,
+                    "organic_cofactors": 0,
+                    "other_hetatm": 23,
+                    "waters": 0
+                  },
+                  "removed_species": [
+                    {
+                      "atom_count": 23,
+                      "category": "other_heteroatom",
+                      "residue_code": "YHL"
+                    }
+                  ],
+                  "route_input": {
+                    "atom_records": 2900,
+                    "chains": [
+                      "A"
+                    ],
+                    "hetatm_records": 0,
+                    "metals": 0,
+                    "organic_cofactors": 0,
+                    "other_hetatm": 0,
+                    "waters": 0
+                  },
+                  "site_ligand": "YHL",
+                  "source": {
+                    "atom_records": 2900,
+                    "chains": [
+                      "A"
+                    ],
+                    "hetatm_records": 23,
+                    "metals": 0,
+                    "organic_cofactors": 0,
+                    "other_hetatm": 23,
+                    "waters": 0
+                  },
+                  "state": "evaluado"
+                },
+                "truncated_sidechains": []
+              },
+              "receptor_sha256": "8fc027cae876631f30518b27823ce175e844bbe9e7bc10554653a7766e21468d",
+              "receta_receptor": 7,
+              "search_trace": {
+                "archive_path": "runs/vina-search/92b2bafbb44a1580441c5f40f9f1c81831b446cb9e06885b14f4c64aaec103cd.zip",
+                "archive_sha256": "92b2bafbb44a1580441c5f40f9f1c81831b446cb9e06885b14f4c64aaec103cd",
+                "instrumentation": {
+                  "binary_sha256": "0e0125909e6db01f7a9ca54ff310409151bf9132c08239dcd1970e10e0aac386",
+                  "capture": "vina_monte_carlo_bfgs_interno",
+                  "upstream_commit": "8eb40404f4f45608acb3b01427587ac049f27c1f",
+                  "version": "1.2.7"
+                },
+                "ligand_pdbqt_sha256": "239227c19f9eea373b5bb68afc020aaecf16d326c20cc39a3329963fcb220e39",
+                "poses_sdf_sha256": "8bc2ae1b67fdcf649be8b9c42f14724615bf13c1b015caee8e24e11a21498cf3",
+                "receptor_sha256": "8fc027cae876631f30518b27823ce175e844bbe9e7bc10554653a7766e21468d",
+                "replicas": 8,
+                "schema": "moldesign.vina-search/1",
+                "snapshots": 62,
+                "steps": 160440
+              },
+              "toolchain": {
+                "dimorphite_dl": "2.0.2",
+                "meeko": "0.7.1",
+                "rdkit": "2025.9.6",
+                "vina": "1.2.7"
+              }
+            },
+            "exhaustiveness": 8,
+            "num_poses": 9,
+            "reference_residues": {
+              "catalog_count": 15,
+              "catalog_source": "auto_pocket_top15",
+              "count": 15,
+              "residues": [
+                "A:ALA337",
+                "A:ARG189",
+                "A:ASN34",
+                "A:GLU312",
+                "A:ILE308",
+                "A:LEU228",
+                "A:LEU37",
+                "A:PHE135",
+                "A:PHE334",
+                "A:PHE429",
+                "A:SER338",
+                "A:THR38",
+                "A:TYR341",
+                "A:TYR433",
+                "A:VAL232"
+              ],
+              "source": "selected"
+            },
+            "seed": 42
+          },
+          "ligand_state": {
+            "cambio_respecto_a_la_entrada": true,
+            "carga_formal_neta": 1,
+            "conformero": {
+              "campo_fuerza_final": "MMFF94",
+              "estrategia_embebido": "ETKDGv3",
+              "intentos_etkdg": 1,
+              "mitigaciones": [],
+              "optimizacion_convergida": true,
+              "rdkit_version": "2025.09.6",
+              "sdf_sha256": "21ba454238cb3283286277314af22a3d9d5c9b367110bf002cb386a0444cb7e7",
+              "semilla": 42
+            },
+            "estereoquimica": {
+              "centros_sin_asignar": 0,
+              "declarada_por_el_usuario": true,
+              "dobles_sin_asignar": 0,
+              "dobles_sin_clasificar_3d": 0,
+              "motor": "RDKit AssignStereochemistryFrom3D 2025.09.6",
+              "perdida_en_la_especie_acoplada": {
+                "centros": 0,
+                "dobles": 0
+              },
+              "semilla": 42,
+              "smiles_3d_efectivo": "O=c1[nH]c2ccccc2c(=O)n1CC[N@H+]1CC[C@@H](C(=O)c2ccc(F)cc2)CC1"
+            },
+            "formula_acoplada": "C22H23FN3O3+",
+            "identidad_acoplada": {
+              "canonical_smiles": "O=C(c1ccc(F)cc1)C1CC[NH+](CCn2c(=O)[nH]c3ccccc3c2=O)CC1",
+              "rdkit_version": "2025.09.6",
+              "sha256": "82557cd834e761289262bfe638ae1cffed9a08d6c414490cda21b727ebd4a14b",
+              "version": 2
+            },
+            "identidad_entrada": {
+              "canonical_smiles": "O=C(c1ccc(F)cc1)C1CCN(CCn2c(=O)[nH]c3ccccc3c2=O)CC1",
+              "rdkit_version": "2025.09.6",
+              "sha256": "fdbfc9d723935a8ecb8a3ed923b74ede6527be22b32726814328d8a572945f7a",
+              "version": 2
+            },
+            "protonacion": {
+              "alternativas": 4,
+              "aplicada": true,
+              "aviso_de_ph": null,
+              "candidatos_sha256": "455fb1e2349aef416c25fca21d239bba8b232a2cbabde11702ea462d933c3738",
+              "motivo": null,
+              "motor": "dimorphite-dl",
+              "parametros": {
+                "max_variants": 128,
+                "ph_max": 7.4,
+                "ph_min": 7.4,
+                "precision": 1.0
+              },
+              "ph": 7.4,
+              "ph_solicitado": null,
+              "recortado": false,
+              "seleccion": {
+                "aniones_esperados": 0,
+                "cationes_esperados": 1,
+                "clases_sin_pka": [],
+                "criterio": "cargas_esperadas_ph_7.4",
+                "desajuste": 0,
+                "empatados": 1,
+                "motivo": "The formal-charge counts for each microstate are compared with the centers Henderson–Hasselbalch predicts to be ionized at pH 7.4, using this module's class-based pKa values. Ties are broken by alphabetical SMILES order, not by dimorphite-dl order, which is not reproducible across runs.",
+                "ph": 7.4,
+                "quimica_resuelta": true,
+                "revision_biguanida": false
+              },
+              "version_motor": "2.0.2"
+            },
+            "smiles_acoplado": "O=C(c1ccc(F)cc1)C1CC[NH+](CCn2c(=O)[nH]c3ccccc3c2=O)CC1",
+            "smiles_entrada": "O=C(c1ccc(F)cc1)C1CCN(CCn2c(=O)[nH]c3ccccc3c2=O)CC1",
+            "tautomeria": {
+              "alternativas": null,
+              "aplicada": false,
+              "aviso_de_modo": null,
+              "declaracion": {
+                "atomos_tautomericos": [
+                  0,
+                  9,
+                  17,
+                  18,
+                  26
+                ],
+                "candidatos": [
+                  {
+                    "es_canonico": true,
+                    "es_entrada": true,
+                    "id": "T0",
+                    "smiles": "O=C(c1ccc(F)cc1)C1CC[NH+](CCn2c(=O)[nH]c3ccccc3c2=O)CC1"
+                  },
+                  {
+                    "es_canonico": false,
+                    "es_entrada": false,
+                    "id": "T1",
+                    "smiles": "O=C(c1ccc(F)cc1)C1CC[NH+](CCn2c(O)c3ccccc3nc2=O)CC1"
+                  },
+                  {
+                    "es_canonico": false,
+                    "es_entrada": false,
+                    "id": "T2",
+                    "smiles": "O=C(c1ccc(F)cc1)C1CC[NH+](CCn2c(O)nc3ccccc3c2=O)CC1"
+                  },
+                  {
+                    "es_canonico": false,
+                    "es_entrada": false,
+                    "id": "T3",
+                    "smiles": "O=c1[nH]c2ccccc2c(=O)n1CC[NH+]1CCC(=C(O)c2ccc(F)cc2)CC1"
+                  },
+                  {
+                    "es_canonico": false,
+                    "es_entrada": false,
+                    "id": "T4",
+                    "smiles": "O=c1c2ccccc2nc(O)n1CC[NH+]1CCC(=C(O)c2ccc(F)cc2)CC1"
+                  },
+                  {
+                    "es_canonico": false,
+                    "es_entrada": false,
+                    "id": "T5",
+                    "smiles": "O=c1nc2ccccc2c(O)n1CC[NH+]1CCC(=C(O)c2ccc(F)cc2)CC1"
+                  }
+                ],
+                "enumeracion_completa": true,
+                "estado": "MULTIESTADO_REQUERIDO",
+                "motivo": "6 tautomers enumerated, and none were excluded based on evidence; the docked species is identified separately",
+                "motor": "RDKit rdMolStandardize.TautomerEnumerator 2025.09.6 (tautomerRemoveSp3Stereo=False, maxTautomers=32)",
+                "n_candidatos": 6,
+                "poblaciones": null,
+                "poblaciones_motivo": "No validated population model is available, so no candidate is excluded. The RDKit canonical form is a reproducible representation, not the dominant state.",
+                "smiles_canonico": "O=C(c1ccc(F)cc1)C1CC[NH+](CCn2c(=O)[nH]c3ccccc3c2=O)CC1",
+                "smiles_entrada": "O=C(c1ccc(F)cc1)C1CC[NH+](CCn2c(=O)[nH]c3ccccc3c2=O)CC1",
+                "version": 1
+              },
+              "declaracion_entrada": {
+                "atomos_tautomericos": [
+                  0,
+                  9,
+                  17,
+                  18,
+                  26
+                ],
+                "candidatos": [
+                  {
+                    "es_canonico": true,
+                    "es_entrada": true,
+                    "id": "T0",
+                    "smiles": "O=C(c1ccc(F)cc1)C1CCN(CCn2c(=O)[nH]c3ccccc3c2=O)CC1"
+                  },
+                  {
+                    "es_canonico": false,
+                    "es_entrada": false,
+                    "id": "T1",
+                    "smiles": "O=C(c1ccc(F)cc1)C1CCN(CCn2c(O)c3ccccc3nc2=O)CC1"
+                  },
+                  {
+                    "es_canonico": false,
+                    "es_entrada": false,
+                    "id": "T2",
+                    "smiles": "O=C(c1ccc(F)cc1)C1CCN(CCn2c(O)nc3ccccc3c2=O)CC1"
+                  },
+                  {
+                    "es_canonico": false,
+                    "es_entrada": false,
+                    "id": "T3",
+                    "smiles": "O=c1[nH]c2ccccc2c(=O)n1CCN1CCC(=C(O)c2ccc(F)cc2)CC1"
+                  },
+                  {
+                    "es_canonico": false,
+                    "es_entrada": false,
+                    "id": "T4",
+                    "smiles": "O=c1c2ccccc2nc(O)n1CCN1CCC(=C(O)c2ccc(F)cc2)CC1"
+                  },
+                  {
+                    "es_canonico": false,
+                    "es_entrada": false,
+                    "id": "T5",
+                    "smiles": "O=c1nc2ccccc2c(O)n1CCN1CCC(=C(O)c2ccc(F)cc2)CC1"
+                  }
+                ],
+                "enumeracion_completa": true,
+                "estado": "MULTIESTADO_REQUERIDO",
+                "motivo": "6 tautomers enumerated, and none were excluded based on evidence; the docked species is identified separately",
+                "motor": "RDKit rdMolStandardize.TautomerEnumerator 2025.09.6 (tautomerRemoveSp3Stereo=False, maxTautomers=32)",
+                "n_candidatos": 6,
+                "poblaciones": null,
+                "poblaciones_motivo": "No validated population model is available, so no candidate is excluded. The RDKit canonical form is a reproducible representation, not the dominant state.",
+                "smiles_canonico": "O=C(c1ccc(F)cc1)C1CCN(CCn2c(=O)[nH]c3ccccc3c2=O)CC1",
+                "smiles_entrada": "O=C(c1ccc(F)cc1)C1CCN(CCn2c(=O)[nH]c3ccccc3c2=O)CC1",
+                "tautomero_acoplado": "entrada",
+                "version": 1
+              },
+              "modo": "entrada",
+              "motivo": "se respeta el tautómero de la entrada (tautomero=entrada)",
+              "motor": null
+            }
+          }
+        },
+        "receptor_calibration": {
+          "advertencia": "",
+          "motivo": "",
+          "nivel": "calibrado",
+          "requiere_advertencia": false,
+          "respaldo": {
+            "endpoint": "Ki",
+            "ic95": [
+              0.216,
+              0.5404
+            ],
+            "n": 89,
+            "panel": "US11718618B2 Example 11",
+            "protocolo": {
+              "exhaustiveness": 8,
+              "num_poses": 9,
+              "semilla": 42
+            },
+            "receptor_sha256": "8fc027cae876631f30518b27823ce175e844bbe9e7bc10554653a7766e21468d",
+            "rho": 0.3918
+          },
+          "resumen": "Calibrated for this receptor (measured Spearman ρ)",
+          "rho_registrada_sin_respaldo": null,
+          "spearman_rho": 0.3918,
+          "structural_family": "transporter",
+          "tiene_pipeline_de_familia": false
+        },
+        "receptor_sha256": "8fc027cae876631f30518b27823ce175e844bbe9e7bc10554653a7766e21468d",
+        "source": "MolDesign GET /evaluation/status",
+        "species": {
+          "docked_smiles_3d": "O=c1[nH]c2ccccc2c(=O)n1CC[N@H+]1CC[C@@H](C(=O)c2ccc(F)cc2)CC1",
+          "input_smiles": "O=C(c1ccc(F)cc1)C1CCN(CCn2c(=O)[nH]c3ccccc3c2=O)CC1",
+          "protonation": {
+            "alternatives": 4,
+            "applied": true,
+            "ph": 7.4,
+            "reason": null
+          },
+          "stereo": {
+            "declared_by_user": true,
+            "lost_in_docked_species": {
+              "centros": 0,
+              "dobles": 0
+            },
+            "unassigned_centers": 0,
+            "unassigned_double_bonds": 0
+          },
+          "tautomer": {
+            "alternatives": null,
+            "applied": false,
+            "reason": "se respeta el tautómero de la entrada (tautomero=entrada)"
+          }
+        },
+        "vina_version": "1.2.7",
+        "warnings": [
+          {
+            "code": "RECEPTOR_PROTONACION_DECLARADA",
+            "message": "Meeko-assigned histidine templates: A:353=HIE, A:414=HIE. The assignment is template-based and does not validate the experimental microstate or a specific pH.",
+            "severity": "precaucion"
+          },
+          {
+            "code": "SITIO_DESOLVATADO",
+            "message": "Desolvated preparation: the deposited structure had no crystallographic waters inside the docking box, so none were removed from the site during preparation.",
+            "severity": "info"
+          },
+          {
+            "code": null,
+            "message": "⚠️ Molecule with 29 heavy atoms and 5 rotatable bonds — docking may take longer than usual. To reduce run time, review the box and Vina exhaustiveness; a smaller search may change the poses.",
+            "severity": "legacy"
+          },
+          {
+            "code": "ESPECIE_ACOPLADA_DISTINTA",
+            "message": "The docked species differs from the input: O=C(c1ccc(F)cc1)C1CCN(CCn2c(=O)[nH]c3ccccc3c2=O)CC1 → O=C(c1ccc(F)cc1)C1CC[NH+](CCn2c(=O)[nH]c3ccccc3c2=O)CC1. Unevaluated alternatives remain a source of chemical uncertainty.",
+            "severity": "precaucion"
+          }
+        ]
+      },
+      "seconds": 12.1,
+      "smiles": "C1CN(CCC1C(=O)C2=CC=C(C=C2)F)CCN3C(=O)C4=CC=CC=C4NC3=O",
+      "source": {
+        "cid": 3822,
+        "database": "PubChem",
+        "match": "exact",
+        "name": "Ketanserin",
+        "pubchem_smiles": "C1CN(CCC1C(=O)C2=CC=C(C=C2)F)CCN3C(=O)C4=CC=CC=C4NC3=O",
+        "query": "ketanserin",
+        "url": "https://pubchem.ncbi.nlm.nih.gov/compound/3822"
+      },
+      "status": "docked",
+      "status_code": "evaluated",
+      "task_id": "e56bb4e4-7b3f-4445-8136-92e561543072",
+      "timing": {
+        "case_state_before": "idle",
+        "to_result_s": 9.1,
+        "to_start_s": 2.8,
+        "waiting_case_s": 0.2
+      },
+      "vina_kcal_mol": -11.2
+    },
+    {
+      "n": 3,
+      "name": "valbenazine",
+      "physical_controls": null,
+      "reading": "The stop rule was already met.",
+      "reason": "The stop rule was already met.",
+      "run": null,
+      "seconds": null,
+      "smiles": "CC(C)C[C@@H]1CN2CCC3=CC(=C(C=C3[C@H]2C[C@H]1OC(=O)[C@H](C(C)C)N)OC)OC",
+      "source": {
+        "cid": 24795069,
+        "database": "PubChem",
+        "match": "exact",
+        "name": "Valbenazine",
+        "pubchem_smiles": "CC(C)C[C@@H]1CN2CCC3=CC(=C(C=C3[C@H]2C[C@H]1OC(=O)[C@H](C(C)C)N)OC)OC",
+        "query": "valbenazine",
+        "url": "https://pubchem.ncbi.nlm.nih.gov/compound/24795069"
+      },
+      "status": "not docked",
+      "status_code": "skipped",
+      "task_id": null,
+      "timing": {
+        "case_state_before": null,
+        "to_result_s": null,
+        "to_start_s": null,
+        "waiting_case_s": null
+      },
+      "vina_kcal_mol": null
+    }
+  ],
+  "notes": [],
+  "plan": [
+    "Case “benchmark-vmat2-reproduction” · receptor 8T69",
+    "3 molecules, one after another in this same case: aspirin, ketanserin, valbenazine",
+    "Stops at the first one that meets it: Vina ≤ -10.5 kcal/mol and the best pose passes the physical checks",
+    "If a molecule fails, it is noted and the next one goes on.",
+    "The one that meets it is saved to Moldex.",
+    "Molcy video (GPU only): scene Search, format test (short preview); MolDesign's closing is always added.",
+    "Presentation: Molcy's automatic one.",
+    "The run is audited in Preparation; if it needs review, that is declared, not decided.",
+    "At the end everything goes into a single ZIP.",
+    "Limit: 7 min per molecule and 40 min in total."
+  ],
+  "plan_digest": "sha256:5bf3ba8e82a3a25050a45fab0cc2ed1a0300b88d26ea84b457083694513c46bc",
+  "preparation": {
+    "blockers": [],
+    "in_review": [
+      "receptor.huecos",
+      "receptor.protonacion",
+      "entorno.membrana",
+      "procedencia.commit",
+      "procedencia.previa_advertencias",
+      "procedencia.previa_sin_evaluar"
+    ],
+    "message": "Preparation: REVIEW. 0 blockers and 6 requirements under review; MolChat did not decide them.",
+    "readiness": "REVISION",
+    "reason": "Open scientific decisions would carry over to the next calculation.",
+    "status": "exported"
+  },
+  "provenance": "The energies, the physical checks, the protocol, the warnings and the docked species came from MolDesign; each molecule's identity, from the PubChem lookup of this conversation whose SMILES matches literally. MolChat ordered the calls, recorded what happened and wrote this notebook without the model.",
+  "receptor": "8T69",
+  "request": "Prepare an approved-once iteration in a NEW case called benchmark-vmat2-reproduction. Resolve aspirin, ketanserin and valbenazine through PubChem in exactly that order. Receptor VMAT2, PDB 8T69. Stop at the FIRST candidate with Vina energy <= -10.5 kcal/mol AND passed physical pose checks. Save the selected run in Moldex, make a short preview search video, audit it in Preparation, and deliver the notebook, original Preparation package and video in a single ZIP. First show the approval card and wait; do not start docking yet.",
+  "rule": {
+    "require_physical": true,
+    "stop": "first",
+    "threshold_kcal_mol": -10.5
+  },
+  "saved": {
+    "message": "Run saved to Moldex.",
+    "name": "ketanserin",
+    "status": "saved",
+    "task_id": "e56bb4e4-7b3f-4445-8136-92e561543072"
+  },
+  "schema": "moldesign.molchat.notebook/1",
+  "selected": {
+    "n": 2,
+    "name": "ketanserin",
+    "physical_controls": "passed",
+    "task_id": "e56bb4e4-7b3f-4445-8136-92e561543072",
+    "vina_kcal_mol": -11.2
+  },
+  "state": "completed",
+  "state_text": "Finished: one molecule meets the rule.",
+  "versions": {
+    "vina": "1.2.7"
+  },
+  "video": {
+    "file": "molcy_33ed4e1c.mp4",
+    "final": "completo",
+    "job_id": "33ed4e1c-64cc-4ed3-8f1a-d4087658fd23",
+    "job_state": "completo",
+    "message": "Video queued in Molcy (started from its tab).",
+    "phase": null,
+    "progress": null,
+    "status": "started"
+  }
+}

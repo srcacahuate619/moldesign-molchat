@@ -1,0 +1,120 @@
+{
+  "schema": "molchat.evidence-summary/1",
+  "synthetic": {
+    "source": "published/synthetic/results.json",
+    "repetitions": 3,
+    "checks_per_repetition": [
+      {
+        "passed": 220,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "passed": 220,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "passed": 220,
+        "failed": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "live_initial": {
+    "source": "published/live/results.json",
+    "distinct_prompts": 36,
+    "trials": 72,
+    "by_difficulty": {
+      "easy": {
+        "passed": 24,
+        "total": 24
+      },
+      "moderate": {
+        "passed": 24,
+        "total": 24
+      },
+      "hard": {
+        "passed": 20,
+        "total": 24
+      }
+    },
+    "requested_tool_calls": {
+      "compute_properties": 26,
+      "pubchem_lookup": 18,
+      "search_receptors": 6,
+      "propose_iteration": 20,
+      "show_property_comparison": 2
+    },
+    "executed_tool_calls": {
+      "compute_properties": 26,
+      "pubchem_lookup": 18,
+      "search_receptors": 6,
+      "propose_iteration": 20,
+      "show_property_comparison": 2
+    }
+  },
+  "browser_campaigns": [
+    {
+      "case": "benchmark-vmat2-20261103",
+      "source": "published/capsule/README.md",
+      "delivery": "published/capsule/delivery.zip",
+      "delivery_sha256": "6e11d8fcc1ee1f46dd0a65e7851fffa879393e636da206bc5f19e998368644e1",
+      "molecules": [
+        {
+          "name": "aspirin",
+          "status": "evaluated",
+          "vina_kcal_mol": -6.867,
+          "physical_controls": "passed"
+        },
+        {
+          "name": "ketanserin",
+          "status": "evaluated",
+          "vina_kcal_mol": -11.2,
+          "physical_controls": "passed"
+        },
+        {
+          "name": "valbenazine",
+          "status": "skipped",
+          "vina_kcal_mol": null,
+          "physical_controls": null
+        }
+      ]
+    },
+    {
+      "case": "benchmark-vmat2-reproduction",
+      "source": "published/capsule-reproduction/README.md",
+      "delivery": "published/capsule-reproduction/delivery.zip",
+      "delivery_sha256": "9c20187534dd9eb5d3f3f3a9051a8a828da060569dcd5df42f5cc79879ef537d",
+      "molecules": [
+        {
+          "name": "aspirin",
+          "status": "evaluated",
+          "vina_kcal_mol": -6.867,
+          "physical_controls": "passed"
+        },
+        {
+          "name": "ketanserin",
+          "status": "evaluated",
+          "vina_kcal_mol": -11.2,
+          "physical_controls": "passed"
+        },
+        {
+          "name": "valbenazine",
+          "status": "skipped",
+          "vina_kcal_mol": null,
+          "physical_controls": null
+        }
+      ]
+    }
+  ],
+  "validation": "published/validation.json",
+  "findings": "FINDINGS.md",
+  "live_followup": {
+    "source": "published/followup/results.json",
+    "trials": 6,
+    "passed": 6,
+    "oracle_revision": "empty-catalog-v2",
+    "not_merged_with_initial_score": true
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "id": "M06",
+  "difficulty": "moderate",
+  "repetition": 2,
+  "prompt": "Prepare an iteration for case missing-receptor: benzene c1ccccc1 and pyridine c1ccncc1, threshold -9.5 kcal/mol, stop at first physically valid pose. I have NOT chosen a receptor. Ask me for it; do not invent or pick one.",
+  "expect": {
+    "no_plan": true,
+    "answer_any": [
+      [
+        "receptor",
+        "PDB"
+      ]
+    ]
+  },
+  "model_steps": [
+    {
+      "step": 1,
+      "request": {
+        "model": "meta-models/muse-spark-open-1026",
+        "temperature": 0.1,
+        "max_tokens": 4096,
+        "messages": [
+          {
+            "role": "system",
+            "content_sha256": "fcec384fd15c61947d867423370569e88264b2c25ec0402dafbb9d92aee604e1"
+          },
+          {
+            "role": "user",
+            "content": "Prepare an iteration for case missing-receptor: benzene c1ccccc1 and pyridine c1ccncc1, threshold -9.5 kcal/mol, stop at first physically valid pose. I have NOT chosen a receptor. Ask me for it; do not invent or pick one."
+          }
+        ],
+        "tool_names": [
+          "create_case",
+          "load_case_smiles",
+          "assign_case_receptor",
+          "evaluate_case",
+          "compute_properties",
+          "show_property_comparison",
+          "verify_editor_structure",
+          "suggest_next_actions",
+          "pubchem_lookup",
+          "search_receptors",
+          "pick_random_receptor",
+          "get_evaluation_status",
+          "explain_evaluation",
+          "compare_poses",
+          "save_to_moldex",
+          "request_molcy_video",
+          "get_molcy_video_status",
+          "propose_iteration"
+        ]
+      },
+      "response": {
+        "role": "assistant",
+        "content": "To prepare the iteration for case **missing-receptor** with:\n\n- benzene `c1ccccc1`\n- pyridine `c1ccncc1`\n- threshold **-9.5 kcal/mol**\n- stop at first physically valid pose\n\nI need the receptor PDB ID to proceed.\n\nYou indicated you have NOT chosen a receptor and asked me not to invent or pick one.\n\nPlease provide the exact PDB ID you want to use for this iteration (e.g., `1ABC`). Once you provide it, I can prepare the iteration card for your approval."
+      },
+      "latency_ms": 2810.034
+    }
+  ],
+  "host_events": [],
+  "tool_executions": [],
+  "validation_events": [],
+  "plans": [],
+  "provider": {
+    "id": "baseten-hackathon",
+    "model": "meta-models/muse-spark-open-1026",
+    "endpoint": "https://inference.baseten.co/v1"
+  },
+  "transcript": [
+    {
+      "role": "system",
+      "content_sha256": "fcec384fd15c61947d867423370569e88264b2c25ec0402dafbb9d92aee604e1"
+    },
+    {
+      "role": "user",
+      "content": "Prepare an iteration for case missing-receptor: benzene c1ccccc1 and pyridine c1ccncc1, threshold -9.5 kcal/mol, stop at first physically valid pose. I have NOT chosen a receptor. Ask me for it; do not invent or pick one."
+    },
+    {
+      "role": "assistant",
+      "content": "To prepare the iteration for case **missing-receptor** with:\n\n- benzene `c1ccccc1`\n- pyridine `c1ccncc1`\n- threshold **-9.5 kcal/mol**\n- stop at first physically valid pose\n\nI need the receptor PDB ID to proceed.\n\nYou indicated you have NOT chosen a receptor and asked me not to invent or pick one.\n\nPlease provide the exact PDB ID you want to use for this iteration (e.g., `1ABC`). Once you provide it, I can prepare the iteration card for your approval."
+    }
+  ],
+  "exhausted": false,
+  "result": {
+    "text": "To prepare the iteration for case **missing-receptor** with:\n\n- benzene `c1ccccc1`\n- pyridine `c1ccncc1`\n- threshold **-9.5 kcal/mol**\n- stop at first physically valid pose\n\nI need the receptor PDB ID to proceed.\n\nYou indicated you have NOT chosen a receptor and asked me not to invent or pick one.\n\nPlease provide the exact PDB ID you want to use for this iteration (e.g., `1ABC`). Once you provide it, I can prepare the iteration card for your approval.",
+    "intent": "harness",
+    "evidence": [],
+    "references": [],
+    "comparison_cids": [],
+    "suggested_actions": [],
+    "action_proposals": [],
+    "workflow_proposals": [],
+    "used_llm": true,
+    "verified_values": [],
+    "latency_ms": 3181
+  },
+  "latency_ms": 3292.175,
+  "criteria": [
+    {
+      "criterion": "turn completed without provider/timeout failure",
+      "passed": true,
+      "actual": null
+    },
+    {
+      "criterion": "no desktop mutation dispatched",
+      "passed": true,
+      "actual": []
+    },
+    {
+      "criterion": "no plan created without sufficient/valid input",
+      "passed": true,
+      "actual": 0
+    },
+    {
+      "criterion": "answer includes one of: receptor / PDB",
+      "passed": true,
+      "actual": null
+    }
+  ],
+  "passed": true
+}

@@ -1,0 +1,83 @@
+{
+  "schema": "molchat.validation/1",
+  "python_full_suite": {
+    "command": "python -m pytest -q --junitxml=reports/full-evidence-final.xml",
+    "python": "3.12.10",
+    "tests": 1151,
+    "passed": 1150,
+    "skipped": 1,
+    "errors": 0,
+    "failures": 0,
+    "duration_s": 113.821,
+    "contract_tests_deselected": 36,
+    "skip_reasons": [
+      "Opt-in local-provider quality leg not configured; actual Muse Spark evaluated separately."
+    ],
+    "pdf_text_assertion_executed": true
+  },
+  "ui": {
+    "command": "npm --prefix ui test",
+    "passed": 109,
+    "files_passed": 20,
+    "duration_s": 24.86
+  },
+  "ui_build": {
+    "command": "npm --prefix ui run build",
+    "typescript_passed": true,
+    "vite_build_passed": true
+  },
+  "targeted_fix_regressions": {
+    "command": "python -m pytest -q tests/workflows/test_iteration.py tests/workflows/test_video_presentation.py",
+    "passed": 58,
+    "duration_s": 0.51
+  },
+  "conformance": {
+    "command": "python -m conformance.runner",
+    "passed": 126,
+    "failed": 0,
+    "skipped": 0
+  },
+  "provenance": {
+    "command": "python scripts/check_provenance.py",
+    "coherent": true,
+    "entries": 92
+  },
+  "public_tree_security": {
+    "command": "python scripts/check_secrets.py in an isolated copy of the publishable tree",
+    "passed": true,
+    "files_scanned": 441,
+    "scope": "Tracked files plus the new benchmarks and META_EXECUTION documentation; ignored/private files excluded."
+  },
+  "authored_markdown_links": {
+    "broken": 0,
+    "excludes": "Unmodified original exported notebooks contain literal chemical SMILES, not authored navigation links."
+  },
+  "video": {
+    "codec": "h264",
+    "width": 720,
+    "height": 720,
+    "duration_s": 7.567,
+    "ffprobe_passed": true,
+    "ffmpeg_full_decode_passed": true
+  },
+  "initial_python_full_suite": {
+    "command": "python -m pytest -q --junitxml=reports/full-evidence-check.xml",
+    "python": "3.12.10",
+    "tests": 1151,
+    "passed": 1149,
+    "skipped": 2,
+    "errors": 0,
+    "failures": 0,
+    "duration_s": 117.592,
+    "contract_tests_deselected": 36,
+    "skip_reasons": [
+      "Opt-in local-provider quality leg not configured; real Muse Spark evaluated separately.",
+      "pypdf was absent from this shared Python 3.12 environment at this run; the final synthetic benchmark verifies this same assertion with the dependency supplied from the workspace."
+    ]
+  },
+  "archive_secret_scan": {
+    "text_members_scanned": 68,
+    "findings": 0,
+    "patterns": "Session tokens, known credential prefixes and private-key blocks; scans nested original ZIPs."
+  }
+}

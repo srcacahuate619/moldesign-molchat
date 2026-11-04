@@ -1,0 +1,25 @@
+{
+  "schema": "molchat.scenarios/1",
+  "evidence_type": "synthetic_regression",
+  "description": "Fixed groups of existing assertions. Difficulty describes integration complexity, not model intelligence. Parameterized tests count as checks, never as distinct prompts.",
+  "scenarios": [
+    {"id":"closed-tool-schemas","difficulty":"easy","metric":"tool_validation","tests":["tests/conversation/test_tool_loop_number_boolean.py"]},
+    {"id":"plan-contract","difficulty":"easy","metric":"plan_validation","tests":["tests/test_plan.py"]},
+    {"id":"evidence-and-number-guards","difficulty":"easy","metric":"traceability","tests":["tests/conversation/test_evidence.py"]},
+    {"id":"pubchem-absence-and-permissions","difficulty":"easy","metric":"error_handling","tests":["tests/conversation/test_pubchem_owned.py"]},
+    {"id":"tool-budget-and-protocol","difficulty":"moderate","metric":"tool_validation","tests":["tests/conversation/test_tool_loop.py"]},
+    {"id":"host-tools-and-identity","difficulty":"moderate","metric":"traceability","tests":["tests/conversation/test_harness_tools.py"]},
+    {"id":"evaluation-errors-and-timeouts","difficulty":"moderate","metric":"error_handling","tests":["tests/workflows/test_evaluation.py"]},
+    {"id":"stop-rules-and-recovery","difficulty":"moderate","metric":"stopping_policy","tests":["tests/workflows/test_iteration.py"]},
+    {"id":"notebook-and-zip","difficulty":"moderate","metric":"delivery_integrity","tests":["tests/workflows/test_notebook_and_deliverable.py"]},
+    {"id":"scientific-record-provenance","difficulty":"moderate","metric":"traceability","tests":["tests/workflows/test_run_record.py"]},
+    {"id":"video-controls-and-digest","difficulty":"moderate","metric":"plan_validation","tests":["tests/workflows/test_video_presentation.py"]},
+    {"id":"model-provider-failures","difficulty":"moderate","metric":"error_handling","tests":["tests/conversation/test_engine_failures.py"]},
+    {"id":"approval-account-isolation-and-once-only","difficulty":"hard","metric":"approval_safety","tests":["tests/server/test_workflow_chat.py"]},
+    {"id":"async-render-and-partial-delivery","difficulty":"hard","metric":"delivery_integrity","tests":["tests/workflows/test_service.py"]},
+    {"id":"preparation-blocks-and-host-contract","difficulty":"hard","metric":"delivery_integrity","tests":["tests/server/test_workflow_preparation.py"]},
+    {"id":"lookup-to-plan-provenance","difficulty":"hard","metric":"traceability","tests":["tests/server/test_workflow_sources.py"]},
+    {"id":"adversarial-execution-gates","difficulty":"hard","metric":"approval_safety","tests":["tests/adversarial/test_gate.py"]},
+    {"id":"real-vmat2-archive-integrity","difficulty":"hard","metric":"delivery_integrity","tests":["tests/workflows/test_recorded_delivery.py"]}
+  ]
+}

@@ -1,0 +1,342 @@
+{
+  "id": "E11",
+  "difficulty": "easy",
+  "repetition": 1,
+  "prompt": "Calculate MolDesign descriptors for L-alanine, SMILES C[C@@H](C(=O)O)N. Report the returned canonical structure and do not claim a docking result.",
+  "expect": {
+    "required_tools": [
+      "compute_properties"
+    ],
+    "successful_tools": [
+      "compute_properties"
+    ],
+    "no_plan": true
+  },
+  "model_steps": [
+    {
+      "step": 1,
+      "request": {
+        "model": "meta-models/muse-spark-open-1026",
+        "temperature": 0.1,
+        "max_tokens": 4096,
+        "messages": [
+          {
+            "role": "system",
+            "content_sha256": "fcec384fd15c61947d867423370569e88264b2c25ec0402dafbb9d92aee604e1"
+          },
+          {
+            "role": "user",
+            "content": "Calculate MolDesign descriptors for L-alanine, SMILES C[C@@H](C(=O)O)N. Report the returned canonical structure and do not claim a docking result."
+          }
+        ],
+        "tool_names": [
+          "create_case",
+          "load_case_smiles",
+          "assign_case_receptor",
+          "evaluate_case",
+          "compute_properties",
+          "show_property_comparison",
+          "verify_editor_structure",
+          "suggest_next_actions",
+          "pubchem_lookup",
+          "search_receptors",
+          "pick_random_receptor",
+          "get_evaluation_status",
+          "explain_evaluation",
+          "compare_poses",
+          "save_to_moldex",
+          "request_molcy_video",
+          "get_molcy_video_status",
+          "propose_iteration"
+        ]
+      },
+      "response": {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "chatcmpl-tool-9f0ed9a56bf6416491530dfa1e3a8925",
+            "type": "function",
+            "function": {
+              "name": "compute_properties",
+              "arguments": "{\"name\": \"C[C@@H](C(=O)O)N\"}"
+            }
+          }
+        ]
+      },
+      "latency_ms": 2248.93
+    },
+    {
+      "step": 2,
+      "request": {
+        "model": "meta-models/muse-spark-open-1026",
+        "temperature": 0.1,
+        "max_tokens": 4096,
+        "messages": [
+          {
+            "role": "system",
+            "content_sha256": "fcec384fd15c61947d867423370569e88264b2c25ec0402dafbb9d92aee604e1"
+          },
+          {
+            "role": "user",
+            "content": "Calculate MolDesign descriptors for L-alanine, SMILES C[C@@H](C(=O)O)N. Report the returned canonical structure and do not claim a docking result."
+          },
+          {
+            "role": "assistant",
+            "content": null,
+            "tool_calls": [
+              {
+                "id": "chatcmpl-tool-9f0ed9a56bf6416491530dfa1e3a8925",
+                "type": "function",
+                "function": {
+                  "name": "compute_properties",
+                  "arguments": "{\"name\": \"C[C@@H](C(=O)O)N\"}"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": "{\"status\": \"ok\", \"name\": \"C[C@@H](C(=O)O)N\", \"properties\": {\"mw\": 89.09, \"logp\": -0.58, \"tpsa\": 63.32, \"hbd\": 3, \"hba\": 3, \"rot_bonds\": 1, \"heavy_atoms\": 6, \"rings\": 0}, \"source\": \"MolDesign / RDKit 2025.09.6 | Avisos: Molecular weight is below the range for the drug-likeness rules (89.1 Da). The Ghose et al. 1999 filter starts at 160 Da and 20 heavy atoms: at this size, those filters and ligand-efficiency thresholds do not assess what they claim to assess. Docking still runs.\", \"methods\": {\"mw\": \"RDKit Descriptors.MolWt (masa molecular promedio)\", \"logp\": \"RDKit Crippen.MolLogP (contribuciones atómicas)\", \"tpsa\": \"RDKit rdMolDescriptors.CalcTPSA (Ertl 2000) con includeSandP=False: suma sólo N y O; el azufre y el fósforo no cuentan\", \"hbd\": \"RDKit Lipinski.NHOHCount (enlaces N-H y O-H)\", \"hba\": \"RDKit Lipinski.NOCount (número de átomos de N y O)\"}, \"variants\": [{\"name\": \"tpsa_incl_s_p\", \"applies_to\": \"tpsa\", \"value\": 63.32, \"method\": \"RDKit rdMolDescriptors.CalcTPSA(mol, includeSandP=True): suma también las contribuciones del azufre y el fósforo (Ertl 2000)\", \"unit\": \"Å²\"}, {\"name\": \"hba_rdkit_num_h_acceptors\", \"applies_to\": \"hba\", \"value\": 2, \"method\": \"RDKit rdMolDescriptors.CalcNumHBA: aceptores de enlace de hidrógeno según los patrones SMARTS de RDKit (no es el recuento de todos los N y O)\", \"unit\": null}], \"structure\": {\"input_smiles\": \"C[C@@H](C(=O)O)N\", \"canonical_smiles\": \"C[C@H](N)C(=O)O\", \"identity\": \"same\", \"verifier\": \"SMILES canónico isomérico RDKit 2025.09.6\", \"warnings\": [\"Molecular weight is below the range for the drug-likeness rules (89.1 Da). The Ghose et al. 1999 filter starts at 160 Da and 20 heavy atoms: at this size, those filters and ligand-efficiency thresholds do not assess what they claim to assess. Docking still runs.\"]}}",
+            "tool_call_id": "chatcmpl-tool-9f0ed9a56bf6416491530dfa1e3a8925"
+          }
+        ],
+        "tool_names": [
+          "create_case",
+          "load_case_smiles",
+          "assign_case_receptor",
+          "evaluate_case",
+          "compute_properties",
+          "show_property_comparison",
+          "verify_editor_structure",
+          "suggest_next_actions",
+          "pubchem_lookup",
+          "search_receptors",
+          "pick_random_receptor",
+          "get_evaluation_status",
+          "explain_evaluation",
+          "compare_poses",
+          "save_to_moldex",
+          "request_molcy_video",
+          "get_molcy_video_status",
+          "propose_iteration"
+        ]
+      },
+      "response": {
+        "role": "assistant",
+        "content": "MolDesign descriptors calculated for **L-alanine** (input SMILES `C[C@@H](C(=O)O)N`) via **MolDesign / RDKit 2025.09.6** - no docking was run and no docking result is claimed:\n\n**Returned canonical structure:**\n- Input SMILES: `C[C@@H](C(=O)O)N`\n- Canonical SMILES (isomeric): `C[C@H](N)C(=O)O`\n- Identity: `same` - verifier: `SMILES canónico isomérico RDKit 2025.09.6`\n\n**Descriptors:**\n- **mw:** 89.09 - *RDKit Descriptors.MolWt (masa molecular promedio)*\n- **logp:** -0.58 - *RDKit Crippen.MolLogP (contribuciones atómicas)*\n- **tpsa:** 63.32 Å² - *RDKit rdMolDescriptors.CalcTPSA (Ertl 2000) con includeSandP=False: suma sólo N y O; el azufre y el fósforo no cuentan*\n- **hbd:** 3 - *RDKit Lipinski.NHOHCount (enlaces N-H y O-H)*\n- **hba:** 3 - *RDKit Lipinski.NOCount (número de átomos de N y O)*\n- **rot_bonds:** 1\n- **heavy_atoms:** 6\n- **rings:** 0\n\n**Variants returned:**\n- `tpsa_incl_s_p` (applies to tpsa): 63.32 Å² - *RDKit rdMolDescriptors.CalcTPSA(mol, includeSandP=True): suma también las contribuciones del azufre y el fósforo (Ertl 2000)*\n- `hba_rdkit_num_h_acceptors` (applies to hba): 2 - *RDKit rdMolDescriptors.CalcNumHBA: aceptores de enlace de hidrógeno según los patrones SMARTS de RDKit (no es el recuento de todos los N y O)*\n\n**Aviso returned:**\n> Molecular weight is below the range for the drug-likeness rules (89.1 Da). The Ghose et al. 1999 filter starts at 160 Da and 20 heavy atoms: at this size, those filters and ligand-efficiency thresholds do not assess what they claim to assess. Docking still runs.\n\nThis is a property calculation only."
+      },
+      "latency_ms": 2735.591
+    }
+  ],
+  "host_events": [],
+  "tool_executions": [
+    {
+      "tool": "compute_properties",
+      "validated_arguments": {
+        "name": "C[C@@H](C(=O)O)N"
+      },
+      "result": {
+        "status": "ok",
+        "name": "C[C@@H](C(=O)O)N",
+        "properties": {
+          "mw": 89.09,
+          "logp": -0.58,
+          "tpsa": 63.32,
+          "hbd": 3,
+          "hba": 3,
+          "rot_bonds": 1,
+          "heavy_atoms": 6,
+          "rings": 0
+        },
+        "source": "MolDesign / RDKit 2025.09.6 | Avisos: Molecular weight is below the range for the drug-likeness rules (89.1 Da). The Ghose et al. 1999 filter starts at 160 Da and 20 heavy atoms: at this size, those filters and ligand-efficiency thresholds do not assess what they claim to assess. Docking still runs.",
+        "methods": {
+          "mw": "RDKit Descriptors.MolWt (masa molecular promedio)",
+          "logp": "RDKit Crippen.MolLogP (contribuciones atómicas)",
+          "tpsa": "RDKit rdMolDescriptors.CalcTPSA (Ertl 2000) con includeSandP=False: suma sólo N y O; el azufre y el fósforo no cuentan",
+          "hbd": "RDKit Lipinski.NHOHCount (enlaces N-H y O-H)",
+          "hba": "RDKit Lipinski.NOCount (número de átomos de N y O)"
+        },
+        "variants": [
+          {
+            "name": "tpsa_incl_s_p",
+            "applies_to": "tpsa",
+            "value": 63.32,
+            "method": "RDKit rdMolDescriptors.CalcTPSA(mol, includeSandP=True): suma también las contribuciones del azufre y el fósforo (Ertl 2000)",
+            "unit": "Å²"
+          },
+          {
+            "name": "hba_rdkit_num_h_acceptors",
+            "applies_to": "hba",
+            "value": 2,
+            "method": "RDKit rdMolDescriptors.CalcNumHBA: aceptores de enlace de hidrógeno según los patrones SMARTS de RDKit (no es el recuento de todos los N y O)",
+            "unit": null
+          }
+        ],
+        "structure": {
+          "input_smiles": "C[C@@H](C(=O)O)N",
+          "canonical_smiles": "C[C@H](N)C(=O)O",
+          "identity": "same",
+          "verifier": "SMILES canónico isomérico RDKit 2025.09.6",
+          "warnings": [
+            "Molecular weight is below the range for the drug-likeness rules (89.1 Da). The Ghose et al. 1999 filter starts at 160 Da and 20 heavy atoms: at this size, those filters and ligand-efficiency thresholds do not assess what they claim to assess. Docking still runs."
+          ]
+        }
+      },
+      "latency_ms": 20.724
+    }
+  ],
+  "validation_events": [
+    {
+      "phase": "start",
+      "value": "compute_properties",
+      "call_id": "chatcmpl-tool-9f0ed9a56bf6416491530dfa1e3a8925",
+      "validated_arguments": null
+    },
+    {
+      "phase": "arguments",
+      "value": "",
+      "call_id": "chatcmpl-tool-9f0ed9a56bf6416491530dfa1e3a8925",
+      "validated_arguments": {
+        "name": "C[C@@H](C(=O)O)N"
+      }
+    },
+    {
+      "phase": "end",
+      "value": "ok",
+      "call_id": "chatcmpl-tool-9f0ed9a56bf6416491530dfa1e3a8925",
+      "validated_arguments": null
+    }
+  ],
+  "plans": [],
+  "provider": {
+    "id": "baseten-hackathon",
+    "model": "meta-models/muse-spark-open-1026",
+    "endpoint": "https://inference.baseten.co/v1"
+  },
+  "transcript": [
+    {
+      "role": "system",
+      "content_sha256": "fcec384fd15c61947d867423370569e88264b2c25ec0402dafbb9d92aee604e1"
+    },
+    {
+      "role": "user",
+      "content": "Calculate MolDesign descriptors for L-alanine, SMILES C[C@@H](C(=O)O)N. Report the returned canonical structure and do not claim a docking result."
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "chatcmpl-tool-9f0ed9a56bf6416491530dfa1e3a8925",
+          "type": "function",
+          "function": {
+            "name": "compute_properties",
+            "arguments": "{\"name\": \"C[C@@H](C(=O)O)N\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": "{\"status\": \"ok\", \"name\": \"C[C@@H](C(=O)O)N\", \"properties\": {\"mw\": 89.09, \"logp\": -0.58, \"tpsa\": 63.32, \"hbd\": 3, \"hba\": 3, \"rot_bonds\": 1, \"heavy_atoms\": 6, \"rings\": 0}, \"source\": \"MolDesign / RDKit 2025.09.6 | Avisos: Molecular weight is below the range for the drug-likeness rules (89.1 Da). The Ghose et al. 1999 filter starts at 160 Da and 20 heavy atoms: at this size, those filters and ligand-efficiency thresholds do not assess what they claim to assess. Docking still runs.\", \"methods\": {\"mw\": \"RDKit Descriptors.MolWt (masa molecular promedio)\", \"logp\": \"RDKit Crippen.MolLogP (contribuciones atómicas)\", \"tpsa\": \"RDKit rdMolDescriptors.CalcTPSA (Ertl 2000) con includeSandP=False: suma sólo N y O; el azufre y el fósforo no cuentan\", \"hbd\": \"RDKit Lipinski.NHOHCount (enlaces N-H y O-H)\", \"hba\": \"RDKit Lipinski.NOCount (número de átomos de N y O)\"}, \"variants\": [{\"name\": \"tpsa_incl_s_p\", \"applies_to\": \"tpsa\", \"value\": 63.32, \"method\": \"RDKit rdMolDescriptors.CalcTPSA(mol, includeSandP=True): suma también las contribuciones del azufre y el fósforo (Ertl 2000)\", \"unit\": \"Å²\"}, {\"name\": \"hba_rdkit_num_h_acceptors\", \"applies_to\": \"hba\", \"value\": 2, \"method\": \"RDKit rdMolDescriptors.CalcNumHBA: aceptores de enlace de hidrógeno según los patrones SMARTS de RDKit (no es el recuento de todos los N y O)\", \"unit\": null}], \"structure\": {\"input_smiles\": \"C[C@@H](C(=O)O)N\", \"canonical_smiles\": \"C[C@H](N)C(=O)O\", \"identity\": \"same\", \"verifier\": \"SMILES canónico isomérico RDKit 2025.09.6\", \"warnings\": [\"Molecular weight is below the range for the drug-likeness rules (89.1 Da). The Ghose et al. 1999 filter starts at 160 Da and 20 heavy atoms: at this size, those filters and ligand-efficiency thresholds do not assess what they claim to assess. Docking still runs.\"]}}",
+      "tool_call_id": "chatcmpl-tool-9f0ed9a56bf6416491530dfa1e3a8925"
+    },
+    {
+      "role": "assistant",
+      "content": "MolDesign descriptors calculated for **L-alanine** (input SMILES `C[C@@H](C(=O)O)N`) via **MolDesign / RDKit 2025.09.6** - no docking was run and no docking result is claimed:\n\n**Returned canonical structure:**\n- Input SMILES: `C[C@@H](C(=O)O)N`\n- Canonical SMILES (isomeric): `C[C@H](N)C(=O)O`\n- Identity: `same` - verifier: `SMILES canónico isomérico RDKit 2025.09.6`\n\n**Descriptors:**\n- **mw:** 89.09 - *RDKit Descriptors.MolWt (masa molecular promedio)*\n- **logp:** -0.58 - *RDKit Crippen.MolLogP (contribuciones atómicas)*\n- **tpsa:** 63.32 Å² - *RDKit rdMolDescriptors.CalcTPSA (Ertl 2000) con includeSandP=False: suma sólo N y O; el azufre y el fósforo no cuentan*\n- **hbd:** 3 - *RDKit Lipinski.NHOHCount (enlaces N-H y O-H)*\n- **hba:** 3 - *RDKit Lipinski.NOCount (número de átomos de N y O)*\n- **rot_bonds:** 1\n- **heavy_atoms:** 6\n- **rings:** 0\n\n**Variants returned:**\n- `tpsa_incl_s_p` (applies to tpsa): 63.32 Å² - *RDKit rdMolDescriptors.CalcTPSA(mol, includeSandP=True): suma también las contribuciones del azufre y el fósforo (Ertl 2000)*\n- `hba_rdkit_num_h_acceptors` (applies to hba): 2 - *RDKit rdMolDescriptors.CalcNumHBA: aceptores de enlace de hidrógeno según los patrones SMARTS de RDKit (no es el recuento de todos los N y O)*\n\n**Aviso returned:**\n> Molecular weight is below the range for the drug-likeness rules (89.1 Da). The Ghose et al. 1999 filter starts at 160 Da and 20 heavy atoms: at this size, those filters and ligand-efficiency thresholds do not assess what they claim to assess. Docking still runs.\n\nThis is a property calculation only."
+    }
+  ],
+  "exhausted": false,
+  "result": {
+    "text": "Verification note: unverified values were hidden. MolDesign descriptors calculated for **L-alanine** (input SMILES `C[C@@H](C(=O)O)N`) via **MolDesign / RDKit 2025.09.6** - no docking was run and no docking result is claimed:\n\n**Returned canonical structure:**\n- Input SMILES: `C[C@@H](C(=O)O)N`\n- Canonical SMILES (isomeric): `C[C@H](N)C(=O)O`\n- Identity: `same` - verifier: `SMILES canónico isomérico RDKit 2025.09.6`\n\n**Descriptors:**\n- **mw:** 89.09 - *RDKit Descriptors.MolWt (masa molecular promedio)*\n- **logp:** -0.58 - *RDKit Crippen.MolLogP (contribuciones atómicas)*\n- **tpsa:** 63.32 Å² - *RDKit rdMolDescriptors.CalcTPSA (Ertl [unverified value]) con includeSandP=False: suma sólo N y O; el azufre y el fósforo no cuentan*\n- **hbd:** 3 - *RDKit Lipinski.NHOHCount (enlaces N-H y O-H)*\n- **hba:** 3 - *RDKit Lipinski.NOCount (número de átomos de N y O)*\n- **rot_bonds:** 1\n- **heavy_atoms:** 6\n- **rings:** 0\n\n**Variants returned:**\n- `tpsa_incl_s_p` (applies to tpsa): 63.32 Å² - *RDKit rdMolDescriptors.CalcTPSA(mol, includeSandP=True): suma también las contribuciones del azufre y el fósforo (Ertl [unverified value])*\n- `hba_rdkit_num_h_acceptors` (applies to hba): 2 - *RDKit rdMolDescriptors.CalcNumHBA: aceptores de enlace de hidrógeno según los patrones SMARTS de RDKit (no es el recuento de todos los N y O)*\n\n**Aviso returned:**\n> Molecular weight is below the range for the drug-likeness rules (89.1 Da). The Ghose et al. [unverified value] filter starts at [unverified value] Da and [unverified value] heavy atoms: at this size, those filters and ligand-efficiency thresholds do not assess what they claim to assess. Docking still runs.\n\nThis is a property calculation only.",
+    "intent": "harness",
+    "evidence": [
+      {
+        "tool": "compute_properties",
+        "label": "C[C@@H](C(=O)O)N",
+        "epistemic_class": "cálculo",
+        "source": "MolDesign / RDKit 2025.09.6 | Avisos: Molecular weight is below the range for the drug-likeness rules (89.1 Da). The Ghose et al. 1999 filter starts at 160 Da and 20 heavy atoms: at this size, those filters and ligand-efficiency thresholds do not assess what they claim to assess. Docking still runs.",
+        "values": {
+          "mw": "89.09",
+          "logp": "-0.58",
+          "tpsa": "63.32",
+          "hbd": "3",
+          "hba": "3",
+          "rot_bonds": "1",
+          "heavy_atoms": "6",
+          "rings": "0",
+          "variante: tpsa_incl_s_p": "63.32",
+          "variante: hba_rdkit_num_h_acceptors": "2"
+        },
+        "error": null,
+        "structure": {
+          "input_smiles": "C[C@@H](C(=O)O)N",
+          "canonical_smiles": "C[C@H](N)C(=O)O",
+          "identity": "same",
+          "verifier": "SMILES canónico isomérico RDKit 2025.09.6",
+          "warnings": [
+            "Molecular weight is below the range for the drug-likeness rules (89.1 Da). The Ghose et al. 1999 filter starts at 160 Da and 20 heavy atoms: at this size, those filters and ligand-efficiency thresholds do not assess what they claim to assess. Docking still runs."
+          ]
+        },
+        "methods": {
+          "mw": "RDKit Descriptors.MolWt (masa molecular promedio)",
+          "logp": "RDKit Crippen.MolLogP (contribuciones atómicas)",
+          "tpsa": "RDKit rdMolDescriptors.CalcTPSA (Ertl 2000) con includeSandP=False: suma sólo N y O; el azufre y el fósforo no cuentan",
+          "hbd": "RDKit Lipinski.NHOHCount (enlaces N-H y O-H)",
+          "hba": "RDKit Lipinski.NOCount (número de átomos de N y O)"
+        }
+      }
+    ],
+    "references": [],
+    "comparison_cids": [],
+    "suggested_actions": [],
+    "action_proposals": [],
+    "workflow_proposals": [],
+    "used_llm": true,
+    "verified_values": [
+      -0.58,
+      0.0,
+      1.0,
+      2.0,
+      3.0,
+      6.0,
+      63.32,
+      89.09
+    ],
+    "latency_ms": 5417
+  },
+  "latency_ms": 5528.144,
+  "criteria": [
+    {
+      "criterion": "turn completed without provider/timeout failure",
+      "passed": true,
+      "actual": null
+    },
+    {
+      "criterion": "no desktop mutation dispatched",
+      "passed": true,
+      "actual": []
+    },
+    {
+      "criterion": "model selected compute_properties",
+      "passed": true,
+      "actual": [
+        "compute_properties"
+      ]
+    },
+    {
+      "criterion": "compute_properties returned a real successful result",
+      "passed": true,
+      "actual": [
+        "ok"
+      ]
+    },
+    {
+      "criterion": "no plan created without sufficient/valid input",
+      "passed": true,
+      "actual": 0
+    }
+  ],
+  "passed": true
+}

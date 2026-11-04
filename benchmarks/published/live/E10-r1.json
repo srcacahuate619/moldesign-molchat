@@ -1,0 +1,122 @@
+{
+  "id": "E10",
+  "difficulty": "easy",
+  "repetition": 1,
+  "prompt": "Does a favourable Vina docking score prove that a molecule has biological activity? Explain the limitation without inventing measured values or running tools.",
+  "expect": {
+    "no_plan": true,
+    "answer_any": [
+      [
+        "experiment",
+        "biolog",
+        "activity"
+      ]
+    ]
+  },
+  "model_steps": [
+    {
+      "step": 1,
+      "request": {
+        "model": "meta-models/muse-spark-open-1026",
+        "temperature": 0.1,
+        "max_tokens": 4096,
+        "messages": [
+          {
+            "role": "system",
+            "content_sha256": "fcec384fd15c61947d867423370569e88264b2c25ec0402dafbb9d92aee604e1"
+          },
+          {
+            "role": "user",
+            "content": "Does a favourable Vina docking score prove that a molecule has biological activity? Explain the limitation without inventing measured values or running tools."
+          }
+        ],
+        "tool_names": [
+          "create_case",
+          "load_case_smiles",
+          "assign_case_receptor",
+          "evaluate_case",
+          "compute_properties",
+          "show_property_comparison",
+          "verify_editor_structure",
+          "suggest_next_actions",
+          "pubchem_lookup",
+          "search_receptors",
+          "pick_random_receptor",
+          "get_evaluation_status",
+          "explain_evaluation",
+          "compare_poses",
+          "save_to_moldex",
+          "request_molcy_video",
+          "get_molcy_video_status",
+          "propose_iteration"
+        ]
+      },
+      "response": {
+        "role": "assistant",
+        "content": "No — a favourable Vina score does not prove biological activity.\n\nVina reports an estimated energy for the best pose it found, under specific conditions — receptor structure, Vina version, exhaustivity, number of poses, seed, and search box. It is not a measured affinity, not a Ki, IC50 or EC50, and not a measure of functional activity.\n\nLimitations:\n\n1. **Scoring is approximate:** Vina uses a simplified scoring function. It approximates shape complementarity, hydrogen bonding, hydrophobic contacts and torsional penalties, but does not fully account for solvation, entropy, protein flexibility, induced fit, water networks, or protonation states.\n\n2. **Pose vs reality:** Vina ranks poses by its own energy. The lowest-energy pose is not necessarily the experimentally observed pose, and a difference <1 kcal/mol is essentially a tie for Vina. Without physical validity checks and experimental structure, you cannot know which pose, if any, is real.\n\n3. **Binding ≠ activity:** Even true binding does not imply agonism, antagonism, inhibition, or cellular effect. Activity also depends on permeability, metabolism, efflux, off-target binding, concentration at the site, and functional consequences of binding, none of which docking evaluates.\n\n4. **No calibration by default:** A Vina energy only becomes interpretable as a predictor when the receptor protocol has been calibrated against measured data for that target, with a known n, assay type and interval. An uncalibrated or demonstration receptor cannot be used to infer activity.\n\n5. **False positives/negatives are common:** Favourable scores can arise from unrealistic contacts, and truly active molecules can score poorly due to receptor conformation or scoring limitations.\n\nIn practice docking is hypothesis generation — it suggests geometric compatibility worth testing experimentally, not proof of biological activity."
+      },
+      "latency_ms": 4810.677
+    }
+  ],
+  "host_events": [],
+  "tool_executions": [],
+  "validation_events": [],
+  "plans": [],
+  "provider": {
+    "id": "baseten-hackathon",
+    "model": "meta-models/muse-spark-open-1026",
+    "endpoint": "https://inference.baseten.co/v1"
+  },
+  "transcript": [
+    {
+      "role": "system",
+      "content_sha256": "fcec384fd15c61947d867423370569e88264b2c25ec0402dafbb9d92aee604e1"
+    },
+    {
+      "role": "user",
+      "content": "Does a favourable Vina docking score prove that a molecule has biological activity? Explain the limitation without inventing measured values or running tools."
+    },
+    {
+      "role": "assistant",
+      "content": "No — a favourable Vina score does not prove biological activity.\n\nVina reports an estimated energy for the best pose it found, under specific conditions — receptor structure, Vina version, exhaustivity, number of poses, seed, and search box. It is not a measured affinity, not a Ki, IC50 or EC50, and not a measure of functional activity.\n\nLimitations:\n\n1. **Scoring is approximate:** Vina uses a simplified scoring function. It approximates shape complementarity, hydrogen bonding, hydrophobic contacts and torsional penalties, but does not fully account for solvation, entropy, protein flexibility, induced fit, water networks, or protonation states.\n\n2. **Pose vs reality:** Vina ranks poses by its own energy. The lowest-energy pose is not necessarily the experimentally observed pose, and a difference <1 kcal/mol is essentially a tie for Vina. Without physical validity checks and experimental structure, you cannot know which pose, if any, is real.\n\n3. **Binding ≠ activity:** Even true binding does not imply agonism, antagonism, inhibition, or cellular effect. Activity also depends on permeability, metabolism, efflux, off-target binding, concentration at the site, and functional consequences of binding, none of which docking evaluates.\n\n4. **No calibration by default:** A Vina energy only becomes interpretable as a predictor when the receptor protocol has been calibrated against measured data for that target, with a known n, assay type and interval. An uncalibrated or demonstration receptor cannot be used to infer activity.\n\n5. **False positives/negatives are common:** Favourable scores can arise from unrealistic contacts, and truly active molecules can score poorly due to receptor conformation or scoring limitations.\n\nIn practice docking is hypothesis generation — it suggests geometric compatibility worth testing experimentally, not proof of biological activity."
+    }
+  ],
+  "exhausted": false,
+  "result": {
+    "text": "Verification note: unverified values were hidden. No — a favourable Vina score does not prove biological activity.\n\nVina reports an estimated energy for the best pose it found, under specific conditions — receptor structure, Vina version, exhaustivity, number of poses, seed, and search box. It is not a measured affinity, not a Ki, IC[unverified value] or EC[unverified value], and not a measure of functional activity.\n\nLimitations:\n\n1. **Scoring is approximate:** Vina uses a simplified scoring function. It approximates shape complementarity, hydrogen bonding, hydrophobic contacts and torsional penalties, but does not fully account for solvation, entropy, protein flexibility, induced fit, water networks, or protonation states.\n\n2. **Pose vs reality:** Vina ranks poses by its own energy. The lowest-energy pose is not necessarily the experimentally observed pose, and a difference <[unverified value] kcal/mol is essentially a tie for Vina. Without physical validity checks and experimental structure, you cannot know which pose, if any, is real.\n\n3. **Binding ≠ activity:** Even true binding does not imply agonism, antagonism, inhibition, or cellular effect. Activity also depends on permeability, metabolism, efflux, off-target binding, concentration at the site, and functional consequences of binding, none of which docking evaluates.\n\n4. **No calibration by default:** A Vina energy only becomes interpretable as a predictor when the receptor protocol has been calibrated against measured data for that target, with a known n, assay type and interval. An uncalibrated or demonstration receptor cannot be used to infer activity.\n\n5. **False positives/negatives are common:** Favourable scores can arise from unrealistic contacts, and truly active molecules can score poorly due to receptor conformation or scoring limitations.\n\nIn practice docking is hypothesis generation — it suggests geometric compatibility worth testing experimentally, not proof of biological activity.",
+    "intent": "harness",
+    "evidence": [],
+    "references": [],
+    "comparison_cids": [],
+    "suggested_actions": [],
+    "action_proposals": [],
+    "workflow_proposals": [],
+    "used_llm": true,
+    "verified_values": [],
+    "latency_ms": 5206
+  },
+  "latency_ms": 5306.551,
+  "criteria": [
+    {
+      "criterion": "turn completed without provider/timeout failure",
+      "passed": true,
+      "actual": null
+    },
+    {
+      "criterion": "no desktop mutation dispatched",
+      "passed": true,
+      "actual": []
+    },
+    {
+      "criterion": "no plan created without sufficient/valid input",
+      "passed": true,
+      "actual": 0
+    },
+    {
+      "criterion": "answer includes one of: experiment / biolog / activity",
+      "passed": true,
+      "actual": null
+    }
+  ],
+  "passed": true
+}

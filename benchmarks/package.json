@@ -1,0 +1,7 @@
+{
+  "name": "molchat-capsule-benchmark",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Opt-in Windows capsule browser reproduction; uses an installed Edge browser.",
+  "devDependencies": { "playwright-core": "1.62.1" }
+}

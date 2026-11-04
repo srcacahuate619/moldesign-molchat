@@ -1,0 +1,74 @@
+{
+  "schema": "molchat.capsule-conditions/1",
+  "timezone": "America/Mexico_City",
+  "local_date": "2026-11-03",
+  "backend_source": {
+    "commit": "9e9453edaabbdc7ebb078b7f503ef6052c607d97",
+    "branch": "codex/release-hygiene",
+    "tracked_tree_clean": false
+  },
+  "frontend_export": {
+    "build_commit": "f02e0d58d7907c0b39f2eb845d6196209788f275",
+    "built_at_utc": "2026-11-03T16:47:32.731Z",
+    "matches_current_source": false,
+    "build_fingerprint": "762bb4f2aba333f767c4b615dfe95a36daeefadb7fcb774b16004ba3efd4e379"
+  },
+  "molchat_pinned": {
+    "commit": "945c4d7a79dc",
+    "version": "0.1.0",
+    "contract": "moldesign.molchat/1"
+  },
+  "provider": {
+    "id": "baseten-hackathon",
+    "endpoint": "https://inference.baseten.co/v1",
+    "model": "meta-models/muse-spark-open-1026"
+  },
+  "vina_cpu_limit": 4,
+  "browser": {
+    "engine": "Microsoft Edge Chromium",
+    "headless": true,
+    "viewport": [
+      1600,
+      1000
+    ],
+    "playwright_core": "1.62.1"
+  },
+  "real_components": [
+    "Muse Spark inference",
+    "PubChem queries",
+    "MolDesign backend",
+    "AutoDock Vina docking",
+    "physical pose checks",
+    "Preparation audit/export",
+    "Molcy Blender video render"
+  ],
+  "emulated_components": [
+    "Tauri bootstrap",
+    "native case filesystem commands",
+    "folder selector",
+    "some filesystem/model-existence checks"
+  ],
+  "not_validated": [
+    "native Tauri WebView2",
+    "production Tauri-origin CORS",
+    "Microsoft Store installer",
+    "native download/extraction/dialogs",
+    "a clean-machine installation"
+  ],
+  "delivery_sha256": "6e11d8fcc1ee1f46dd0a65e7851fffa879393e636da206bc5f19e998368644e1",
+  "hardware": {
+    "cpu": [
+      {
+        "Name": "AMD Ryzen 5 5500",
+        "NumberOfCores": 6,
+        "NumberOfLogicalProcessors": 12
+      }
+    ],
+    "gpu": [
+      {
+        "Name": "NVIDIA GeForce GTX 1660 SUPER"
+      }
+    ],
+    "memory_bytes": 34246000640
+  }
+}

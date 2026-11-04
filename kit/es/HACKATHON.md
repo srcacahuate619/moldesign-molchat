@@ -4,6 +4,8 @@
 
 **▶ [Ver la demo de 3 minutos](https://www.youtube.com/watch?v=luRIXlqWy6I)** (en inglés)
 
+**[Evaluación de fiabilidad: 36 prompts reales, gráficas, trazas y una campaña completa nueva](../../benchmarks/README.md)** · [Invocación real al proveedor y límites del harness](../../docs/META_EXECUTION.md). Los fallos iniciales y sus correcciones se muestran por separado.
+
 MolChat permite que un investigador de química computacional delegue una serie corta de acoplamientos desde un mensaje. Muse Spark Open busca los compuestos en PubChem y prepara un plan con el receptor, el orden de los candidatos, la regla de parada y lo que se pide al final. El investigador lo aprueba una vez. MolChat maneja la aplicación de escritorio y entrega la evidencia necesaria para revisar o compartir el resultado.
 
 ## La corrida grabada

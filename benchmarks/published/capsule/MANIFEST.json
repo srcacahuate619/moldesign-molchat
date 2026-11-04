@@ -1,0 +1,44 @@
+{
+  "case": "benchmark-vmat2-20261103",
+  "missing": [],
+  "note": "The Preparation package goes in exactly as MolDesign delivered it; its content and its hash were not changed here.",
+  "pieces": [
+    {
+      "bytes": 43652,
+      "kind": "notebook",
+      "origin": "MolChat",
+      "path": "notebook/notebook.json",
+      "sha256": "0724ce2c9abe9d1eb21227339f1b7266f8bffb95931ff2342e279c981ec94cdb"
+    },
+    {
+      "bytes": 7357,
+      "kind": "notebook",
+      "origin": "MolChat",
+      "path": "notebook/notebook.md",
+      "sha256": "68e1cc349a063d338d42c973f153a1dd0283e181abffc39e1244f6aaee674fdb"
+    },
+    {
+      "bytes": 80592,
+      "kind": "notebook",
+      "origin": "MolChat",
+      "path": "notebook/notebook.pdf",
+      "sha256": "9724bef135c0f36d2ceca498ead9c7981458e78761e83294af772e2b884f2cf4"
+    },
+    {
+      "bytes": 279830,
+      "kind": "preparation_package",
+      "origin": "MolDesign",
+      "path": "preparation/moldesign_case_dc342635-835f-4465-a616-f190d4aeabb0_run_7967d611-9b2.zip",
+      "sha256": "5bd4fd843081489cf3dc99fcce9fb988a2910608c3612a0f933c0d52befa53bc"
+    },
+    {
+      "bytes": 3354239,
+      "kind": "video",
+      "origin": "MolDesign",
+      "path": "video/molcy_96ee39c3.mp4",
+      "sha256": "4ce86db31d923b4ededdbd31a0f660c9c0037a458deaf61d3af1b6d3d482ace7"
+    }
+  ],
+  "plan_digest": "sha256:3311033a4ea32b262214035136eb7f6e0eba401606a6199c0d8deb9fe7cd180a",
+  "schema": "moldesign.molchat.deliverable/1"
+}

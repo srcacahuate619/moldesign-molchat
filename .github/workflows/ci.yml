@@ -30,11 +30,23 @@ jobs:
       - run: python -m pytest -q
         env:
           PYTHONPATH: src:.
+      - name: Verify published benchmark evidence
+        run: python benchmarks/verify_artifacts.py
       - name: Reproduce the keyless workflow demo
         if: matrix.python == '3.12'
         run: |
           mkdir -p reports
           python -m pytest -q --basetemp=reports/judge-demo tests/server/test_workflow_chat.py
+      - name: Run the reproducible harness benchmark
+        if: matrix.python == '3.12'
+        run: python benchmarks/run_benchmark.py --output reports/benchmark-run --repetitions 3
+      - name: Upload benchmark results and synthetic delivery
+        if: always() && matrix.python == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: molchat-harness-benchmark-synthetic
+          path: reports/benchmark-run/
+          if-no-files-found: error
       - name: Upload the synthetic demo delivery
         if: matrix.python == '3.12'
         uses: actions/upload-artifact@v4

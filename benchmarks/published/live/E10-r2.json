@@ -1,0 +1,122 @@
+{
+  "id": "E10",
+  "difficulty": "easy",
+  "repetition": 2,
+  "prompt": "Does a favourable Vina docking score prove that a molecule has biological activity? Explain the limitation without inventing measured values or running tools.",
+  "expect": {
+    "no_plan": true,
+    "answer_any": [
+      [
+        "experiment",
+        "biolog",
+        "activity"
+      ]
+    ]
+  },
+  "model_steps": [
+    {
+      "step": 1,
+      "request": {
+        "model": "meta-models/muse-spark-open-1026",
+        "temperature": 0.1,
+        "max_tokens": 4096,
+        "messages": [
+          {
+            "role": "system",
+            "content_sha256": "fcec384fd15c61947d867423370569e88264b2c25ec0402dafbb9d92aee604e1"
+          },
+          {
+            "role": "user",
+            "content": "Does a favourable Vina docking score prove that a molecule has biological activity? Explain the limitation without inventing measured values or running tools."
+          }
+        ],
+        "tool_names": [
+          "create_case",
+          "load_case_smiles",
+          "assign_case_receptor",
+          "evaluate_case",
+          "compute_properties",
+          "show_property_comparison",
+          "verify_editor_structure",
+          "suggest_next_actions",
+          "pubchem_lookup",
+          "search_receptors",
+          "pick_random_receptor",
+          "get_evaluation_status",
+          "explain_evaluation",
+          "compare_poses",
+          "save_to_moldex",
+          "request_molcy_video",
+          "get_molcy_video_status",
+          "propose_iteration"
+        ]
+      },
+      "response": {
+        "role": "assistant",
+        "content": " No — a favourable Vina docking score does **not** prove biological activity.\n\nA Vina score is a computational estimate of binding energy for a single static pose in a defined binding site, not an experimental measurement of activity:\n\n* **It is not a measurement.** Vina does not measure affinity, Ki, IC50, or cellular activity. It predicts a score using an empirical scoring function with approximations for steric, hydrophobic, hydrogen-bonding and other terms.\n\n* **Major physics is approximated or omitted.** Typical docking does not fully account for protein flexibility, induced fit, explicit water and solvation/desolvation, entropy, protonation states, ion effects, or the cellular environment. A molecule can score well in silico and still not bind in solution.\n\n* **Binding ≠ activity.** Even real binding in vitro does not guarantee functional biological activity. Activity also depends on membrane permeability, metabolism, efflux, off-target binding, toxicity, concentration at the target, and whether binding is agonistic, antagonistic, or functionally irrelevant.\n\n* **Scoring is not calibrated to activity.** Vina scores are useful for ranking poses and for hypothesis generation, but correlation with experimental affinity is limited and system-dependent. A more negative score means the model predicts more favourable geometry/energy in that site, not that the compound is active, potent, or selective.\n\n* **Small differences are not decisive.** Vina cannot resolve real affinity, and a difference of <1 kcal/mol is essentially a tie within the method's error. No threshold proves activity.\n\nA favourable score can support a hypothesis to test experimentally, but proof of biological activity requires experimental assays — e.g. biochemical binding, functional and cellular assays — under defined conditions."
+      },
+      "latency_ms": 4066.036
+    }
+  ],
+  "host_events": [],
+  "tool_executions": [],
+  "validation_events": [],
+  "plans": [],
+  "provider": {
+    "id": "baseten-hackathon",
+    "model": "meta-models/muse-spark-open-1026",
+    "endpoint": "https://inference.baseten.co/v1"
+  },
+  "transcript": [
+    {
+      "role": "system",
+      "content_sha256": "fcec384fd15c61947d867423370569e88264b2c25ec0402dafbb9d92aee604e1"
+    },
+    {
+      "role": "user",
+      "content": "Does a favourable Vina docking score prove that a molecule has biological activity? Explain the limitation without inventing measured values or running tools."
+    },
+    {
+      "role": "assistant",
+      "content": " No — a favourable Vina docking score does **not** prove biological activity.\n\nA Vina score is a computational estimate of binding energy for a single static pose in a defined binding site, not an experimental measurement of activity:\n\n* **It is not a measurement.** Vina does not measure affinity, Ki, IC50, or cellular activity. It predicts a score using an empirical scoring function with approximations for steric, hydrophobic, hydrogen-bonding and other terms.\n\n* **Major physics is approximated or omitted.** Typical docking does not fully account for protein flexibility, induced fit, explicit water and solvation/desolvation, entropy, protonation states, ion effects, or the cellular environment. A molecule can score well in silico and still not bind in solution.\n\n* **Binding ≠ activity.** Even real binding in vitro does not guarantee functional biological activity. Activity also depends on membrane permeability, metabolism, efflux, off-target binding, toxicity, concentration at the target, and whether binding is agonistic, antagonistic, or functionally irrelevant.\n\n* **Scoring is not calibrated to activity.** Vina scores are useful for ranking poses and for hypothesis generation, but correlation with experimental affinity is limited and system-dependent. A more negative score means the model predicts more favourable geometry/energy in that site, not that the compound is active, potent, or selective.\n\n* **Small differences are not decisive.** Vina cannot resolve real affinity, and a difference of <1 kcal/mol is essentially a tie within the method's error. No threshold proves activity.\n\nA favourable score can support a hypothesis to test experimentally, but proof of biological activity requires experimental assays — e.g. biochemical binding, functional and cellular assays — under defined conditions."
+    }
+  ],
+  "exhausted": false,
+  "result": {
+    "text": "Verification note: unverified values were hidden.  No — a favourable Vina docking score does **not** prove biological activity.\n\nA Vina score is a computational estimate of binding energy for a single static pose in a defined binding site, not an experimental measurement of activity:\n\n* **It is not a measurement.** Vina does not measure affinity, Ki, IC[unverified value], or cellular activity. It predicts a score using an empirical scoring function with approximations for steric, hydrophobic, hydrogen-bonding and other terms.\n\n* **Major physics is approximated or omitted.** Typical docking does not fully account for protein flexibility, induced fit, explicit water and solvation/desolvation, entropy, protonation states, ion effects, or the cellular environment. A molecule can score well in silico and still not bind in solution.\n\n* **Binding ≠ activity.** Even real binding in vitro does not guarantee functional biological activity. Activity also depends on membrane permeability, metabolism, efflux, off-target binding, toxicity, concentration at the target, and whether binding is agonistic, antagonistic, or functionally irrelevant.\n\n* **Scoring is not calibrated to activity.** Vina scores are useful for ranking poses and for hypothesis generation, but correlation with experimental affinity is limited and system-dependent. A more negative score means the model predicts more favourable geometry/energy in that site, not that the compound is active, potent, or selective.\n\n* **Small differences are not decisive.** Vina cannot resolve real affinity, and a difference of <[unverified value] kcal/mol is essentially a tie within the method's error. No threshold proves activity.\n\nA favourable score can support a hypothesis to test experimentally, but proof of biological activity requires experimental assays — e.g. biochemical binding, functional and cellular assays — under defined conditions.",
+    "intent": "harness",
+    "evidence": [],
+    "references": [],
+    "comparison_cids": [],
+    "suggested_actions": [],
+    "action_proposals": [],
+    "workflow_proposals": [],
+    "used_llm": true,
+    "verified_values": [],
+    "latency_ms": 4425
+  },
+  "latency_ms": 4542.636,
+  "criteria": [
+    {
+      "criterion": "turn completed without provider/timeout failure",
+      "passed": true,
+      "actual": null
+    },
+    {
+      "criterion": "no desktop mutation dispatched",
+      "passed": true,
+      "actual": []
+    },
+    {
+      "criterion": "no plan created without sufficient/valid input",
+      "passed": true,
+      "actual": 0
+    },
+    {
+      "criterion": "answer includes one of: experiment / biolog / activity",
+      "passed": true,
+      "actual": null
+    }
+  ],
+  "passed": true
+}

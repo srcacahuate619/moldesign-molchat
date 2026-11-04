@@ -70,3 +70,17 @@ async def test_the_model_tool_takes_the_colours_and_leaves_a_card_and_refuses_a_
     except ValueError:
         return  # refused by the closed schema
     assert (await tool.execute(bad))["status"] == "invalid"  # or by the plan itself, before any card
+
+
+async def test_the_model_tool_preserves_requested_time_limits_in_the_approved_spec() -> None:
+    proposed: list[IterationSpec] = []
+    tool = propose_iteration_tool("60 seconds per molecule and 180 seconds total",
+        lambda spec: proposed.append(spec) or {"id": "w1", "lines": spec.card_lines()})
+    args = _arguments(json.dumps({**BASE, "per_molecule_timeout_s": 60, "budget_s": 180}), tool.parameters)
+    result = await tool.execute(args)
+    assert result["status"] == "awaiting_approval"
+    assert proposed[0].per_molecule_timeout_s == 60 and proposed[0].budget_s == 180
+    assert proposed[0].digest != IterationSpec.from_dict(BASE).digest
+    for invalid in ({"per_molecule_timeout_s": 29}, {"budget_s": 7201}, {"budget_s": True}):
+        with pytest.raises(ValueError):
+            _arguments(json.dumps({**BASE, **invalid}), tool.parameters)

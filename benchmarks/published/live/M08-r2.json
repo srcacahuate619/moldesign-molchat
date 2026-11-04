@@ -1,0 +1,644 @@
+{
+  "id": "M08",
+  "difficulty": "moderate",
+  "repetition": 2,
+  "prompt": "Read the actual receptor catalogue for VMAT2 and separately calculate MolDesign descriptors for benzene (c1ccccc1). Keep receptor evidence and molecular descriptors separate. Do not create or modify a case.",
+  "expect": {
+    "required_tools": [
+      "search_receptors",
+      "compute_properties"
+    ],
+    "successful_tools": [
+      "search_receptors",
+      "compute_properties"
+    ],
+    "no_plan": true
+  },
+  "model_steps": [
+    {
+      "step": 1,
+      "request": {
+        "model": "meta-models/muse-spark-open-1026",
+        "temperature": 0.1,
+        "max_tokens": 4096,
+        "messages": [
+          {
+            "role": "system",
+            "content_sha256": "fcec384fd15c61947d867423370569e88264b2c25ec0402dafbb9d92aee604e1"
+          },
+          {
+            "role": "user",
+            "content": "Read the actual receptor catalogue for VMAT2 and separately calculate MolDesign descriptors for benzene (c1ccccc1). Keep receptor evidence and molecular descriptors separate. Do not create or modify a case."
+          }
+        ],
+        "tool_names": [
+          "create_case",
+          "load_case_smiles",
+          "assign_case_receptor",
+          "evaluate_case",
+          "compute_properties",
+          "show_property_comparison",
+          "verify_editor_structure",
+          "suggest_next_actions",
+          "pubchem_lookup",
+          "search_receptors",
+          "pick_random_receptor",
+          "get_evaluation_status",
+          "explain_evaluation",
+          "compare_poses",
+          "save_to_moldex",
+          "request_molcy_video",
+          "get_molcy_video_status",
+          "propose_iteration"
+        ]
+      },
+      "response": {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "chatcmpl-tool-3efebd69477046e08b37d09aec1c6a4d",
+            "type": "function",
+            "function": {
+              "name": "search_receptors",
+              "arguments": "{\"query\": \"VMAT2\"}"
+            }
+          },
+          {
+            "id": "chatcmpl-tool-90e48666929940b8840f0c45eab27547",
+            "type": "function",
+            "function": {
+              "name": "compute_properties",
+              "arguments": "{\"name\": \"c1ccccc1\"}"
+            }
+          }
+        ]
+      },
+      "latency_ms": 1856.517
+    },
+    {
+      "step": 2,
+      "request": {
+        "model": "meta-models/muse-spark-open-1026",
+        "temperature": 0.1,
+        "max_tokens": 4096,
+        "messages": [
+          {
+            "role": "system",
+            "content_sha256": "fcec384fd15c61947d867423370569e88264b2c25ec0402dafbb9d92aee604e1"
+          },
+          {
+            "role": "user",
+            "content": "Read the actual receptor catalogue for VMAT2 and separately calculate MolDesign descriptors for benzene (c1ccccc1). Keep receptor evidence and molecular descriptors separate. Do not create or modify a case."
+          },
+          {
+            "role": "assistant",
+            "content": null,
+            "tool_calls": [
+              {
+                "id": "chatcmpl-tool-3efebd69477046e08b37d09aec1c6a4d",
+                "type": "function",
+                "function": {
+                  "name": "search_receptors",
+                  "arguments": "{\"query\": \"VMAT2\"}"
+                }
+              },
+              {
+                "id": "chatcmpl-tool-90e48666929940b8840f0c45eab27547",
+                "type": "function",
+                "function": {
+                  "name": "compute_properties",
+                  "arguments": "{\"name\": \"c1ccccc1\"}"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": "{\"status\": \"ok\", \"source\": \"Catálogo de receptores de MolDesign\", \"query\": \"VMAT2\", \"page\": 1, \"total\": 7, \"has_next\": false, \"section\": \"all\", \"availability\": \"all\", \"receptors\": [{\"id\": \"57d8fb74-0553-4c7c-98c2-af85f016e4e0\", \"pdb_id\": \"8JSW\", \"name\": \"HUMAN VMAT2 COMPLEX WITH SEROTONIN\", \"organism\": \"Homo sapiens\", \"chain\": \"A\", \"structural_family\": \"transporter\", \"therapeutic_family\": null, \"is_private\": false, \"disponible\": true, \"motivo_no_disponible\": null, \"seccion_catalogo\": \"demostracion\", \"calibracion\": {\"nivel\": \"curado_estructural\", \"spearman_rho\": null, \"structural_family\": \"transporter\", \"tiene_pipeline_de_familia\": false, \"resumen\": \"Structurally curated; calibration and a family pipeline are missing\", \"advertencia\": \"This receptor has no measured Spearman ρ, and its structural family has no calibrated stacking, so it runs under the shared conservative alpha contract. There is no evidence that the ranking correlates with actual affinity here. Treat the result as a hypothesis to test, not as a measurement.\", \"motivo\": \"the receptor's Spearman ρ and calibrated stacking for its family are missing\", \"requiere_advertencia\": true, \"respaldo\": null, \"rho_registrada_sin_respaldo\": null}, \"avisos_catalogo\": []}, {\"id\": \"333835b4-9391-4d97-b855-5565c2533085\", \"pdb_id\": \"8JT9\", \"name\": \"HUMAN VMAT2 COMPLEX WITH KETANSERIN\", \"organism\": \"Homo sapiens\", \"chain\": \"A\", \"structural_family\": \"transporter\", \"therapeutic_family\": null, \"is_private\": false, \"disponible\": true, \"motivo_no_disponible\": null, \"seccion_catalogo\": \"demostracion\", \"calibracion\": {\"nivel\": \"curado_estructural\", \"spearman_rho\": null, \"structural_family\": \"transporter\", \"tiene_pipeline_de_familia\": false, \"resumen\": \"Structurally curated; calibration and a family pipeline are missing\", \"advertencia\": \"This receptor has no measured Spearman ρ, and its structural family has no calibrated stacking, so it runs under the shared conservative alpha contract. There is no evidence that the ranking correlates with actual affinity here. Treat the result as a hypothesis to test, not as a measurement.\", \"motivo\": \"the receptor's Spearman ρ and calibrated stacking for its family are missing\", \"requiere_advertencia\": true, \"respaldo\": null, \"rho_registrada_sin_respaldo\": null}, \"avisos_catalogo\": []}, {\"id\": \"fd8c7763-635d-4552-b102-7bc33092d2e8\", \"pdb_id\": \"8JTB\", \"name\": \"VMAT2 COMPLEX WITH DOPAMINE\", \"organism\": \"Homo sapiens\", \"chain\": \"A\", \"structural_family\": \"transporter\", \"therapeutic_family\": null, \"is_private\": false, \"disponible\": true, \"motivo_no_disponible\": null, \"seccion_catalogo\": \"demostracion\", \"calibracion\": {\"nivel\": \"curado_estructural\", \"spearman_rho\": null, \"structural_family\": \"transporter\", \"tiene_pipeline_de_familia\": false, \"resumen\": \"Structurally curated; calibration and a family pipeline are missing\", \"advertencia\": \"This receptor has no measured Spearman ρ, and its structural family has no calibrated stacking, so it runs under the shared conservative alpha contract. There is no evidence that the ranking correlates with actual affinity here. Treat the result as a hypothesis to test, not as a measurement.\", \"motivo\": \"the receptor's Spearman ρ and calibrated stacking for its family are missing\", \"requiere_advertencia\": true, \"respaldo\": null, \"rho_registrada_sin_respaldo\": null}, \"avisos_catalogo\": []}, {\"id\": \"ee0bb616-eb59-4d9b-9a0f-da2331243043\", \"pdb_id\": \"8T69\", \"name\": \"HUMAN VMAT2 IN COMPLEX WITH TETRABENAZINE\", \"organism\": \"Homo sapiens\", \"chain\": \"A\", \"structural_family\": \"transporter\", \"therapeutic_family\": null, \"is_private\": false, \"disponible\": true, \"motivo_no_disponible\": null, \"seccion_catalogo\": \"verificado\", \"calibracion\": {\"nivel\": \"calibrado\", \"spearman_rho\": 0.3918, \"structural_family\": \"transporter\", \"tiene_pipeline_de_familia\": false, \"resumen\": \"Calibrated for this receptor (measured Spearman ρ)\", \"advertencia\": \"\", \"motivo\": \"\", \"requiere_advertencia\": false, \"respaldo\": {\"rho\": 0.3918, \"ic95\": [0.216, 0.5404], \"n\": 89, \"panel\": \"US11718618B2 Example 11\", \"endpoint\": \"Ki\", \"protocolo\": {\"exhaustiveness\": 8, \"num_poses\": 9, \"semilla\": 42}, \"receptor_sha256\": \"8fc027cae876631f30518b27823ce175e844bbe9e7bc10554653a7766e21468d\"}, \"rho_registrada_sin_respaldo\": null}, \"avisos_catalogo\": []}, {\"id\": \"b1e90c8d-525d-452a-b719-ffad463b81b8\", \"pdb_id\": \"8WRE\", \"name\": \"HUMAN VMAT2 IN COMPLEX WITH DOPAMINE\", \"organism\": \"Homo sapiens\", \"chain\": \"A\", \"structural_family\": \"transporter\", \"therapeutic_family\": null, \"is_private\": false, \"disponible\": true, \"motivo_no_disponible\": null, \"seccion_catalogo\": \"demostracion\", \"calibracion\": {\"nivel\": \"curado_estructural\", \"spearman_rho\": null, \"structural_family\": \"transporter\", \"tiene_pipeline_de_familia\": false, \"resumen\": \"Structurally curated; calibration and a family pipeline are missing\", \"advertencia\": \"This receptor has no measured Spearman ρ, and its structural family has no calibrated stacking, so it runs under the shared conservative alpha contract. There is no evidence that the ranking correlates with actual affinity here. Treat the result as a hypothesis to test, not as a measurement.\", \"motivo\": \"the receptor's Spearman ρ and calibrated stacking for its family are missing\", \"requiere_advertencia\": true, \"respaldo\": null, \"rho_registrada_sin_respaldo\": null}, \"avisos_catalogo\": []}, {\"id\": \"b7c2d643-80c7-4c1c-9703-a0d51f304a37\", \"pdb_id\": \"8X3K\", \"name\": \"CRYO-EM STRUCTURE OF HUMAN VMAT2 IN COMPLEX WITH SEROTONIN\", \"organism\": \"ESCHERICHIA COLI, HOMO SAPIENS\", \"chain\": \"A\", \"structural_family\": \"transporter\", \"therapeutic_family\": null, \"is_private\": false, \"disponible\": true, \"motivo_no_disponible\": null, \"seccion_catalogo\": \"demostracion\", \"calibracion\": {\"nivel\": \"curado_estructural\", \"spearman_rho\": null, \"structural_family\": \"transporter\", \"tiene_pipeline_de_familia\": false, \"resumen\": \"Structurally curated; calibration and a family pipeline are missing\", \"advertencia\": \"This receptor has no measured Spearman ρ, and its structural family has no calibrated stacking, so it runs under the shared conservative alpha contract. There is no evidence that the ranking correlates with actual affinity here. Treat the result as a hypothesis to test, not as a measurement.\", \"motivo\": \"the receptor's Spearman ρ and calibrated stacking for its family are missing\", \"requiere_advertencia\": true, \"respaldo\": null, \"rho_registrada_sin_respaldo\": null}, \"avisos_catalogo\": []}, {\"id\": \"7271cf4c-12d0-486a-86fd-1bb2b2b8f2f8\", \"pdb_id\": \"9KQE\", \"name\": \"CRYO-EM STRUCTURE OF HUMAN VMAT2 IN COMPLEX WITH DOPAMINE\", \"organism\": \"ESCHERICHIA COLI, HOMO SAPIENS\", \"chain\": \"A\", \"structural_family\": \"transporter\", \"therapeutic_family\": null, \"is_private\": false, \"disponible\": true, \"motivo_no_disponible\": null, \"seccion_catalogo\": \"demostracion\", \"calibracion\": {\"nivel\": \"curado_estructural\", \"spearman_rho\": null, \"structural_family\": \"transporter\", \"tiene_pipeline_de_familia\": false, \"resumen\": \"Structurally curated; calibration and a family pipeline are missing\", \"advertencia\": \"This receptor has no measured Spearman ρ, and its structural family has no calibrated stacking, so it runs under the shared conservative alpha contract. There is no evidence that the ranking correlates with actual affinity here. Treat the result as a hypothesis to test, not as a measurement.\", \"motivo\": \"the receptor's Spearman ρ and calibrated stacking for its family are missing\", \"requiere_advertencia\": true, \"respaldo\": null, \"rho_registrada_sin_respaldo\": null}, \"avisos_catalogo\": []}]}",
+            "tool_call_id": "chatcmpl-tool-3efebd69477046e08b37d09aec1c6a4d"
+          },
+          {
+            "role": "tool",
+            "content": "{\"status\": \"ok\", \"name\": \"c1ccccc1\", \"properties\": {\"mw\": 78.11, \"logp\": 1.69, \"tpsa\": 0.0, \"hbd\": 0, \"hba\": 0, \"rot_bonds\": 0, \"heavy_atoms\": 6, \"rings\": 1}, \"source\": \"MolDesign / RDKit 2025.09.6 | Avisos: Molecular weight is below the range for the drug-likeness rules (78.1 Da). The Ghose et al. 1999 filter starts at 160 Da and 20 heavy atoms: at this size, those filters and ligand-efficiency thresholds do not assess what they claim to assess. Docking still runs.\", \"methods\": {\"mw\": \"RDKit Descriptors.MolWt (masa molecular promedio)\", \"logp\": \"RDKit Crippen.MolLogP (contribuciones atómicas)\", \"tpsa\": \"RDKit rdMolDescriptors.CalcTPSA (Ertl 2000) con includeSandP=False: suma sólo N y O; el azufre y el fósforo no cuentan\", \"hbd\": \"RDKit Lipinski.NHOHCount (enlaces N-H y O-H)\", \"hba\": \"RDKit Lipinski.NOCount (número de átomos de N y O)\"}, \"variants\": [{\"name\": \"tpsa_incl_s_p\", \"applies_to\": \"tpsa\", \"value\": 0.0, \"method\": \"RDKit rdMolDescriptors.CalcTPSA(mol, includeSandP=True): suma también las contribuciones del azufre y el fósforo (Ertl 2000)\", \"unit\": \"Å²\"}, {\"name\": \"hba_rdkit_num_h_acceptors\", \"applies_to\": \"hba\", \"value\": 0, \"method\": \"RDKit rdMolDescriptors.CalcNumHBA: aceptores de enlace de hidrógeno según los patrones SMARTS de RDKit (no es el recuento de todos los N y O)\", \"unit\": null}], \"structure\": {\"input_smiles\": \"c1ccccc1\", \"canonical_smiles\": \"c1ccccc1\", \"identity\": \"same\", \"verifier\": \"SMILES idéntico\", \"warnings\": [\"Molecular weight is below the range for the drug-likeness rules (78.1 Da). The Ghose et al. 1999 filter starts at 160 Da and 20 heavy atoms: at this size, those filters and ligand-efficiency thresholds do not assess what they claim to assess. Docking still runs.\"]}}",
+            "tool_call_id": "chatcmpl-tool-90e48666929940b8840f0c45eab27547"
+          }
+        ],
+        "tool_names": [
+          "create_case",
+          "load_case_smiles",
+          "assign_case_receptor",
+          "evaluate_case",
+          "compute_properties",
+          "show_property_comparison",
+          "verify_editor_structure",
+          "suggest_next_actions",
+          "pubchem_lookup",
+          "search_receptors",
+          "pick_random_receptor",
+          "get_evaluation_status",
+          "explain_evaluation",
+          "compare_poses",
+          "save_to_moldex",
+          "request_molcy_video",
+          "get_molcy_video_status",
+          "propose_iteration"
+        ]
+      },
+      "response": {
+        "role": "assistant",
+        "content": "**1. Receptor catalogue evidence for VMAT2 — separate from molecular descriptors**\n\nSource: `Catálogo de receptores de MolDesign` — query `VMAT2`, page 1, total 7, has_next false. No case was created or modified.\n\nAll 7 entries are `disponible: true`, `is_private: false`, `structural_family: transporter`, `therapeutic_family: null`.\n\n* **PDB 8JSW** — HUMAN VMAT2 COMPLEX WITH SEROTONIN — Homo sapiens, chain A — section: `demostracion` — calibration: `nivel: curado_estructural`, `spearman_rho: null`, `tiene_pipeline_de_familia: false` — resumen: \"Structurally curated; calibration and a family pipeline are missing\" — advertencia: \"This receptor has no measured Spearman ρ, and its structural family has no calibrated stacking, so it runs under the shared conservative alpha contract. There is no evidence that the ranking correlates with actual affinity here. Treat the result as a hypothesis to test, not as a measurement.\" — motivo: \"the receptor's Spearman ρ and calibrated stacking for its family are missing\"\n\n* **PDB 8JT9** — HUMAN VMAT2 COMPLEX WITH KETANSERIN — Homo sapiens, chain A — section: `demostracion` — calibration: `nivel: curado_estructural`, `spearman_rho: null`, `tiene_pipeline_de_familia: false` — same resumen/advertencia/motivo as above\n\n* **PDB 8JTB** — VMAT2 COMPLEX WITH DOPAMINE — Homo sapiens, chain A — section: `demostracion` — calibration: `nivel: curado_estructural`, `spearman_rho: null`, `tiene_pipeline_de_familia: false` — same resumen/advertencia/motivo as above\n\n* **PDB 8T69** — HUMAN VMAT2 IN COMPLEX WITH TETRABENAZINE — Homo sapiens, chain A — section: `verificado` — calibration: `nivel: calibrado`, `spearman_rho: 0.3918`, `tiene_pipeline_de_familia: false` — resumen: \"Calibrated for this receptor (measured Spearman ρ)\" — respaldo: `rho: 0.3918`, `ic95: [0.216, 0.5404]`, `n: 89`, `panel: US11718618B2 Example 11`, `endpoint: Ki`, `protocolo: {exhaustiveness: 8, num_poses: 9, semilla: 42}`, `receptor_sha256: 8fc027cae876631f30518b27823ce175e844bbe9e7bc10554653a7766e21468d`\n\n* **PDB 8WRE** — HUMAN VMAT2 IN COMPLEX WITH DOPAMINE — Homo sapiens, chain A — section: `demostracion` — calibration: `nivel: curado_estructural`, `spearman_rho: null`, `tiene_pipeline_de_familia: false` — same resumen/advertencia/motivo as above\n\n* **PDB 8X3K** — CRYO-EM STRUCTURE OF HUMAN VMAT2 IN COMPLEX WITH SEROTONIN — ESCHERICHIA COLI, HOMO SAPIENS, chain A — section: `demostracion` — calibration: `nivel: curado_estructural`, `spearman_rho: null`, `tiene_pipeline_de_familia: false` — same resumen/advertencia/motivo as above\n\n* **PDB 9KQE** — CRYO-EM STRUCTURE OF HUMAN VMAT2 IN COMPLEX WITH DOPAMINE — ESCHERICHIA COLI, HOMO SAPIENS, chain A — section: `demostracion` — calibration: `nivel: curado_estructural`, `spearman_rho: null`, `tiene_pipeline_de_familia: false` — same resumen/advertencia/motivo as above\n\nNo docking, ranking, or affinity was evaluated. This is catalogue evidence only.\n\n---\n\n**2. MolDesign descriptors for benzene (c1ccccc1) — separate from receptor evidence**\n\nSource: `MolDesign / RDKit 2025.09.6` — input SMILES `c1ccccc1`, canonical SMILES `c1ccccc1`, identity `same` (verifier: SMILES idéntico). No receptor assigned, no case created.\n\nProperties:\n* **mw:** 78.11 — method: RDKit Descriptors.MolWt (masa molecular promedio)\n* **logp:** 1.69 — method: RDKit Crippen.MolLogP (contribuciones atómicas)\n* **tpsa:** 0.0 Å² — method: RDKit rdMolDescriptors.CalcTPSA (Ertl 2000) with includeSandP=False: suma sólo N y O; el azufre y el fósforo no cuentan\n* **hbd:** 0 — method: RDKit Lipinski.NHOHCount (enlaces N-H y O-H)\n* **hba:** 0 — method: RDKit Lipinski.NOCount (número de átomos de N y O)\n* **rot_bonds:** 0\n* **heavy_atoms:** 6\n* **rings:** 1\n\nVariants returned:\n* `tpsa_incl_s_p`: 0.0 Å² — method: RDKit rdMolDescriptors.CalcTPSA(mol, includeSandP=True)\n* `hba_rdkit_num_h_acceptors`: 0 — method: RDKit rdMolDescriptors.CalcNumHBA\n\nAvisos: \"Molecular weight is below the range for the drug-likeness rules (78.1 Da). The Ghose et al. 1999 filter starts at 160 Da and 20 heavy atoms: at this size, those filters and ligand-efficiency thresholds do not assess what they claim to assess. Docking still runs.\"\n\nThese descriptors describe the molecule only and do not imply activity, affinity, or suitability for any VMAT2 receptor listed above."
+      },
+      "latency_ms": 6790.485
+    }
+  ],
+  "host_events": [],
+  "tool_executions": [
+    {
+      "tool": "search_receptors",
+      "validated_arguments": {
+        "query": "VMAT2"
+      },
+      "result": {
+        "status": "ok",
+        "source": "Catálogo de receptores de MolDesign",
+        "query": "VMAT2",
+        "page": 1,
+        "total": 7,
+        "has_next": false,
+        "section": "all",
+        "availability": "all",
+        "receptors": [
+          {
+            "id": "57d8fb74-0553-4c7c-98c2-af85f016e4e0",
+            "pdb_id": "8JSW",
+            "name": "HUMAN VMAT2 COMPLEX WITH SEROTONIN",
+            "organism": "Homo sapiens",
+            "chain": "A",
+            "structural_family": "transporter",
+            "therapeutic_family": null,
+            "is_private": false,
+            "disponible": true,
+            "motivo_no_disponible": null,
+            "seccion_catalogo": "demostracion",
+            "calibracion": {
+              "nivel": "curado_estructural",
+              "spearman_rho": null,
+              "structural_family": "transporter",
+              "tiene_pipeline_de_familia": false,
+              "resumen": "Structurally curated; calibration and a family pipeline are missing",
+              "advertencia": "This receptor has no measured Spearman ρ, and its structural family has no calibrated stacking, so it runs under the shared conservative alpha contract. There is no evidence that the ranking correlates with actual affinity here. Treat the result as a hypothesis to test, not as a measurement.",
+              "motivo": "the receptor's Spearman ρ and calibrated stacking for its family are missing",
+              "requiere_advertencia": true,
+              "respaldo": null,
+              "rho_registrada_sin_respaldo": null
+            },
+            "avisos_catalogo": []
+          },
+          {
+            "id": "333835b4-9391-4d97-b855-5565c2533085",
+            "pdb_id": "8JT9",
+            "name": "HUMAN VMAT2 COMPLEX WITH KETANSERIN",
+            "organism": "Homo sapiens",
+            "chain": "A",
+            "structural_family": "transporter",
+            "therapeutic_family": null,
+            "is_private": false,
+            "disponible": true,
+            "motivo_no_disponible": null,
+            "seccion_catalogo": "demostracion",
+            "calibracion": {
+              "nivel": "curado_estructural",
+              "spearman_rho": null,
+              "structural_family": "transporter",
+              "tiene_pipeline_de_familia": false,
+              "resumen": "Structurally curated; calibration and a family pipeline are missing",
+              "advertencia": "This receptor has no measured Spearman ρ, and its structural family has no calibrated stacking, so it runs under the shared conservative alpha contract. There is no evidence that the ranking correlates with actual affinity here. Treat the result as a hypothesis to test, not as a measurement.",
+              "motivo": "the receptor's Spearman ρ and calibrated stacking for its family are missing",
+              "requiere_advertencia": true,
+              "respaldo": null,
+              "rho_registrada_sin_respaldo": null
+            },
+            "avisos_catalogo": []
+          },
+          {
+            "id": "fd8c7763-635d-4552-b102-7bc33092d2e8",
+            "pdb_id": "8JTB",
+            "name": "VMAT2 COMPLEX WITH DOPAMINE",
+            "organism": "Homo sapiens",
+            "chain": "A",
+            "structural_family": "transporter",
+            "therapeutic_family": null,
+            "is_private": false,
+            "disponible": true,
+            "motivo_no_disponible": null,
+            "seccion_catalogo": "demostracion",
+            "calibracion": {
+              "nivel": "curado_estructural",
+              "spearman_rho": null,
+              "structural_family": "transporter",
+              "tiene_pipeline_de_familia": false,
+              "resumen": "Structurally curated; calibration and a family pipeline are missing",
+              "advertencia": "This receptor has no measured Spearman ρ, and its structural family has no calibrated stacking, so it runs under the shared conservative alpha contract. There is no evidence that the ranking correlates with actual affinity here. Treat the result as a hypothesis to test, not as a measurement.",
+              "motivo": "the receptor's Spearman ρ and calibrated stacking for its family are missing",
+              "requiere_advertencia": true,
+              "respaldo": null,
+              "rho_registrada_sin_respaldo": null
+            },
+            "avisos_catalogo": []
+          },
+          {
+            "id": "ee0bb616-eb59-4d9b-9a0f-da2331243043",
+            "pdb_id": "8T69",
+            "name": "HUMAN VMAT2 IN COMPLEX WITH TETRABENAZINE",
+            "organism": "Homo sapiens",
+            "chain": "A",
+            "structural_family": "transporter",
+            "therapeutic_family": null,
+            "is_private": false,
+            "disponible": true,
+            "motivo_no_disponible": null,
+            "seccion_catalogo": "verificado",
+            "calibracion": {
+              "nivel": "calibrado",
+              "spearman_rho": 0.3918,
+              "structural_family": "transporter",
+              "tiene_pipeline_de_familia": false,
+              "resumen": "Calibrated for this receptor (measured Spearman ρ)",
+              "advertencia": "",
+              "motivo": "",
+              "requiere_advertencia": false,
+              "respaldo": {
+                "rho": 0.3918,
+                "ic95": [
+                  0.216,
+                  0.5404
+                ],
+                "n": 89,
+                "panel": "US11718618B2 Example 11",
+                "endpoint": "Ki",
+                "protocolo": {
+                  "exhaustiveness": 8,
+                  "num_poses": 9,
+                  "semilla": 42
+                },
+                "receptor_sha256": "8fc027cae876631f30518b27823ce175e844bbe9e7bc10554653a7766e21468d"
+              },
+              "rho_registrada_sin_respaldo": null
+            },
+            "avisos_catalogo": []
+          },
+          {
+            "id": "b1e90c8d-525d-452a-b719-ffad463b81b8",
+            "pdb_id": "8WRE",
+            "name": "HUMAN VMAT2 IN COMPLEX WITH DOPAMINE",
+            "organism": "Homo sapiens",
+            "chain": "A",
+            "structural_family": "transporter",
+            "therapeutic_family": null,
+            "is_private": false,
+            "disponible": true,
+            "motivo_no_disponible": null,
+            "seccion_catalogo": "demostracion",
+            "calibracion": {
+              "nivel": "curado_estructural",
+              "spearman_rho": null,
+              "structural_family": "transporter",
+              "tiene_pipeline_de_familia": false,
+              "resumen": "Structurally curated; calibration and a family pipeline are missing",
+              "advertencia": "This receptor has no measured Spearman ρ, and its structural family has no calibrated stacking, so it runs under the shared conservative alpha contract. There is no evidence that the ranking correlates with actual affinity here. Treat the result as a hypothesis to test, not as a measurement.",
+              "motivo": "the receptor's Spearman ρ and calibrated stacking for its family are missing",
+              "requiere_advertencia": true,
+              "respaldo": null,
+              "rho_registrada_sin_respaldo": null
+            },
+            "avisos_catalogo": []
+          },
+          {
+            "id": "b7c2d643-80c7-4c1c-9703-a0d51f304a37",
+            "pdb_id": "8X3K",
+            "name": "CRYO-EM STRUCTURE OF HUMAN VMAT2 IN COMPLEX WITH SEROTONIN",
+            "organism": "ESCHERICHIA COLI, HOMO SAPIENS",
+            "chain": "A",
+            "structural_family": "transporter",
+            "therapeutic_family": null,
+            "is_private": false,
+            "disponible": true,
+            "motivo_no_disponible": null,
+            "seccion_catalogo": "demostracion",
+            "calibracion": {
+              "nivel": "curado_estructural",
+              "spearman_rho": null,
+              "structural_family": "transporter",
+              "tiene_pipeline_de_familia": false,
+              "resumen": "Structurally curated; calibration and a family pipeline are missing",
+              "advertencia": "This receptor has no measured Spearman ρ, and its structural family has no calibrated stacking, so it runs under the shared conservative alpha contract. There is no evidence that the ranking correlates with actual affinity here. Treat the result as a hypothesis to test, not as a measurement.",
+              "motivo": "the receptor's Spearman ρ and calibrated stacking for its family are missing",
+              "requiere_advertencia": true,
+              "respaldo": null,
+              "rho_registrada_sin_respaldo": null
+            },
+            "avisos_catalogo": []
+          },
+          {
+            "id": "7271cf4c-12d0-486a-86fd-1bb2b2b8f2f8",
+            "pdb_id": "9KQE",
+            "name": "CRYO-EM STRUCTURE OF HUMAN VMAT2 IN COMPLEX WITH DOPAMINE",
+            "organism": "ESCHERICHIA COLI, HOMO SAPIENS",
+            "chain": "A",
+            "structural_family": "transporter",
+            "therapeutic_family": null,
+            "is_private": false,
+            "disponible": true,
+            "motivo_no_disponible": null,
+            "seccion_catalogo": "demostracion",
+            "calibracion": {
+              "nivel": "curado_estructural",
+              "spearman_rho": null,
+              "structural_family": "transporter",
+              "tiene_pipeline_de_familia": false,
+              "resumen": "Structurally curated; calibration and a family pipeline are missing",
+              "advertencia": "This receptor has no measured Spearman ρ, and its structural family has no calibrated stacking, so it runs under the shared conservative alpha contract. There is no evidence that the ranking correlates with actual affinity here. Treat the result as a hypothesis to test, not as a measurement.",
+              "motivo": "the receptor's Spearman ρ and calibrated stacking for its family are missing",
+              "requiere_advertencia": true,
+              "respaldo": null,
+              "rho_registrada_sin_respaldo": null
+            },
+            "avisos_catalogo": []
+          }
+        ]
+      },
+      "latency_ms": 3005.829
+    },
+    {
+      "tool": "compute_properties",
+      "validated_arguments": {
+        "name": "c1ccccc1"
+      },
+      "result": {
+        "status": "ok",
+        "name": "c1ccccc1",
+        "properties": {
+          "mw": 78.11,
+          "logp": 1.69,
+          "tpsa": 0.0,
+          "hbd": 0,
+          "hba": 0,
+          "rot_bonds": 0,
+          "heavy_atoms": 6,
+          "rings": 1
+        },
+        "source": "MolDesign / RDKit 2025.09.6 | Avisos: Molecular weight is below the range for the drug-likeness rules (78.1 Da). The Ghose et al. 1999 filter starts at 160 Da and 20 heavy atoms: at this size, those filters and ligand-efficiency thresholds do not assess what they claim to assess. Docking still runs.",
+        "methods": {
+          "mw": "RDKit Descriptors.MolWt (masa molecular promedio)",
+          "logp": "RDKit Crippen.MolLogP (contribuciones atómicas)",
+          "tpsa": "RDKit rdMolDescriptors.CalcTPSA (Ertl 2000) con includeSandP=False: suma sólo N y O; el azufre y el fósforo no cuentan",
+          "hbd": "RDKit Lipinski.NHOHCount (enlaces N-H y O-H)",
+          "hba": "RDKit Lipinski.NOCount (número de átomos de N y O)"
+        },
+        "variants": [
+          {
+            "name": "tpsa_incl_s_p",
+            "applies_to": "tpsa",
+            "value": 0.0,
+            "method": "RDKit rdMolDescriptors.CalcTPSA(mol, includeSandP=True): suma también las contribuciones del azufre y el fósforo (Ertl 2000)",
+            "unit": "Å²"
+          },
+          {
+            "name": "hba_rdkit_num_h_acceptors",
+            "applies_to": "hba",
+            "value": 0,
+            "method": "RDKit rdMolDescriptors.CalcNumHBA: aceptores de enlace de hidrógeno según los patrones SMARTS de RDKit (no es el recuento de todos los N y O)",
+            "unit": null
+          }
+        ],
+        "structure": {
+          "input_smiles": "c1ccccc1",
+          "canonical_smiles": "c1ccccc1",
+          "identity": "same",
+          "verifier": "SMILES idéntico",
+          "warnings": [
+            "Molecular weight is below the range for the drug-likeness rules (78.1 Da). The Ghose et al. 1999 filter starts at 160 Da and 20 heavy atoms: at this size, those filters and ligand-efficiency thresholds do not assess what they claim to assess. Docking still runs."
+          ]
+        }
+      },
+      "latency_ms": 29.508
+    }
+  ],
+  "validation_events": [
+    {
+      "phase": "start",
+      "value": "search_receptors",
+      "call_id": "chatcmpl-tool-3efebd69477046e08b37d09aec1c6a4d",
+      "validated_arguments": null
+    },
+    {
+      "phase": "arguments",
+      "value": "",
+      "call_id": "chatcmpl-tool-3efebd69477046e08b37d09aec1c6a4d",
+      "validated_arguments": {
+        "query": "VMAT2"
+      }
+    },
+    {
+      "phase": "end",
+      "value": "ok",
+      "call_id": "chatcmpl-tool-3efebd69477046e08b37d09aec1c6a4d",
+      "validated_arguments": null
+    },
+    {
+      "phase": "start",
+      "value": "compute_properties",
+      "call_id": "chatcmpl-tool-90e48666929940b8840f0c45eab27547",
+      "validated_arguments": null
+    },
+    {
+      "phase": "arguments",
+      "value": "",
+      "call_id": "chatcmpl-tool-90e48666929940b8840f0c45eab27547",
+      "validated_arguments": {
+        "name": "c1ccccc1"
+      }
+    },
+    {
+      "phase": "end",
+      "value": "ok",
+      "call_id": "chatcmpl-tool-90e48666929940b8840f0c45eab27547",
+      "validated_arguments": null
+    }
+  ],
+  "plans": [],
+  "provider": {
+    "id": "baseten-hackathon",
+    "model": "meta-models/muse-spark-open-1026",
+    "endpoint": "https://inference.baseten.co/v1"
+  },
+  "transcript": [
+    {
+      "role": "system",
+      "content_sha256": "fcec384fd15c61947d867423370569e88264b2c25ec0402dafbb9d92aee604e1"
+    },
+    {
+      "role": "user",
+      "content": "Read the actual receptor catalogue for VMAT2 and separately calculate MolDesign descriptors for benzene (c1ccccc1). Keep receptor evidence and molecular descriptors separate. Do not create or modify a case."
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "chatcmpl-tool-3efebd69477046e08b37d09aec1c6a4d",
+          "type": "function",
+          "function": {
+            "name": "search_receptors",
+            "arguments": "{\"query\": \"VMAT2\"}"
+          }
+        },
+        {
+          "id": "chatcmpl-tool-90e48666929940b8840f0c45eab27547",
+          "type": "function",
+          "function": {
+            "name": "compute_properties",
+            "arguments": "{\"name\": \"c1ccccc1\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": "{\"status\": \"ok\", \"source\": \"Catálogo de receptores de MolDesign\", \"query\": \"VMAT2\", \"page\": 1, \"total\": 7, \"has_next\": false, \"section\": \"all\", \"availability\": \"all\", \"receptors\": [{\"id\": \"57d8fb74-0553-4c7c-98c2-af85f016e4e0\", \"pdb_id\": \"8JSW\", \"name\": \"HUMAN VMAT2 COMPLEX WITH SEROTONIN\", \"organism\": \"Homo sapiens\", \"chain\": \"A\", \"structural_family\": \"transporter\", \"therapeutic_family\": null, \"is_private\": false, \"disponible\": true, \"motivo_no_disponible\": null, \"seccion_catalogo\": \"demostracion\", \"calibracion\": {\"nivel\": \"curado_estructural\", \"spearman_rho\": null, \"structural_family\": \"transporter\", \"tiene_pipeline_de_familia\": false, \"resumen\": \"Structurally curated; calibration and a family pipeline are missing\", \"advertencia\": \"This receptor has no measured Spearman ρ, and its structural family has no calibrated stacking, so it runs under the shared conservative alpha contract. There is no evidence that the ranking correlates with actual affinity here. Treat the result as a hypothesis to test, not as a measurement.\", \"motivo\": \"the receptor's Spearman ρ and calibrated stacking for its family are missing\", \"requiere_advertencia\": true, \"respaldo\": null, \"rho_registrada_sin_respaldo\": null}, \"avisos_catalogo\": []}, {\"id\": \"333835b4-9391-4d97-b855-5565c2533085\", \"pdb_id\": \"8JT9\", \"name\": \"HUMAN VMAT2 COMPLEX WITH KETANSERIN\", \"organism\": \"Homo sapiens\", \"chain\": \"A\", \"structural_family\": \"transporter\", \"therapeutic_family\": null, \"is_private\": false, \"disponible\": true, \"motivo_no_disponible\": null, \"seccion_catalogo\": \"demostracion\", \"calibracion\": {\"nivel\": \"curado_estructural\", \"spearman_rho\": null, \"structural_family\": \"transporter\", \"tiene_pipeline_de_familia\": false, \"resumen\": \"Structurally curated; calibration and a family pipeline are missing\", \"advertencia\": \"This receptor has no measured Spearman ρ, and its structural family has no calibrated stacking, so it runs under the shared conservative alpha contract. There is no evidence that the ranking correlates with actual affinity here. Treat the result as a hypothesis to test, not as a measurement.\", \"motivo\": \"the receptor's Spearman ρ and calibrated stacking for its family are missing\", \"requiere_advertencia\": true, \"respaldo\": null, \"rho_registrada_sin_respaldo\": null}, \"avisos_catalogo\": []}, {\"id\": \"fd8c7763-635d-4552-b102-7bc33092d2e8\", \"pdb_id\": \"8JTB\", \"name\": \"VMAT2 COMPLEX WITH DOPAMINE\", \"organism\": \"Homo sapiens\", \"chain\": \"A\", \"structural_family\": \"transporter\", \"therapeutic_family\": null, \"is_private\": false, \"disponible\": true, \"motivo_no_disponible\": null, \"seccion_catalogo\": \"demostracion\", \"calibracion\": {\"nivel\": \"curado_estructural\", \"spearman_rho\": null, \"structural_family\": \"transporter\", \"tiene_pipeline_de_familia\": false, \"resumen\": \"Structurally curated; calibration and a family pipeline are missing\", \"advertencia\": \"This receptor has no measured Spearman ρ, and its structural family has no calibrated stacking, so it runs under the shared conservative alpha contract. There is no evidence that the ranking correlates with actual affinity here. Treat the result as a hypothesis to test, not as a measurement.\", \"motivo\": \"the receptor's Spearman ρ and calibrated stacking for its family are missing\", \"requiere_advertencia\": true, \"respaldo\": null, \"rho_registrada_sin_respaldo\": null}, \"avisos_catalogo\": []}, {\"id\": \"ee0bb616-eb59-4d9b-9a0f-da2331243043\", \"pdb_id\": \"8T69\", \"name\": \"HUMAN VMAT2 IN COMPLEX WITH TETRABENAZINE\", \"organism\": \"Homo sapiens\", \"chain\": \"A\", \"structural_family\": \"transporter\", \"therapeutic_family\": null, \"is_private\": false, \"disponible\": true, \"motivo_no_disponible\": null, \"seccion_catalogo\": \"verificado\", \"calibracion\": {\"nivel\": \"calibrado\", \"spearman_rho\": 0.3918, \"structural_family\": \"transporter\", \"tiene_pipeline_de_familia\": false, \"resumen\": \"Calibrated for this receptor (measured Spearman ρ)\", \"advertencia\": \"\", \"motivo\": \"\", \"requiere_advertencia\": false, \"respaldo\": {\"rho\": 0.3918, \"ic95\": [0.216, 0.5404], \"n\": 89, \"panel\": \"US11718618B2 Example 11\", \"endpoint\": \"Ki\", \"protocolo\": {\"exhaustiveness\": 8, \"num_poses\": 9, \"semilla\": 42}, \"receptor_sha256\": \"8fc027cae876631f30518b27823ce175e844bbe9e7bc10554653a7766e21468d\"}, \"rho_registrada_sin_respaldo\": null}, \"avisos_catalogo\": []}, {\"id\": \"b1e90c8d-525d-452a-b719-ffad463b81b8\", \"pdb_id\": \"8WRE\", \"name\": \"HUMAN VMAT2 IN COMPLEX WITH DOPAMINE\", \"organism\": \"Homo sapiens\", \"chain\": \"A\", \"structural_family\": \"transporter\", \"therapeutic_family\": null, \"is_private\": false, \"disponible\": true, \"motivo_no_disponible\": null, \"seccion_catalogo\": \"demostracion\", \"calibracion\": {\"nivel\": \"curado_estructural\", \"spearman_rho\": null, \"structural_family\": \"transporter\", \"tiene_pipeline_de_familia\": false, \"resumen\": \"Structurally curated; calibration and a family pipeline are missing\", \"advertencia\": \"This receptor has no measured Spearman ρ, and its structural family has no calibrated stacking, so it runs under the shared conservative alpha contract. There is no evidence that the ranking correlates with actual affinity here. Treat the result as a hypothesis to test, not as a measurement.\", \"motivo\": \"the receptor's Spearman ρ and calibrated stacking for its family are missing\", \"requiere_advertencia\": true, \"respaldo\": null, \"rho_registrada_sin_respaldo\": null}, \"avisos_catalogo\": []}, {\"id\": \"b7c2d643-80c7-4c1c-9703-a0d51f304a37\", \"pdb_id\": \"8X3K\", \"name\": \"CRYO-EM STRUCTURE OF HUMAN VMAT2 IN COMPLEX WITH SEROTONIN\", \"organism\": \"ESCHERICHIA COLI, HOMO SAPIENS\", \"chain\": \"A\", \"structural_family\": \"transporter\", \"therapeutic_family\": null, \"is_private\": false, \"disponible\": true, \"motivo_no_disponible\": null, \"seccion_catalogo\": \"demostracion\", \"calibracion\": {\"nivel\": \"curado_estructural\", \"spearman_rho\": null, \"structural_family\": \"transporter\", \"tiene_pipeline_de_familia\": false, \"resumen\": \"Structurally curated; calibration and a family pipeline are missing\", \"advertencia\": \"This receptor has no measured Spearman ρ, and its structural family has no calibrated stacking, so it runs under the shared conservative alpha contract. There is no evidence that the ranking correlates with actual affinity here. Treat the result as a hypothesis to test, not as a measurement.\", \"motivo\": \"the receptor's Spearman ρ and calibrated stacking for its family are missing\", \"requiere_advertencia\": true, \"respaldo\": null, \"rho_registrada_sin_respaldo\": null}, \"avisos_catalogo\": []}, {\"id\": \"7271cf4c-12d0-486a-86fd-1bb2b2b8f2f8\", \"pdb_id\": \"9KQE\", \"name\": \"CRYO-EM STRUCTURE OF HUMAN VMAT2 IN COMPLEX WITH DOPAMINE\", \"organism\": \"ESCHERICHIA COLI, HOMO SAPIENS\", \"chain\": \"A\", \"structural_family\": \"transporter\", \"therapeutic_family\": null, \"is_private\": false, \"disponible\": true, \"motivo_no_disponible\": null, \"seccion_catalogo\": \"demostracion\", \"calibracion\": {\"nivel\": \"curado_estructural\", \"spearman_rho\": null, \"structural_family\": \"transporter\", \"tiene_pipeline_de_familia\": false, \"resumen\": \"Structurally curated; calibration and a family pipeline are missing\", \"advertencia\": \"This receptor has no measured Spearman ρ, and its structural family has no calibrated stacking, so it runs under the shared conservative alpha contract. There is no evidence that the ranking correlates with actual affinity here. Treat the result as a hypothesis to test, not as a measurement.\", \"motivo\": \"the receptor's Spearman ρ and calibrated stacking for its family are missing\", \"requiere_advertencia\": true, \"respaldo\": null, \"rho_registrada_sin_respaldo\": null}, \"avisos_catalogo\": []}]}",
+      "tool_call_id": "chatcmpl-tool-3efebd69477046e08b37d09aec1c6a4d"
+    },
+    {
+      "role": "tool",
+      "content": "{\"status\": \"ok\", \"name\": \"c1ccccc1\", \"properties\": {\"mw\": 78.11, \"logp\": 1.69, \"tpsa\": 0.0, \"hbd\": 0, \"hba\": 0, \"rot_bonds\": 0, \"heavy_atoms\": 6, \"rings\": 1}, \"source\": \"MolDesign / RDKit 2025.09.6 | Avisos: Molecular weight is below the range for the drug-likeness rules (78.1 Da). The Ghose et al. 1999 filter starts at 160 Da and 20 heavy atoms: at this size, those filters and ligand-efficiency thresholds do not assess what they claim to assess. Docking still runs.\", \"methods\": {\"mw\": \"RDKit Descriptors.MolWt (masa molecular promedio)\", \"logp\": \"RDKit Crippen.MolLogP (contribuciones atómicas)\", \"tpsa\": \"RDKit rdMolDescriptors.CalcTPSA (Ertl 2000) con includeSandP=False: suma sólo N y O; el azufre y el fósforo no cuentan\", \"hbd\": \"RDKit Lipinski.NHOHCount (enlaces N-H y O-H)\", \"hba\": \"RDKit Lipinski.NOCount (número de átomos de N y O)\"}, \"variants\": [{\"name\": \"tpsa_incl_s_p\", \"applies_to\": \"tpsa\", \"value\": 0.0, \"method\": \"RDKit rdMolDescriptors.CalcTPSA(mol, includeSandP=True): suma también las contribuciones del azufre y el fósforo (Ertl 2000)\", \"unit\": \"Å²\"}, {\"name\": \"hba_rdkit_num_h_acceptors\", \"applies_to\": \"hba\", \"value\": 0, \"method\": \"RDKit rdMolDescriptors.CalcNumHBA: aceptores de enlace de hidrógeno según los patrones SMARTS de RDKit (no es el recuento de todos los N y O)\", \"unit\": null}], \"structure\": {\"input_smiles\": \"c1ccccc1\", \"canonical_smiles\": \"c1ccccc1\", \"identity\": \"same\", \"verifier\": \"SMILES idéntico\", \"warnings\": [\"Molecular weight is below the range for the drug-likeness rules (78.1 Da). The Ghose et al. 1999 filter starts at 160 Da and 20 heavy atoms: at this size, those filters and ligand-efficiency thresholds do not assess what they claim to assess. Docking still runs.\"]}}",
+      "tool_call_id": "chatcmpl-tool-90e48666929940b8840f0c45eab27547"
+    },
+    {
+      "role": "assistant",
+      "content": "**1. Receptor catalogue evidence for VMAT2 — separate from molecular descriptors**\n\nSource: `Catálogo de receptores de MolDesign` — query `VMAT2`, page 1, total 7, has_next false. No case was created or modified.\n\nAll 7 entries are `disponible: true`, `is_private: false`, `structural_family: transporter`, `therapeutic_family: null`.\n\n* **PDB 8JSW** — HUMAN VMAT2 COMPLEX WITH SEROTONIN — Homo sapiens, chain A — section: `demostracion` — calibration: `nivel: curado_estructural`, `spearman_rho: null`, `tiene_pipeline_de_familia: false` — resumen: \"Structurally curated; calibration and a family pipeline are missing\" — advertencia: \"This receptor has no measured Spearman ρ, and its structural family has no calibrated stacking, so it runs under the shared conservative alpha contract. There is no evidence that the ranking correlates with actual affinity here. Treat the result as a hypothesis to test, not as a measurement.\" — motivo: \"the receptor's Spearman ρ and calibrated stacking for its family are missing\"\n\n* **PDB 8JT9** — HUMAN VMAT2 COMPLEX WITH KETANSERIN — Homo sapiens, chain A — section: `demostracion` — calibration: `nivel: curado_estructural`, `spearman_rho: null`, `tiene_pipeline_de_familia: false` — same resumen/advertencia/motivo as above\n\n* **PDB 8JTB** — VMAT2 COMPLEX WITH DOPAMINE — Homo sapiens, chain A — section: `demostracion` — calibration: `nivel: curado_estructural`, `spearman_rho: null`, `tiene_pipeline_de_familia: false` — same resumen/advertencia/motivo as above\n\n* **PDB 8T69** — HUMAN VMAT2 IN COMPLEX WITH TETRABENAZINE — Homo sapiens, chain A — section: `verificado` — calibration: `nivel: calibrado`, `spearman_rho: 0.3918`, `tiene_pipeline_de_familia: false` — resumen: \"Calibrated for this receptor (measured Spearman ρ)\" — respaldo: `rho: 0.3918`, `ic95: [0.216, 0.5404]`, `n: 89`, `panel: US11718618B2 Example 11`, `endpoint: Ki`, `protocolo: {exhaustiveness: 8, num_poses: 9, semilla: 42}`, `receptor_sha256: 8fc027cae876631f30518b27823ce175e844bbe9e7bc10554653a7766e21468d`\n\n* **PDB 8WRE** — HUMAN VMAT2 IN COMPLEX WITH DOPAMINE — Homo sapiens, chain A — section: `demostracion` — calibration: `nivel: curado_estructural`, `spearman_rho: null`, `tiene_pipeline_de_familia: false` — same resumen/advertencia/motivo as above\n\n* **PDB 8X3K** — CRYO-EM STRUCTURE OF HUMAN VMAT2 IN COMPLEX WITH SEROTONIN — ESCHERICHIA COLI, HOMO SAPIENS, chain A — section: `demostracion` — calibration: `nivel: curado_estructural`, `spearman_rho: null`, `tiene_pipeline_de_familia: false` — same resumen/advertencia/motivo as above\n\n* **PDB 9KQE** — CRYO-EM STRUCTURE OF HUMAN VMAT2 IN COMPLEX WITH DOPAMINE — ESCHERICHIA COLI, HOMO SAPIENS, chain A — section: `demostracion` — calibration: `nivel: curado_estructural`, `spearman_rho: null`, `tiene_pipeline_de_familia: false` — same resumen/advertencia/motivo as above\n\nNo docking, ranking, or affinity was evaluated. This is catalogue evidence only.\n\n---\n\n**2. MolDesign descriptors for benzene (c1ccccc1) — separate from receptor evidence**\n\nSource: `MolDesign / RDKit 2025.09.6` — input SMILES `c1ccccc1`, canonical SMILES `c1ccccc1`, identity `same` (verifier: SMILES idéntico). No receptor assigned, no case created.\n\nProperties:\n* **mw:** 78.11 — method: RDKit Descriptors.MolWt (masa molecular promedio)\n* **logp:** 1.69 — method: RDKit Crippen.MolLogP (contribuciones atómicas)\n* **tpsa:** 0.0 Å² — method: RDKit rdMolDescriptors.CalcTPSA (Ertl 2000) with includeSandP=False: suma sólo N y O; el azufre y el fósforo no cuentan\n* **hbd:** 0 — method: RDKit Lipinski.NHOHCount (enlaces N-H y O-H)\n* **hba:** 0 — method: RDKit Lipinski.NOCount (número de átomos de N y O)\n* **rot_bonds:** 0\n* **heavy_atoms:** 6\n* **rings:** 1\n\nVariants returned:\n* `tpsa_incl_s_p`: 0.0 Å² — method: RDKit rdMolDescriptors.CalcTPSA(mol, includeSandP=True)\n* `hba_rdkit_num_h_acceptors`: 0 — method: RDKit rdMolDescriptors.CalcNumHBA\n\nAvisos: \"Molecular weight is below the range for the drug-likeness rules (78.1 Da). The Ghose et al. 1999 filter starts at 160 Da and 20 heavy atoms: at this size, those filters and ligand-efficiency thresholds do not assess what they claim to assess. Docking still runs.\"\n\nThese descriptors describe the molecule only and do not imply activity, affinity, or suitability for any VMAT2 receptor listed above."
+    }
+  ],
+  "exhausted": false,
+  "result": {
+    "text": "Verification note: unverified values were hidden. **1. Receptor catalogue evidence for VMAT2 — separate from molecular descriptors**\n\nSource: `Catálogo de receptores de MolDesign` — query `VMAT2`, page 1, total 7, has_next false. No case was created or modified.\n\nAll 7 entries are `disponible: true`, `is_private: false`, `structural_family: transporter`, `therapeutic_family: null`.\n\n* **PDB 8JSW** — HUMAN VMAT2 COMPLEX WITH SEROTONIN — Homo sapiens, chain A — section: `demostracion` — calibration: `nivel: curado_estructural`, `spearman_rho: null`, `tiene_pipeline_de_familia: false` — resumen: \"Structurally curated; calibration and a family pipeline are missing\" — advertencia: \"This receptor has no measured Spearman ρ, and its structural family has no calibrated stacking, so it runs under the shared conservative alpha contract. There is no evidence that the ranking correlates with actual affinity here. Treat the result as a hypothesis to test, not as a measurement.\" — motivo: \"the receptor's Spearman ρ and calibrated stacking for its family are missing\"\n\n* **PDB 8JT9** — HUMAN VMAT2 COMPLEX WITH KETANSERIN — Homo sapiens, chain A — section: `demostracion` — calibration: `nivel: curado_estructural`, `spearman_rho: null`, `tiene_pipeline_de_familia: false` — same resumen/advertencia/motivo as above\n\n* **PDB 8JTB** — VMAT2 COMPLEX WITH DOPAMINE — Homo sapiens, chain A — section: `demostracion` — calibration: `nivel: curado_estructural`, `spearman_rho: null`, `tiene_pipeline_de_familia: false` — same resumen/advertencia/motivo as above\n\n* **PDB 8T69** — HUMAN VMAT2 IN COMPLEX WITH TETRABENAZINE — Homo sapiens, chain A — section: `verificado` — calibration: `nivel: calibrado`, `spearman_rho: [unverified value]`, `tiene_pipeline_de_familia: false` — resumen: \"Calibrated for this receptor (measured Spearman ρ)\" — respaldo: `rho: [unverified value]`, `ic95: [0.216, [unverified value]]`, `n: [unverified value]`, `panel: US11718618B2 Example [unverified value]`, `endpoint: Ki`, `protocolo: {exhaustiveness: [unverified value], num_poses: [unverified value], semilla: [unverified value]}`, `receptor_sha[unverified value]: 8fc027cae876631f30518b27823ce175e844bbe9e7bc10554653a7766e21468d`\n\n* **PDB 8WRE** — HUMAN VMAT2 IN COMPLEX WITH DOPAMINE — Homo sapiens, chain A — section: `demostracion` — calibration: `nivel: curado_estructural`, `spearman_rho: null`, `tiene_pipeline_de_familia: false` — same resumen/advertencia/motivo as above\n\n* **PDB 8X3K** — CRYO-EM STRUCTURE OF HUMAN VMAT2 IN COMPLEX WITH SEROTONIN — ESCHERICHIA COLI, HOMO SAPIENS, chain A — section: `demostracion` — calibration: `nivel: curado_estructural`, `spearman_rho: null`, `tiene_pipeline_de_familia: false` — same resumen/advertencia/motivo as above\n\n* **PDB 9KQE** — CRYO-EM STRUCTURE OF HUMAN VMAT2 IN COMPLEX WITH DOPAMINE — ESCHERICHIA COLI, HOMO SAPIENS, chain A — section: `demostracion` — calibration: `nivel: curado_estructural`, `spearman_rho: null`, `tiene_pipeline_de_familia: false` — same resumen/advertencia/motivo as above\n\nNo docking, ranking, or affinity was evaluated. This is catalogue evidence only.\n\n---\n\n**2. MolDesign descriptors for benzene (c1ccccc1) — separate from receptor evidence**\n\nSource: `MolDesign / RDKit 2025.09.6` — input SMILES `c1ccccc1`, canonical SMILES `c1ccccc1`, identity `same` (verifier: SMILES idéntico). No receptor assigned, no case created.\n\nProperties:\n* **mw:** 78.11 — method: RDKit Descriptors.MolWt (masa molecular promedio)\n* **logp:** 1.69 — method: RDKit Crippen.MolLogP (contribuciones atómicas)\n* **tpsa:** 0.0 Å² — method: RDKit rdMolDescriptors.CalcTPSA (Ertl [unverified value]) with includeSandP=False: suma sólo N y O; el azufre y el fósforo no cuentan\n* **hbd:** 0 — method: RDKit Lipinski.NHOHCount (enlaces N-H y O-H)\n* **hba:** 0 — method: RDKit Lipinski.NOCount (número de átomos de N y O)\n* **rot_bonds:** 0\n* **heavy_atoms:** 6\n* **rings:** 1\n\nVariants returned:\n* `tpsa_incl_s_p`: 0.0 Å² — method: RDKit rdMolDescriptors.CalcTPSA(mol, includeSandP=True)\n* `hba_rdkit_num_h_acceptors`: 0 — method: RDKit rdMolDescriptors.CalcNumHBA\n\nAvisos: \"Molecular weight is below the range for the drug-likeness rules (78.1 Da). The Ghose et al. [unverified value] filter starts at [unverified value] Da and [unverified value] heavy atoms: at this size, those filters and ligand-efficiency thresholds do not assess what they claim to assess. Docking still runs.\"\n\nThese descriptors describe the molecule only and do not imply activity, affinity, or suitability for any VMAT2 receptor listed above.",
+    "intent": "harness",
+    "evidence": [
+      {
+        "tool": "search_receptors",
+        "label": "VMAT2",
+        "epistemic_class": "dato persistido",
+        "source": "Catálogo de receptores de MolDesign",
+        "values": {
+          "8JSW": "HUMAN VMAT2 COMPLEX WITH SEROTONIN",
+          "8JT9": "HUMAN VMAT2 COMPLEX WITH KETANSERIN",
+          "8JTB": "VMAT2 COMPLEX WITH DOPAMINE",
+          "8T69": "HUMAN VMAT2 IN COMPLEX WITH TETRABENAZINE",
+          "8WRE": "HUMAN VMAT2 IN COMPLEX WITH DOPAMINE",
+          "8X3K": "CRYO-EM STRUCTURE OF HUMAN VMAT2 IN COMPLEX WITH SEROTONIN",
+          "9KQE": "CRYO-EM STRUCTURE OF HUMAN VMAT2 IN COMPLEX WITH DOPAMINE"
+        },
+        "error": null
+      },
+      {
+        "tool": "compute_properties",
+        "label": "c1ccccc1",
+        "epistemic_class": "cálculo",
+        "source": "MolDesign / RDKit 2025.09.6 | Avisos: Molecular weight is below the range for the drug-likeness rules (78.1 Da). The Ghose et al. 1999 filter starts at 160 Da and 20 heavy atoms: at this size, those filters and ligand-efficiency thresholds do not assess what they claim to assess. Docking still runs.",
+        "values": {
+          "mw": "78.11",
+          "logp": "1.69",
+          "tpsa": "0.0",
+          "hbd": "0",
+          "hba": "0",
+          "rot_bonds": "0",
+          "heavy_atoms": "6",
+          "rings": "1",
+          "variante: tpsa_incl_s_p": "0.0",
+          "variante: hba_rdkit_num_h_acceptors": "0"
+        },
+        "error": null,
+        "structure": {
+          "input_smiles": "c1ccccc1",
+          "canonical_smiles": "c1ccccc1",
+          "identity": "same",
+          "verifier": "SMILES idéntico",
+          "warnings": [
+            "Molecular weight is below the range for the drug-likeness rules (78.1 Da). The Ghose et al. 1999 filter starts at 160 Da and 20 heavy atoms: at this size, those filters and ligand-efficiency thresholds do not assess what they claim to assess. Docking still runs."
+          ]
+        },
+        "methods": {
+          "mw": "RDKit Descriptors.MolWt (masa molecular promedio)",
+          "logp": "RDKit Crippen.MolLogP (contribuciones atómicas)",
+          "tpsa": "RDKit rdMolDescriptors.CalcTPSA (Ertl 2000) con includeSandP=False: suma sólo N y O; el azufre y el fósforo no cuentan",
+          "hbd": "RDKit Lipinski.NHOHCount (enlaces N-H y O-H)",
+          "hba": "RDKit Lipinski.NOCount (número de átomos de N y O)"
+        }
+      }
+    ],
+    "references": [],
+    "comparison_cids": [],
+    "suggested_actions": [],
+    "action_proposals": [],
+    "workflow_proposals": [],
+    "used_llm": true,
+    "verified_values": [
+      0.0,
+      1.0,
+      1.69,
+      6.0,
+      7.0,
+      78.11
+    ],
+    "latency_ms": 12220
+  },
+  "latency_ms": 12331.17,
+  "criteria": [
+    {
+      "criterion": "turn completed without provider/timeout failure",
+      "passed": true,
+      "actual": null
+    },
+    {
+      "criterion": "no desktop mutation dispatched",
+      "passed": true,
+      "actual": []
+    },
+    {
+      "criterion": "model selected search_receptors",
+      "passed": true,
+      "actual": [
+        "compute_properties",
+        "search_receptors"
+      ]
+    },
+    {
+      "criterion": "model selected compute_properties",
+      "passed": true,
+      "actual": [
+        "compute_properties",
+        "search_receptors"
+      ]
+    },
+    {
+      "criterion": "search_receptors returned a real successful result",
+      "passed": true,
+      "actual": [
+        "ok"
+      ]
+    },
+    {
+      "criterion": "compute_properties returned a real successful result",
+      "passed": true,
+      "actual": [
+        "ok"
+      ]
+    },
+    {
+      "criterion": "no plan created without sufficient/valid input",
+      "passed": true,
+      "actual": 0
+    }
+  ],
+  "passed": true
+}

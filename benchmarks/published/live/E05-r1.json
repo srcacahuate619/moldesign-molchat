@@ -1,0 +1,316 @@
+{
+  "id": "E05",
+  "difficulty": "easy",
+  "repetition": 1,
+  "prompt": "Search the actual receptor catalogue for VMAT2 (8T69). Show the returned entry and its catalogue section. Do not assign it to a case.",
+  "expect": {
+    "required_tools": [
+      "search_receptors"
+    ],
+    "successful_tools": [
+      "search_receptors"
+    ],
+    "no_plan": true
+  },
+  "model_steps": [
+    {
+      "step": 1,
+      "request": {
+        "model": "meta-models/muse-spark-open-1026",
+        "temperature": 0.1,
+        "max_tokens": 4096,
+        "messages": [
+          {
+            "role": "system",
+            "content_sha256": "fcec384fd15c61947d867423370569e88264b2c25ec0402dafbb9d92aee604e1"
+          },
+          {
+            "role": "user",
+            "content": "Search the actual receptor catalogue for VMAT2 (8T69). Show the returned entry and its catalogue section. Do not assign it to a case."
+          }
+        ],
+        "tool_names": [
+          "create_case",
+          "load_case_smiles",
+          "assign_case_receptor",
+          "evaluate_case",
+          "compute_properties",
+          "show_property_comparison",
+          "verify_editor_structure",
+          "suggest_next_actions",
+          "pubchem_lookup",
+          "search_receptors",
+          "pick_random_receptor",
+          "get_evaluation_status",
+          "explain_evaluation",
+          "compare_poses",
+          "save_to_moldex",
+          "request_molcy_video",
+          "get_molcy_video_status",
+          "propose_iteration"
+        ]
+      },
+      "response": {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "chatcmpl-tool-75905c04dda24f92bb1c53e75ea38f8a",
+            "type": "function",
+            "function": {
+              "name": "search_receptors",
+              "arguments": "{\"query\": \"8T69\"}"
+            }
+          }
+        ]
+      },
+      "latency_ms": 1382.335
+    },
+    {
+      "step": 2,
+      "request": {
+        "model": "meta-models/muse-spark-open-1026",
+        "temperature": 0.1,
+        "max_tokens": 4096,
+        "messages": [
+          {
+            "role": "system",
+            "content_sha256": "fcec384fd15c61947d867423370569e88264b2c25ec0402dafbb9d92aee604e1"
+          },
+          {
+            "role": "user",
+            "content": "Search the actual receptor catalogue for VMAT2 (8T69). Show the returned entry and its catalogue section. Do not assign it to a case."
+          },
+          {
+            "role": "assistant",
+            "content": null,
+            "tool_calls": [
+              {
+                "id": "chatcmpl-tool-75905c04dda24f92bb1c53e75ea38f8a",
+                "type": "function",
+                "function": {
+                  "name": "search_receptors",
+                  "arguments": "{\"query\": \"8T69\"}"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": "{\"status\": \"ok\", \"source\": \"Catálogo de receptores de MolDesign\", \"query\": \"8T69\", \"page\": 1, \"total\": 1, \"has_next\": false, \"section\": \"all\", \"availability\": \"all\", \"receptors\": [{\"id\": \"ee0bb616-eb59-4d9b-9a0f-da2331243043\", \"pdb_id\": \"8T69\", \"name\": \"HUMAN VMAT2 IN COMPLEX WITH TETRABENAZINE\", \"organism\": \"Homo sapiens\", \"chain\": \"A\", \"structural_family\": \"transporter\", \"therapeutic_family\": null, \"is_private\": false, \"disponible\": true, \"motivo_no_disponible\": null, \"seccion_catalogo\": \"verificado\", \"calibracion\": {\"nivel\": \"calibrado\", \"spearman_rho\": 0.3918, \"structural_family\": \"transporter\", \"tiene_pipeline_de_familia\": false, \"resumen\": \"Calibrated for this receptor (measured Spearman ρ)\", \"advertencia\": \"\", \"motivo\": \"\", \"requiere_advertencia\": false, \"respaldo\": {\"rho\": 0.3918, \"ic95\": [0.216, 0.5404], \"n\": 89, \"panel\": \"US11718618B2 Example 11\", \"endpoint\": \"Ki\", \"protocolo\": {\"exhaustiveness\": 8, \"num_poses\": 9, \"semilla\": 42}, \"receptor_sha256\": \"8fc027cae876631f30518b27823ce175e844bbe9e7bc10554653a7766e21468d\"}, \"rho_registrada_sin_respaldo\": null}, \"avisos_catalogo\": []}]}",
+            "tool_call_id": "chatcmpl-tool-75905c04dda24f92bb1c53e75ea38f8a"
+          }
+        ],
+        "tool_names": [
+          "create_case",
+          "load_case_smiles",
+          "assign_case_receptor",
+          "evaluate_case",
+          "compute_properties",
+          "show_property_comparison",
+          "verify_editor_structure",
+          "suggest_next_actions",
+          "pubchem_lookup",
+          "search_receptors",
+          "pick_random_receptor",
+          "get_evaluation_status",
+          "explain_evaluation",
+          "compare_poses",
+          "save_to_moldex",
+          "request_molcy_video",
+          "get_molcy_video_status",
+          "propose_iteration"
+        ]
+      },
+      "response": {
+        "role": "assistant",
+        "content": "Found in the actual MolDesign receptor catalogue for query **8T69**:\n\n**Total: 1 result (page 1/1, has_next: false)**\n\n**Entry returned:**\n- **PDB ID:** 8T69\n- **Name:** HUMAN VMAT2 IN COMPLEX WITH TETRABENAZINE\n- **Organism:** Homo sapiens\n- **Chain:** A\n- **Structural family:** transporter\n- **Therapeutic family:** null\n- **ID:** ee0bb616-eb59-4d9b-9a0f-da2331243043\n- **Disponible:** true (available)\n- **Motivo no disponible:** null\n- **Sección catálogo:** **verificado** (verified section)\n- **Is private:** false\n\n**Calibration:**\n- **Nivel:** calibrado\n- **Spearman ρ:** 0.3918\n- **IC95:** [0.216, 0.5404]\n- **n:** 89\n- **Panel:** US11718618B2 Example 11\n- **Endpoint:** Ki\n- **Protocolo:** exhaustiveness 8, num_poses 9, semilla 42\n- **Resumen:** Calibrated for this receptor (measured Spearman ρ)\n\n**Avisos catálogo:** []\n\nAs requested, it was **not assigned** to any case - only searched and displayed."
+      },
+      "latency_ms": 2254.474
+    }
+  ],
+  "host_events": [],
+  "tool_executions": [
+    {
+      "tool": "search_receptors",
+      "validated_arguments": {
+        "query": "8T69"
+      },
+      "result": {
+        "status": "ok",
+        "source": "Catálogo de receptores de MolDesign",
+        "query": "8T69",
+        "page": 1,
+        "total": 1,
+        "has_next": false,
+        "section": "all",
+        "availability": "all",
+        "receptors": [
+          {
+            "id": "ee0bb616-eb59-4d9b-9a0f-da2331243043",
+            "pdb_id": "8T69",
+            "name": "HUMAN VMAT2 IN COMPLEX WITH TETRABENAZINE",
+            "organism": "Homo sapiens",
+            "chain": "A",
+            "structural_family": "transporter",
+            "therapeutic_family": null,
+            "is_private": false,
+            "disponible": true,
+            "motivo_no_disponible": null,
+            "seccion_catalogo": "verificado",
+            "calibracion": {
+              "nivel": "calibrado",
+              "spearman_rho": 0.3918,
+              "structural_family": "transporter",
+              "tiene_pipeline_de_familia": false,
+              "resumen": "Calibrated for this receptor (measured Spearman ρ)",
+              "advertencia": "",
+              "motivo": "",
+              "requiere_advertencia": false,
+              "respaldo": {
+                "rho": 0.3918,
+                "ic95": [
+                  0.216,
+                  0.5404
+                ],
+                "n": 89,
+                "panel": "US11718618B2 Example 11",
+                "endpoint": "Ki",
+                "protocolo": {
+                  "exhaustiveness": 8,
+                  "num_poses": 9,
+                  "semilla": 42
+                },
+                "receptor_sha256": "8fc027cae876631f30518b27823ce175e844bbe9e7bc10554653a7766e21468d"
+              },
+              "rho_registrada_sin_respaldo": null
+            },
+            "avisos_catalogo": []
+          }
+        ]
+      },
+      "latency_ms": 5360.241
+    }
+  ],
+  "validation_events": [
+    {
+      "phase": "start",
+      "value": "search_receptors",
+      "call_id": "chatcmpl-tool-75905c04dda24f92bb1c53e75ea38f8a",
+      "validated_arguments": null
+    },
+    {
+      "phase": "arguments",
+      "value": "",
+      "call_id": "chatcmpl-tool-75905c04dda24f92bb1c53e75ea38f8a",
+      "validated_arguments": {
+        "query": "8T69"
+      }
+    },
+    {
+      "phase": "end",
+      "value": "ok",
+      "call_id": "chatcmpl-tool-75905c04dda24f92bb1c53e75ea38f8a",
+      "validated_arguments": null
+    }
+  ],
+  "plans": [],
+  "provider": {
+    "id": "baseten-hackathon",
+    "model": "meta-models/muse-spark-open-1026",
+    "endpoint": "https://inference.baseten.co/v1"
+  },
+  "transcript": [
+    {
+      "role": "system",
+      "content_sha256": "fcec384fd15c61947d867423370569e88264b2c25ec0402dafbb9d92aee604e1"
+    },
+    {
+      "role": "user",
+      "content": "Search the actual receptor catalogue for VMAT2 (8T69). Show the returned entry and its catalogue section. Do not assign it to a case."
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "chatcmpl-tool-75905c04dda24f92bb1c53e75ea38f8a",
+          "type": "function",
+          "function": {
+            "name": "search_receptors",
+            "arguments": "{\"query\": \"8T69\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": "{\"status\": \"ok\", \"source\": \"Catálogo de receptores de MolDesign\", \"query\": \"8T69\", \"page\": 1, \"total\": 1, \"has_next\": false, \"section\": \"all\", \"availability\": \"all\", \"receptors\": [{\"id\": \"ee0bb616-eb59-4d9b-9a0f-da2331243043\", \"pdb_id\": \"8T69\", \"name\": \"HUMAN VMAT2 IN COMPLEX WITH TETRABENAZINE\", \"organism\": \"Homo sapiens\", \"chain\": \"A\", \"structural_family\": \"transporter\", \"therapeutic_family\": null, \"is_private\": false, \"disponible\": true, \"motivo_no_disponible\": null, \"seccion_catalogo\": \"verificado\", \"calibracion\": {\"nivel\": \"calibrado\", \"spearman_rho\": 0.3918, \"structural_family\": \"transporter\", \"tiene_pipeline_de_familia\": false, \"resumen\": \"Calibrated for this receptor (measured Spearman ρ)\", \"advertencia\": \"\", \"motivo\": \"\", \"requiere_advertencia\": false, \"respaldo\": {\"rho\": 0.3918, \"ic95\": [0.216, 0.5404], \"n\": 89, \"panel\": \"US11718618B2 Example 11\", \"endpoint\": \"Ki\", \"protocolo\": {\"exhaustiveness\": 8, \"num_poses\": 9, \"semilla\": 42}, \"receptor_sha256\": \"8fc027cae876631f30518b27823ce175e844bbe9e7bc10554653a7766e21468d\"}, \"rho_registrada_sin_respaldo\": null}, \"avisos_catalogo\": []}]}",
+      "tool_call_id": "chatcmpl-tool-75905c04dda24f92bb1c53e75ea38f8a"
+    },
+    {
+      "role": "assistant",
+      "content": "Found in the actual MolDesign receptor catalogue for query **8T69**:\n\n**Total: 1 result (page 1/1, has_next: false)**\n\n**Entry returned:**\n- **PDB ID:** 8T69\n- **Name:** HUMAN VMAT2 IN COMPLEX WITH TETRABENAZINE\n- **Organism:** Homo sapiens\n- **Chain:** A\n- **Structural family:** transporter\n- **Therapeutic family:** null\n- **ID:** ee0bb616-eb59-4d9b-9a0f-da2331243043\n- **Disponible:** true (available)\n- **Motivo no disponible:** null\n- **Sección catálogo:** **verificado** (verified section)\n- **Is private:** false\n\n**Calibration:**\n- **Nivel:** calibrado\n- **Spearman ρ:** 0.3918\n- **IC95:** [0.216, 0.5404]\n- **n:** 89\n- **Panel:** US11718618B2 Example 11\n- **Endpoint:** Ki\n- **Protocolo:** exhaustiveness 8, num_poses 9, semilla 42\n- **Resumen:** Calibrated for this receptor (measured Spearman ρ)\n\n**Avisos catálogo:** []\n\nAs requested, it was **not assigned** to any case - only searched and displayed."
+    }
+  ],
+  "exhausted": false,
+  "result": {
+    "text": "Verification note: unverified values were hidden. Found in the actual MolDesign receptor catalogue for query **8T69**:\n\n**Total: 1 result (page 1/1, has_next: false)**\n\n**Entry returned:**\n- **PDB ID:** 8T69\n- **Name:** HUMAN VMAT2 IN COMPLEX WITH TETRABENAZINE\n- **Organism:** Homo sapiens\n- **Chain:** A\n- **Structural family:** transporter\n- **Therapeutic family:** null\n- **ID:** ee0bb616-eb59-4d9b-9a0f-da2331243043\n- **Disponible:** true (available)\n- **Motivo no disponible:** null\n- **Sección catálogo:** **verificado** (verified section)\n- **Is private:** false\n\n**Calibration:**\n- **Nivel:** calibrado\n- **Spearman ρ:** [unverified value]\n- **IC[unverified value]:** [[unverified value], [unverified value]]\n- **n:** [unverified value]\n- **Panel:** US11718618B2 Example [unverified value]\n- **Endpoint:** Ki\n- **Protocolo:** exhaustiveness 8, num_poses [unverified value], semilla [unverified value]\n- **Resumen:** Calibrated for this receptor (measured Spearman ρ)\n\n**Avisos catálogo:** []\n\nAs requested, it was **not assigned** to any case - only searched and displayed.",
+    "intent": "harness",
+    "evidence": [
+      {
+        "tool": "search_receptors",
+        "label": "8T69",
+        "epistemic_class": "dato persistido",
+        "source": "Catálogo de receptores de MolDesign",
+        "values": {
+          "8T69": "HUMAN VMAT2 IN COMPLEX WITH TETRABENAZINE"
+        },
+        "error": null
+      }
+    ],
+    "references": [],
+    "comparison_cids": [],
+    "suggested_actions": [],
+    "action_proposals": [],
+    "workflow_proposals": [],
+    "used_llm": true,
+    "verified_values": [
+      1.0
+    ],
+    "latency_ms": 9496
+  },
+  "latency_ms": 9609.742,
+  "criteria": [
+    {
+      "criterion": "turn completed without provider/timeout failure",
+      "passed": true,
+      "actual": null
+    },
+    {
+      "criterion": "no desktop mutation dispatched",
+      "passed": true,
+      "actual": []
+    },
+    {
+      "criterion": "model selected search_receptors",
+      "passed": true,
+      "actual": [
+        "search_receptors"
+      ]
+    },
+    {
+      "criterion": "search_receptors returned a real successful result",
+      "passed": true,
+      "actual": [
+        "ok"
+      ]
+    },
+    {
+      "criterion": "no plan created without sufficient/valid input",
+      "passed": true,
+      "actual": 0
+    }
+  ],
+  "passed": true
+}

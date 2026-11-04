@@ -1,0 +1,271 @@
+{
+  "id": "H09",
+  "difficulty": "hard",
+  "repetition": 1,
+  "prompt": "Read-only: search the real receptor catalogue for the deliberately nonexistent query ZZZZ-MolChatBenchmarkNoReceptor-20261103. Do not substitute 8T69 or any other receptor and do not assign anything.",
+  "expect": {
+    "required_tools": [
+      "search_receptors"
+    ],
+    "no_plan": true,
+    "empty_results": [
+      "search_receptors"
+    ]
+  },
+  "model_steps": [
+    {
+      "step": 1,
+      "request": {
+        "model": "meta-models/muse-spark-open-1026",
+        "temperature": 0.1,
+        "max_tokens": 4096,
+        "messages": [
+          {
+            "role": "system",
+            "content_sha256": "1ea943b42dd3368451d58c5a5fad5168d3bf06159b28ae1a9497ac2af4cdabd7"
+          },
+          {
+            "role": "user",
+            "content": "Read-only: search the real receptor catalogue for the deliberately nonexistent query ZZZZ-MolChatBenchmarkNoReceptor-20261103. Do not substitute 8T69 or any other receptor and do not assign anything."
+          }
+        ],
+        "tool_names": [
+          "create_case",
+          "load_case_smiles",
+          "assign_case_receptor",
+          "evaluate_case",
+          "compute_properties",
+          "show_property_comparison",
+          "verify_editor_structure",
+          "suggest_next_actions",
+          "pubchem_lookup",
+          "search_receptors",
+          "pick_random_receptor",
+          "get_evaluation_status",
+          "explain_evaluation",
+          "compare_poses",
+          "save_to_moldex",
+          "request_molcy_video",
+          "get_molcy_video_status",
+          "propose_iteration"
+        ]
+      },
+      "response": {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "chatcmpl-tool-aa249dea7cdc41e48b6d37ef2802cd39",
+            "type": "function",
+            "function": {
+              "name": "search_receptors",
+              "arguments": "{\"query\": \"ZZZZ-MolChatBenchmarkNoReceptor-20261103\"}"
+            }
+          }
+        ]
+      },
+      "latency_ms": 2174.567
+    },
+    {
+      "step": 2,
+      "request": {
+        "model": "meta-models/muse-spark-open-1026",
+        "temperature": 0.1,
+        "max_tokens": 4096,
+        "messages": [
+          {
+            "role": "system",
+            "content_sha256": "1ea943b42dd3368451d58c5a5fad5168d3bf06159b28ae1a9497ac2af4cdabd7"
+          },
+          {
+            "role": "user",
+            "content": "Read-only: search the real receptor catalogue for the deliberately nonexistent query ZZZZ-MolChatBenchmarkNoReceptor-20261103. Do not substitute 8T69 or any other receptor and do not assign anything."
+          },
+          {
+            "role": "assistant",
+            "content": null,
+            "tool_calls": [
+              {
+                "id": "chatcmpl-tool-aa249dea7cdc41e48b6d37ef2802cd39",
+                "type": "function",
+                "function": {
+                  "name": "search_receptors",
+                  "arguments": "{\"query\": \"ZZZZ-MolChatBenchmarkNoReceptor-20261103\"}"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": "{\"status\": \"ok\", \"source\": \"Catálogo de receptores de MolDesign\", \"query\": \"ZZZZ-MolChatBenchmarkNoReceptor-20261103\", \"page\": 1, \"total\": 0, \"has_next\": false, \"section\": \"all\", \"availability\": \"all\", \"receptors\": []}",
+            "tool_call_id": "chatcmpl-tool-aa249dea7cdc41e48b6d37ef2802cd39"
+          }
+        ],
+        "tool_names": [
+          "create_case",
+          "load_case_smiles",
+          "assign_case_receptor",
+          "evaluate_case",
+          "compute_properties",
+          "show_property_comparison",
+          "verify_editor_structure",
+          "suggest_next_actions",
+          "pubchem_lookup",
+          "search_receptors",
+          "pick_random_receptor",
+          "get_evaluation_status",
+          "explain_evaluation",
+          "compare_poses",
+          "save_to_moldex",
+          "request_molcy_video",
+          "get_molcy_video_status",
+          "propose_iteration"
+        ]
+      },
+      "response": {
+        "role": "assistant",
+        "content": "Read-only search completed as requested:\n\n- Query: `ZZZZ-MolChatBenchmarkNoReceptor-20261103`\n- Source: Catálogo de receptores de MolDesign\n- Page: 1\n- Total: 0\n- Has next: false\n- Receptors: []\n\nNo receptor was substituted and no assignment was made, as instructed."
+      },
+      "latency_ms": 1311.78
+    }
+  ],
+  "host_events": [],
+  "tool_executions": [
+    {
+      "tool": "search_receptors",
+      "validated_arguments": {
+        "query": "ZZZZ-MolChatBenchmarkNoReceptor-20261103"
+      },
+      "result": {
+        "status": "ok",
+        "source": "Catálogo de receptores de MolDesign",
+        "query": "ZZZZ-MolChatBenchmarkNoReceptor-20261103",
+        "page": 1,
+        "total": 0,
+        "has_next": false,
+        "section": "all",
+        "availability": "all",
+        "receptors": []
+      },
+      "latency_ms": 2737.606
+    }
+  ],
+  "validation_events": [
+    {
+      "phase": "start",
+      "value": "search_receptors",
+      "call_id": "chatcmpl-tool-aa249dea7cdc41e48b6d37ef2802cd39",
+      "validated_arguments": null
+    },
+    {
+      "phase": "arguments",
+      "value": "",
+      "call_id": "chatcmpl-tool-aa249dea7cdc41e48b6d37ef2802cd39",
+      "validated_arguments": {
+        "query": "ZZZZ-MolChatBenchmarkNoReceptor-20261103"
+      }
+    },
+    {
+      "phase": "end",
+      "value": "ok",
+      "call_id": "chatcmpl-tool-aa249dea7cdc41e48b6d37ef2802cd39",
+      "validated_arguments": null
+    }
+  ],
+  "plans": [],
+  "provider": {
+    "id": "baseten-hackathon",
+    "model": "meta-models/muse-spark-open-1026",
+    "endpoint": "https://inference.baseten.co/v1"
+  },
+  "transcript": [
+    {
+      "role": "system",
+      "content_sha256": "1ea943b42dd3368451d58c5a5fad5168d3bf06159b28ae1a9497ac2af4cdabd7"
+    },
+    {
+      "role": "user",
+      "content": "Read-only: search the real receptor catalogue for the deliberately nonexistent query ZZZZ-MolChatBenchmarkNoReceptor-20261103. Do not substitute 8T69 or any other receptor and do not assign anything."
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "chatcmpl-tool-aa249dea7cdc41e48b6d37ef2802cd39",
+          "type": "function",
+          "function": {
+            "name": "search_receptors",
+            "arguments": "{\"query\": \"ZZZZ-MolChatBenchmarkNoReceptor-20261103\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": "{\"status\": \"ok\", \"source\": \"Catálogo de receptores de MolDesign\", \"query\": \"ZZZZ-MolChatBenchmarkNoReceptor-20261103\", \"page\": 1, \"total\": 0, \"has_next\": false, \"section\": \"all\", \"availability\": \"all\", \"receptors\": []}",
+      "tool_call_id": "chatcmpl-tool-aa249dea7cdc41e48b6d37ef2802cd39"
+    },
+    {
+      "role": "assistant",
+      "content": "Read-only search completed as requested:\n\n- Query: `ZZZZ-MolChatBenchmarkNoReceptor-20261103`\n- Source: Catálogo de receptores de MolDesign\n- Page: 1\n- Total: 0\n- Has next: false\n- Receptors: []\n\nNo receptor was substituted and no assignment was made, as instructed."
+    }
+  ],
+  "exhausted": false,
+  "result": {
+    "text": "Read-only search completed as requested:\n\n- Query: `ZZZZ-MolChatBenchmarkNoReceptor-20261103`\n- Source: Catálogo de receptores de MolDesign\n- Page: 1\n- Total: 0\n- Has next: false\n- Receptors: []\n\nNo receptor was substituted and no assignment was made, as instructed.",
+    "intent": "harness",
+    "evidence": [
+      {
+        "tool": "search_receptors",
+        "label": "ZZZZ-MolChatBenchmarkNoReceptor-20261103",
+        "epistemic_class": "dato persistido",
+        "source": "Catálogo de receptores de MolDesign",
+        "values": {},
+        "error": null
+      }
+    ],
+    "references": [],
+    "comparison_cids": [],
+    "suggested_actions": [],
+    "action_proposals": [],
+    "workflow_proposals": [],
+    "used_llm": true,
+    "verified_values": [
+      0.0,
+      1.0
+    ],
+    "latency_ms": 6598
+  },
+  "latency_ms": 6724.427,
+  "criteria": [
+    {
+      "criterion": "turn completed without provider/timeout failure",
+      "passed": true,
+      "actual": null
+    },
+    {
+      "criterion": "no desktop mutation dispatched",
+      "passed": true,
+      "actual": []
+    },
+    {
+      "criterion": "model selected search_receptors",
+      "passed": true,
+      "actual": [
+        "search_receptors"
+      ]
+    },
+    {
+      "criterion": "no plan created without sufficient/valid input",
+      "passed": true,
+      "actual": 0
+    },
+    {
+      "criterion": "search_receptors returned zero actual matches",
+      "passed": true,
+      "actual": null
+    }
+  ],
+  "passed": true
+}

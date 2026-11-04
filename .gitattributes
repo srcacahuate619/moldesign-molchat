@@ -3,3 +3,8 @@ ui/index.html text eol=lf
 
 # The delivery from the recorded demo run is published byte for byte: its hashes must hold on every checkout.
 kit/vmat2-run/** -text
+
+# Benchmark evidence is hash-bound; preserve original bytes on every platform.
+benchmarks/published/** -text -whitespace
+benchmarks/prompts.json -text whitespace=cr-at-eol
+benchmarks/scenarios.json -text whitespace=cr-at-eol

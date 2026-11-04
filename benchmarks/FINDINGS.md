@@ -1,0 +1,27 @@
+# Findings, corrections and limits
+
+The benchmark was allowed to fail. The initial 72 scored Muse Spark trials remain unchanged in [`published/live/`](published/live/); targeted verification after a correction is in [`published/followup/`](published/followup/). [Generated result tables](RESULTS.md)
+
+| Finding | Initial evidence | Cause | Correction and verification |
+|---|---|---|---|
+| H09 empty receptor search scored as a failure twice | [r1](published/live/H09-r1.json), [r2](published/live/H09-r2.json) | **Evaluator defect.** The real tool correctly returns `status=ok`, `total=0`, `receptors=[]` after a successful empty query. The initial oracle wrongly demanded `not_found`. The model's answers honestly reported the absence. | The original prompt file and score were retained. `--correct-empty-catalog` declares an explicit oracle revision in the follow-up; 3/3 fresh trials passed. This is not a model improvement. |
+| H12 requested time limits were replaced by defaults twice | [r1](published/live/H12-r1.json), [r2](published/live/H12-r2.json) | **MolChat defect.** `IterationSpec` supported deadlines, but the closed model-facing `propose_iteration` schema did not expose them. The resulting card showed 420/2400 seconds instead of the requested 60/180. The card was still pending, so no incorrect run was approved. | Added bounded `per_molecule_timeout_s` and `budget_s` fields and explicit guidance. A regression test checks the resulting approved spec, changed digest and invalid bounds/types. Three fresh live H12 trials preserved 60/180. |
+| Omitted candidates remained “waiting” in the browser | [Real capsule table](published/capsule/screenshots/03-stop.png), [notebook](published/capsule/notebook.md) | **Notification defect.** The deterministic runner correctly skipped valbenazine, and the notebook/ZIP recorded it. The runner did not emit a `molecule` event for skipped rows, so the older pinned UI retained its initial label. | Emit terminal skipped records after first-match stopping, total-budget exhaustion and case-preparation failure. Existing event/stop tests now verify all rows, including null task/energy for unevaluated candidates. The captured capsule screenshot remains an honest record of the older build, not a retouched image. |
+
+## Setup observations
+
+- An unscored connectivity pilot used ethanol for a positive descriptor query. The real host rejected it because the pharmacological evaluation validator requires at least five heavy atoms. Before the scored run, positive fragment cases were changed to supported structures; an explicitly invalid SMILES remains a negative test. This pilot was not evidence of a model failure or a docking run.
+- The first runner iteration failed to create a parent temporary directory, then an aggregation bug failed to recognize class-based adversarial tests. Both runner defects were corrected before the retained successful synthetic baseline. The original successful 219-check reference is preserved separately in [`published/synthetic-baseline/`](published/synthetic-baseline/).
+- The Python 3.12 environment initially lacked `pypdf`, so a PDF-text assertion was skipped. The benchmark correctly returned a nonzero exit for incomplete coverage. `pypdf` is now a declared development dependency, and the final keyless reference includes that assertion. The dependency used for local verification was installed inside the workspace, without altering the shared environment.
+- No credential or session token is published. A session is received once over loopback and retained in memory. Traces contain only newly created test conversations and allowlisted protocol fields; hidden reasoning and HTTP headers are excluded. Capsule trace paths are sanitized. Original scientific delivery ZIPs are not rewritten.
+- Visual review found that an emoji warning prefix on the original PDF's second page renders as unsupported glyphs. The warning text remains legible in PDF and intact in JSON/Markdown. The original scientific artifacts are retained unchanged; the public notebook screenshot shows the first page. This cosmetic limitation is distinct from an omitted scientific result.
+
+## What these results establish
+
+The measured examples cover real source-backed calculations, compound lookup, catalogue lookup, structured planning, preserved user parameters, refusal to claim unavailable results, approval checks and a completed browser campaign. The keyless layer exercises hostile/invalid calls, ownership boundaries, cancellation, deadlines, induced docking/render failures and ZIP tampering using existing tests.
+
+These are fixed, developer-authored cases. Lexical checks for explanatory answers are coarse, not expert scientific review. Two repetitions per prompt are insufficient to estimate a general success probability. No claim is made about arbitrary prompts, unseen adversarial inputs, or all chemistry workflows.
+
+The capsule's Vina and Molcy outputs are real, while parts of the desktop bridge are emulated. Its frontend build predates the backend source checkout. Neither native Tauri packaging nor a clean Windows installer was validated here. The local Docker CLI points at a remote context, and no local Docker daemon is running; the supplied benchmark Dockerfile was not built during this evaluation.
+
+Successful docking coordination is not evidence that ketanserin or any other compound has the pharmacological activity implied by a hypothesis. Preparation's `REVIEW` remains open; MolChat makes no scientific decision on the researcher's behalf.
