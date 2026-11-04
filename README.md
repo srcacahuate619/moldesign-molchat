@@ -8,12 +8,15 @@
 
 **Measured reliability:** 36 fixed prompts, two real Muse Spark trials per prompt, plus a separate keyless harness benchmark. [All tables, graphs and traces](benchmarks/RESULTS.md) · [Actual provider calls and harness boundaries](docs/META_EXECUTION.md)
 
+[Submission text and evidence links](kit/en/SUBMISSION.md) · [Final integration check](benchmarks/published/release-check/README.md) · [Frozen handoff](kit/FINAL_RELEASE.md)
+
 | Evidence | Measured result | Reproduce / inspect |
 |---|---|---|
 | Live Muse Spark: easy / moderate / hard | 24/24 · 24/24 · 20/24 task contracts in the initial run | [36 prompts and every outcome](benchmarks/RESULTS.md) |
 | Follow-up after findings | 6/6 targeted trials: corrected empty-search criterion and repaired time-budget schema | [Failures and corrections](benchmarks/FINDINGS.md) |
 | Keyless harness | 220/220 checks in each of 3 repetitions | `python benchmarks/run_benchmark.py` |
 | New real VMAT2 campaigns | Same outcome in 2 campaigns: 2 docked, 1 skipped; real audit, video and complete ZIP | [Artifacts and screenshots](benchmarks/published/capsule/README.md) · [Automated reproduction](benchmarks/published/capsule-reproduction/README.md) |
+| Closing integration check | 16/16 assertions on corrected source, including explicit time limits and no writes before approval | [Final delivery and retained failed attempt](benchmarks/published/release-check/README.md) |
 
 The initial failures are retained. Scripted tests measure harness behaviour; live trials measure these specific model tasks. Neither measures biological activity or proves that docking predicts potency. Live planning and the browser capsule use separately recorded source revisions; native desktop commands are partly emulated.
 

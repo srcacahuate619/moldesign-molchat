@@ -2,6 +2,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const assert = require('node:assert/strict');
+const { createHash } = require('node:crypto');
 const { chromium } = require(process.env.MOLCHAT_PLAYWRIGHT_MODULE || 'playwright-core');
 const args = process.argv.slice(2);
 const option = (key, fallback) => args.includes(key) ? args[args.indexOf(key) + 1] : fallback;
@@ -9,7 +10,12 @@ const url = option('--url', 'http://localhost:13016/');
 if (!['localhost', '127.0.0.1'].includes(new URL(url).hostname)) throw Error('A local test capsule is required.');
 const output = path.resolve(option('--output', 'reports/capsule-reproduction'));
 const caseName = option('--case', 'benchmark-vmat2-' + new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14));
-const prompt = `Prepare an approved-once iteration in a NEW case called ${caseName}. Resolve aspirin, ketanserin and valbenazine through PubChem in exactly that order. Receptor VMAT2, PDB 8T69. Stop at the FIRST candidate with Vina energy <= -10.5 kcal/mol AND passed physical pose checks. Save the selected run in Moldex, make a short preview search video, audit it in Preparation, and deliver the notebook, original Preparation package and video in a single ZIP. First show the approval card and wait; do not start docking yet.`;
+const timeout = option('--per-molecule-timeout-s', null);
+const budget = option('--budget-s', null);
+if ((timeout === null) !== (budget === null)) throw Error('Specify both time limits together.');
+if (timeout !== null && (!/^\d+$/.test(timeout) || !/^\d+$/.test(budget) || +timeout < 30 || +timeout > 1800 || +budget < 60 || +budget > 7200)) throw Error('Time limits are outside the supported integer ranges.');
+const limits = timeout === null ? '' : ` Use a per-molecule limit of ${timeout} seconds and an iteration budget of ${budget} seconds; preserve both limits on the approval card.`;
+const prompt = `Prepare an approved-once iteration in a NEW case called ${caseName}. Resolve aspirin, ketanserin and valbenazine through PubChem in exactly that order. Receptor VMAT2, PDB 8T69. Stop at the FIRST candidate with Vina energy <= -10.5 kcal/mol AND passed physical pose checks. Save the selected run in Moldex, make a short preview search video, audit it in Preparation, and deliver the notebook, original Preparation package and video in a single ZIP.${limits} First show the approval card and wait; do not start docking yet.`;
 const decode = body => {
   try {
     if (body.split('\n').some(line => line.startsWith('data:'))) return body.split('\n').filter(line => line.startsWith('data:')).map(line => JSON.parse(line.slice(5)));
@@ -17,7 +23,7 @@ const decode = body => {
   } catch { return body; }
 };
 const safeJSON = value => JSON.stringify(value, (key, item) => key === 'paths' ? undefined : item, 2)
-  .replace(/[A-Za-z]:[\\/]+/g, '[local-path]/') + '\n';
+  .replace(/(?<![A-Za-z])[A-Za-z]:[\\/]+/g, '[local-path]/') + '\n';
 
 (async () => {
   await fs.mkdir(path.join(output, 'screenshots'), { recursive: true });
@@ -27,7 +33,8 @@ const safeJSON = value => JSON.stringify(value, (key, item) => key === 'paths' ?
   const context = await browser.newContext({ viewport: { width: 1600, height: 1000 }, locale: 'en-US' });
   const page = await context.newPage();
   const record = { schema: 'molchat.capsule-run/1', started_at_utc: new Date().toISOString(),
-                   prompt, requests: [], responses: [], assertions: [] };
+                   prompt, runner_sha256: createHash('sha256').update(await fs.readFile(__filename)).digest('hex'),
+                   requests: [], responses: [], assertions: [] };
   const pending = [];
   let session;
   const check = (name, actual, expected) => {
@@ -47,6 +54,8 @@ const safeJSON = value => JSON.stringify(value, (key, item) => key === 'paths' ?
     session = await response.json();
     const status = await (await context.request.get(backend + '/molchat-host/status')).json();
     record.sidecar = status;
+    const expectedCommit = option('--expected-commit', null);
+    if (expectedCommit !== null) check('sidecar uses the expected published commit', status.commit.startsWith(expectedCommit), true);
     page.on('request', request => {
       const u = new URL(request.url());
       if (u.origin === session.url && request.method() === 'POST') record.requests.push({ path: u.pathname, time_utc: new Date().toISOString(), body: decode(request.postData() || '{}') });
@@ -66,6 +75,11 @@ const safeJSON = value => JSON.stringify(value, (key, item) => key === 'paths' ?
     check('exactly one workflow card', result.workflow_proposals.length, 1);
     const card = result.workflow_proposals[0];
     record.card = card;
+    if (timeout !== null) {
+      check('approval card preserves requested time limits', card.lines.some(line =>
+        line.includes(`${Math.ceil(+timeout / 60)} min`) && line.includes(`${Math.ceil(+budget / 60)} min`)), true);
+      record.requested_limits = { per_molecule_timeout_s: +timeout, budget_s: +budget };
+    }
     check('candidate order', card.molecules.map(m => m.toLowerCase()), ['aspirin', 'ketanserin', 'valbenazine']);
     check('no host mutation before approval', record.requests.filter(r => /\/(case|smiles|receptor|evaluation)-requests\//.test(r.path)).length, 0);
     const denied = await context.request.post(`${session.url}/v1/workflows/${card.id}/run`, {
@@ -96,6 +110,10 @@ const safeJSON = value => JSON.stringify(value, (key, item) => key === 'paths' ?
     check('selected physical checks', record.latest.summary.selected.physical_status, 'passed');
     check('Moldex saved', record.latest.summary.saved, 'saved');
     check('Preparation verdict preserved', record.latest.summary.preparation, 'REVIEW');
+    if (option('--check-skipped-label', 'false') === 'true') {
+      record.skipped_row_text = await frame.locator('.iteration-table tbody tr').nth(2).locator('td').nth(1).innerText();
+      check('skipped candidate is shown as not evaluated', /^(not evaluated|no se evaluó)$/i.test(record.skipped_row_text.trim()), true);
+    }
     await frame.locator('.iteration-table').screenshot({ path: path.join(output, 'screenshots/03-stop.png') });
     for (const [apiName, name] of [['entrega.zip', 'delivery.zip'], ['cuaderno.md', 'notebook.md'], ['cuaderno.json', 'notebook.json'], ['cuaderno.pdf', 'notebook.pdf']]) {
       const response = await context.request.get(`${session.url}/v1/workflows/${card.id}/files/${apiName}`, { headers: { Authorization: 'Bearer ' + session.token } });

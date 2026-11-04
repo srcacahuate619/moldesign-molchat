@@ -12,6 +12,8 @@ The evidence has three separate layers:
 
 The new browser campaign was also [repeated successfully using the public automation script](published/capsule-reproduction/README.md), with a second unchanged delivery ZIP.
 
+The separate [final integration check](published/release-check/README.md) verifies the corrected application revision, explicit 180/600-second limits, zero host writes before approval and the visible skipped-candidate state. The preceding failed attempt is preserved in the [findings](FINDINGS.md).
+
 ## Results
 
 [Tables, graphs and all individual outcomes](RESULTS.md) · [Machine-readable summary](results.json) · [How Muse Spark is actually called](../docs/META_EXECUTION.md)

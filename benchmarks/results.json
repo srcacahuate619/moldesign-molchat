@@ -106,6 +106,32 @@
           "physical_controls": null
         }
       ]
+    },
+    {
+      "case": "benchmark-release-345856a",
+      "source": "published/release-check/README.md",
+      "delivery": "published/release-check/delivery.zip",
+      "delivery_sha256": "3e010b4df21f8350a1c32bc2d1ae85405ecd01ceb8ee39cd2f5ae906e8c448d2",
+      "molecules": [
+        {
+          "name": "aspirin",
+          "status": "evaluated",
+          "vina_kcal_mol": -6.867,
+          "physical_controls": "passed"
+        },
+        {
+          "name": "ketanserin",
+          "status": "evaluated",
+          "vina_kcal_mol": -11.2,
+          "physical_controls": "passed"
+        },
+        {
+          "name": "valbenazine",
+          "status": "skipped",
+          "vina_kcal_mol": null,
+          "physical_controls": null
+        }
+      ]
     }
   ],
   "validation": "published/validation.json",
@@ -116,5 +142,10 @@
     "passed": 6,
     "oracle_revision": "empty-catalog-v2",
     "not_merged_with_initial_score": true
+  },
+  "release_attempt_before_fix": {
+    "source": "published/release-attempt-49df407/execution.json",
+    "passed": false,
+    "finding": "One case creation occurred before approval; no docking was approved or started."
   }
 }

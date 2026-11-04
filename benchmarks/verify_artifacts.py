@@ -35,7 +35,7 @@ def main():
                     raw = archive.read(piece['path'])
                     # Synthetic fixtures deliberately exercise opaque byte transport.
                     # Real capsule packages must also pass their own nested file hashes.
-                    if 'capsule' not in entry['path']:
+                    if 'capsule' not in entry['path'] and not entry['path'].startswith('release-check/'):
                         continue
                     with zipfile.ZipFile(io.BytesIO(raw)) as inner:
                         names = [name for name in inner.namelist() if name.endswith('/manifest.json')]

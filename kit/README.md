@@ -9,6 +9,7 @@ Todo lo que necesita alguien nuevo, en un solo sitio: la demo, lo que se constru
 | | English | Español |
 |---|---|---|
 | The hackathon / El hackathon | [HACKATHON.md](en/HACKATHON.md) | [HACKATHON.md](es/HACKATHON.md) |
+| Submission copy / Texto de candidatura | [SUBMISSION.md](en/SUBMISSION.md) | [SUBMISSION.md](es/SUBMISSION.md) |
 | Run MolDesign with MolChat / Usar MolDesign con MolChat | [GETTING_STARTED.md](en/GETTING_STARTED.md) | [GETTING_STARTED.md](es/GETTING_STARTED.md) |
 | Extend MolChat: the key and the lock / Extender MolChat: la llave y la cerradura | [EXTENDING.md](en/EXTENDING.md) | [EXTENDING.md](es/EXTENDING.md) |
 | Overview / Presentación | [README](../README.md) | [README.md](es/README.md) |

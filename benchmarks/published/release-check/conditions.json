@@ -1,0 +1,35 @@
+{
+  "schema": "molchat.release-check-conditions/1",
+  "molchat_source_commit": "345856ae940e5db54016e55de32391afb2d54e5f",
+  "staged_manifest_sha256": "db3f745e9e1d50f7086caec9adda528c3f6299388dafe5adba895a6ef5976c6f",
+  "staged_file_set_sha256": "8ef703bef826fbbf6954a3cbae9c26c7896f1c2e8fcc52d9a3efb789ea1a11a3",
+  "staged_file_count": 82,
+  "staging_mode": "Verified external sidecar; included MolDesign copy and pin left untouched.",
+  "capsule_url": "http://localhost:13016/",
+  "host_conditions_reference": "../capsule/conditions.json",
+  "requested_limits": {
+    "per_molecule_timeout_s": 180,
+    "budget_s": 600
+  },
+  "new_scientific_scenarios": false,
+  "scope": "One existing three-candidate VMAT2 campaign; browser bridge emulation remains in place.",
+  "regressions": [
+    {
+      "selection": "workflow, case actions, harness chat, workflow sources and harness tools",
+      "passed": 105,
+      "duration_s": 31.94
+    },
+    {
+      "selection": "workflow card blocks later host writes without planning keyword",
+      "passed": 1,
+      "duration_s": 1.12
+    }
+  ],
+  "failed_prior_attempt": "../release-attempt-49df407/execution.json",
+  "repository_source_tree": "f0dda6b76f6f69e4d07f5fa7bb220a9e786031e5",
+  "repository_ui_tree": "d5354c7fa0f45c8c0cd8a7b3db4102f889f52ef0",
+  "exact_approval_limit_line_verified": "Limit: 3 min per molecule and 10 min in total.",
+  "assertions_passed": 16,
+  "scientific_delivery_sha256": "3e010b4df21f8350a1c32bc2d1ae85405ecd01ceb8ee39cd2f5ae906e8c448d2",
+  "recorded_runner_matches_published_script": true
+}

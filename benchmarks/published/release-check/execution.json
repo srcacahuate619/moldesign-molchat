@@ -1,0 +1,2155 @@
+{
+  "schema": "molchat.capsule-run/1",
+  "started_at_utc": "2026-11-04T05:01:26.094Z",
+  "prompt": "Prepare an approved-once iteration in a NEW case called benchmark-release-345856a. Resolve aspirin, ketanserin and valbenazine through PubChem in exactly that order. Receptor VMAT2, PDB 8T69. Stop at the FIRST candidate with Vina energy <= -10.5 kcal/mol AND passed physical pose checks. Save the selected run in Moldex, make a short preview search video, audit it in Preparation, and deliver the notebook, original Preparation package and video in a single ZIP. Use a per-molecule limit of 180 seconds and an iteration budget of 600 seconds; preserve both limits on the approval card. First show the approval card and wait; do not start docking yet.",
+  "runner_sha256": "c75139da385c0ebafc1b83e5cd2b9f41c8aacb234f52e1db621198625323b250",
+  "requests": [
+    {
+      "path": "/v1/chat",
+      "time_utc": "2026-11-04T05:01:29.016Z",
+      "body": {
+        "text": "Prepare an approved-once iteration in a NEW case called benchmark-release-345856a. Resolve aspirin, ketanserin and valbenazine through PubChem in exactly that order. Receptor VMAT2, PDB 8T69. Stop at the FIRST candidate with Vina energy <= -10.5 kcal/mol AND passed physical pose checks. Save the selected run in Moldex, make a short preview search video, audit it in Preparation, and deliver the notebook, original Preparation package and video in a single ZIP. Use a per-molecule limit of 180 seconds and an iteration budget of 600 seconds; preserve both limits on the approval card. First show the approval card and wait; do not start docking yet.",
+        "lang": "en"
+      }
+    },
+    {
+      "path": "/v1/workflows/89350439f7684e4bae537a3c0872eb6a/run",
+      "time_utc": "2026-11-04T05:01:41.853Z",
+      "body": {
+        "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed"
+      }
+    },
+    {
+      "path": "/v1/case-requests/ef3423a5ba0c43d28c1ba3497928199f/result",
+      "time_utc": "2026-11-04T05:01:42.361Z",
+      "body": {
+        "status": "created"
+      }
+    },
+    {
+      "path": "/v1/receptor-requests/1cb43dc78d2342ee8ee93b579395f20e/result",
+      "time_utc": "2026-11-04T05:01:46.986Z",
+      "body": {
+        "status": "applied"
+      }
+    },
+    {
+      "path": "/v1/case-status-requests/a62307da3e58469488c0ef06bd7d8358/result",
+      "time_utc": "2026-11-04T05:01:47.117Z",
+      "body": {
+        "status": "idle"
+      }
+    },
+    {
+      "path": "/v1/smiles-requests/c687e119b1c64a30b1c0e6218968f5b4/result",
+      "time_utc": "2026-11-04T05:01:47.224Z",
+      "body": {
+        "status": "applied"
+      }
+    },
+    {
+      "path": "/v1/evaluation-requests/4dc2176cc6644b47a4c8a255dc690fa0/result",
+      "time_utc": "2026-11-04T05:01:51.339Z",
+      "body": {
+        "status": "started",
+        "task_id": "5f4c2805-3e50-4e94-b696-91f8ed578824"
+      }
+    },
+    {
+      "path": "/v1/case-status-requests/944aa6c863cd4cf6a00178b03d2eacd5/result",
+      "time_utc": "2026-11-04T05:02:12.660Z",
+      "body": {
+        "status": "idle",
+        "run_state": "completed",
+        "task_id": "5f4c2805-3e50-4e94-b696-91f8ed578824"
+      }
+    },
+    {
+      "path": "/v1/smiles-requests/192a4d407b0549288fa8797417015b95/result",
+      "time_utc": "2026-11-04T05:02:12.747Z",
+      "body": {
+        "status": "applied"
+      }
+    },
+    {
+      "path": "/v1/evaluation-requests/01069f064b12401293ad67ff4193ebb3/result",
+      "time_utc": "2026-11-04T05:02:15.691Z",
+      "body": {
+        "status": "started",
+        "task_id": "80680042-8847-4c82-a518-0fed8e5327d8"
+      }
+    },
+    {
+      "path": "/v1/molcy-requests/a777a34b10a1455bb26185b23c0e581d/result",
+      "time_utc": "2026-11-04T05:02:59.758Z",
+      "body": {
+        "status": "started",
+        "job_id": "2d659f98-6c8b-4405-b37b-3ddb58db2ae8"
+      }
+    },
+    {
+      "path": "/v1/preparation-requests/a56cc8975d144bb2ab30c288f93b5473/result",
+      "time_utc": "2026-11-04T05:03:00.284Z",
+      "body": {
+        "status": "audited",
+        "molecule_id": "09a2521f-fa91-4438-acce-109fc9187439",
+        "estado": "REVISION",
+        "projection": {
+          "projection_version": 1,
+          "case_id": "942fc4ae-74be-4297-a667-e7f94cc2a736",
+          "name": "benchmark-release-345856a",
+          "context": {
+            "study_kind": "explore-hypothesis"
+          },
+          "inputs": {
+            "receptor": {
+              "pdb_id": "8T69",
+              "chain": "A",
+              "origin": "curado",
+              "name": "HUMAN VMAT2 IN COMPLEX WITH TETRABENAZINE",
+              "target_id": "ee0bb616-eb59-4d9b-9a0f-da2331243043"
+            },
+            "ligand": {
+              "input_smiles": "C1CN(CCC1C(=O)C2=CC=C(C=C2)F)CCN3C(=O)C4=CC=CC=C4NC3=O",
+              "canonical_smiles": "O=C(c1ccc(F)cc1)C1CCN(CCn2c(=O)[nH]c3ccccc3c2=O)CC1"
+            },
+            "config": {
+              "grid_center": [
+                127.862,
+                123.474,
+                104.225
+              ],
+              "grid_size": [
+                30,
+                30,
+                30
+              ],
+              "custom_hotspots": [
+                "A:ALA337",
+                "A:ARG189",
+                "A:ASN34",
+                "A:GLU312",
+                "A:ILE308",
+                "A:LEU228",
+                "A:LEU37",
+                "A:PHE135",
+                "A:PHE334",
+                "A:PHE429",
+                "A:SER338",
+                "A:THR38",
+                "A:TYR341",
+                "A:TYR433",
+                "A:VAL232"
+              ],
+              "docking_engine": "vina",
+              "exhaustiveness": 8,
+              "num_poses": 9,
+              "seed": 42,
+              "pipeline_config": {
+                "enabled_stages": [
+                  "validation",
+                  "properties",
+                  "sa_filter",
+                  "conformer",
+                  "docking",
+                  "xgb",
+                  "clgnn"
+                ],
+                "docking_engine": "vina",
+                "gnn_precision": "fp32",
+                "pro_workers": 4,
+                "pro_parallel_docks": 2,
+                "pro_mmgbsa_steps": 1000,
+                "pro_selectivity": false,
+                "pro_mmgbsa": false,
+                "stage_params": {
+                  "docking": {
+                    "exhaustiveness": 8,
+                    "num_poses": 9
+                  },
+                  "conformer": {
+                    "conformers": 1
+                  },
+                  "properties": {
+                    "run_admet_ai": false
+                  }
+                }
+              }
+            }
+          },
+          "run_inputs_relation": "corresponde",
+          "case_schema_version": 7,
+          "created_at": "2026-11-04T05:01:42.170Z",
+          "preflight": {
+            "fingerprint": "sha256:0eaa72b7f188799150fc4fb5702439442437864379daac0b3d9f5208b80a1658",
+            "generated_at": "2026-11-04T05:02:15.501496+00:00",
+            "schema_version": 4,
+            "execution_route": "docking_vina",
+            "warnings": [
+              "ESPECIES_DEL_SITIO_RETIRADAS",
+              "RECEPTOR_PROTONACION_DECLARADA"
+            ],
+            "not_evaluated": [
+              "LIGANDO_PROTONACION_TAUTOMERO",
+              "ASSEMBLY_BIOLOGICA",
+              "HUECOS_CERCA_DEL_SITIO"
+            ],
+            "receptor_label": "8T69 · cadena A",
+            "ligand_label": "O=C(c1ccc(F)cc1)C1CCN(CCn2c(=O)[nH]c3ccccc3c2=O)CC1",
+            "grid_label": "(127.86, 123.47, 104.22) · (30.00, 30.00, 30.00) Å"
+          },
+          "run": {
+            "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+            "input_fingerprint": "sha256:0eaa72b7f188799150fc4fb5702439442437864379daac0b3d9f5208b80a1658",
+            "execution_state": "completed",
+            "started_at": "2026-11-04T05:02:15.654848Z"
+          }
+        }
+      }
+    }
+  ],
+  "responses": [
+    {
+      "path": "/v1/chat",
+      "status": 200,
+      "body": [
+        {
+          "type": "conversation",
+          "id": "583362ad2913"
+        },
+        {
+          "type": "result",
+          "result": {
+            "text": "I prepared an iteration over 3 molecules with a threshold of -10.5 kcal/mol; the receptor and the rules are on the card. Nothing has been docked yet: review it and approve it with one button; after that it needs nothing else from you. If you don't approve it, it expires.",
+            "intent": "harness",
+            "evidence": [],
+            "references": [
+              {
+                "cid": 24795069,
+                "name": "Valbenazine",
+                "source": "https://pubchem.ncbi.nlm.nih.gov/compound/24795069",
+                "properties": {
+                  "MolecularFormula": "C24H38N2O4",
+                  "MolecularWeight": "418.6",
+                  "IUPACName": "[(2R,3R,11bR)-9,10-dimethoxy-3-(2-methylpropyl)-2,3,4,6,7,11b-hexahydro-1H-benzo[a]quinolizin-2-yl] (2S)-2-amino-3-methylbutanoate",
+                  "SMILES": "CC(C)C[C@@H]1CN2CCC3=CC(=C(C=C3[C@H]2C[C@H]1OC(=O)[C@H](C(C)C)N)OC)OC",
+                  "ConnectivitySMILES": "CC(C)CC1CN2CCC3=CC(=C(C=C3C2CC1OC(=O)C(C(C)C)N)OC)OC",
+                  "XLogP": 4.3,
+                  "TPSA": 74,
+                  "HBondDonorCount": 1,
+                  "HBondAcceptorCount": 6
+                },
+                "properties_available": true
+              }
+            ],
+            "comparison_cids": [],
+            "suggested_actions": [],
+            "action_proposals": [],
+            "workflow_proposals": [
+              {
+                "id": "89350439f7684e4bae537a3c0872eb6a",
+                "kind": "iteration",
+                "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+                "title": "Molecule iteration",
+                "lines": [
+                  "Case “benchmark-release-345856a” · receptor 8T69",
+                  "3 molecules, one after another in this same case: aspirin, ketanserin, valbenazine",
+                  "Stops at the first one that meets it: Vina ≤ -10.5 kcal/mol and the best pose passes the physical checks",
+                  "If a molecule fails, it is noted and the next one goes on.",
+                  "The one that meets it is saved to Moldex.",
+                  "Molcy video (GPU only): scene Search, format test (short preview); MolDesign's closing is always added.",
+                  "Presentation: Molcy's automatic one.",
+                  "The run is audited in Preparation; if it needs review, that is declared, not decided.",
+                  "At the end everything goes into a single ZIP.",
+                  "Limit: 3 min per molecule and 10 min in total."
+                ],
+                "molecules": [
+                  "aspirin",
+                  "ketanserin",
+                  "valbenazine"
+                ],
+                "steps": [
+                  "case",
+                  "receptor",
+                  "molecules",
+                  "moldex",
+                  "video",
+                  "preparation",
+                  "deliverable"
+                ]
+              }
+            ],
+            "used_llm": true,
+            "verified_values": [
+              -10.5,
+              1,
+              1.2,
+              2.6,
+              3,
+              4,
+              4.3,
+              5,
+              6,
+              10.5,
+              63.6,
+              69.7,
+              74,
+              180.16,
+              395.4,
+              418.6,
+              2244,
+              3822,
+              24795069
+            ],
+            "latency_ms": 12407
+          }
+        }
+      ]
+    },
+    {
+      "path": "/v1/workflows/89350439f7684e4bae537a3c0872eb6a/run",
+      "status": 200,
+      "body": [
+        {
+          "type": "workflow",
+          "event": "approved",
+          "id": "89350439f7684e4bae537a3c0872eb6a",
+          "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed"
+        },
+        {
+          "type": "workflow",
+          "event": "started",
+          "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+          "molecules": 3
+        },
+        {
+          "type": "case_create",
+          "request_id": "ef3423a5ba0c43d28c1ba3497928199f",
+          "name": "benchmark-release-345856a"
+        },
+        {
+          "type": "workflow",
+          "event": "case_step",
+          "step": "create the case",
+          "key": "case",
+          "status": "created"
+        },
+        {
+          "type": "case_receptor",
+          "request_id": "1cb43dc78d2342ee8ee93b579395f20e",
+          "case_name": "benchmark-release-345856a",
+          "pdb_id": "8T69"
+        },
+        {
+          "type": "workflow",
+          "event": "case_step",
+          "step": "assign the receptor",
+          "key": "receptor",
+          "status": "applied"
+        },
+        {
+          "type": "workflow",
+          "event": "molecule_started",
+          "index": 1,
+          "name": "aspirin"
+        },
+        {
+          "type": "case_status",
+          "request_id": "a62307da3e58469488c0ef06bd7d8358",
+          "case_name": "benchmark-release-345856a"
+        },
+        {
+          "type": "case_smiles",
+          "request_id": "c687e119b1c64a30b1c0e6218968f5b4",
+          "case_name": "benchmark-release-345856a",
+          "smiles": "CC(=O)OC1=CC=CC=C1C(=O)O"
+        },
+        {
+          "type": "case_evaluation",
+          "request_id": "4dc2176cc6644b47a4c8a255dc690fa0",
+          "case_name": "benchmark-release-345856a"
+        },
+        {
+          "type": "workflow",
+          "event": "molecule",
+          "record": {
+            "index": 1,
+            "name": "aspirin",
+            "smiles": "CC(=O)OC1=CC=CC=C1C(=O)O",
+            "status": "evaluated",
+            "outcome": "below_threshold",
+            "task_id": "5f4c2805-3e50-4e94-b696-91f8ed578824",
+            "molecule_id": "e1638c68-5cd9-4d0d-bb61-ae9353d6dab7",
+            "affinity_kcal": -6.867,
+            "physical_status": "passed",
+            "reason": "Vina -6.867 kcal/mol does not reach the -10.5 threshold.",
+            "seconds": 25.6,
+            "seconds_waiting_case": 0.1,
+            "case_state_before": "idle",
+            "seconds_to_start": 4.2,
+            "seconds_to_result": 21.2,
+            "source": {
+              "database": "PubChem",
+              "cid": 2244,
+              "name": "Aspirin",
+              "url": "https://pubchem.ncbi.nlm.nih.gov/compound/2244",
+              "query": "aspirin",
+              "match": "exact",
+              "pubchem_smiles": "CC(=O)OC1=CC=CC=C1C(=O)O"
+            },
+            "run": {
+              "source": "MolDesign GET /evaluation/status",
+              "vina_version": "1.2.7",
+              "receptor_sha256": "8fc027cae876631f30518b27823ce175e844bbe9e7bc10554653a7766e21468d",
+              "protocol": {
+                "engine": "vina",
+                "exhaustiveness": 8,
+                "num_poses": 9,
+                "seed": 42,
+                "conformers": 1,
+                "requested": null,
+                "box_center": [
+                  127.862,
+                  123.474,
+                  104.225
+                ],
+                "box_size": [
+                  30,
+                  30,
+                  30
+                ]
+              },
+              "warnings": [
+                {
+                  "code": "RECEPTOR_PROTONACION_DECLARADA",
+                  "severity": "precaucion",
+                  "message": "Meeko-assigned histidine templates: A:353=HIE, A:414=HIE. The assignment is template-based and does not validate the experimental microstate or a specific pH."
+                },
+                {
+                  "code": "SITIO_DESOLVATADO",
+                  "severity": "info",
+                  "message": "Desolvated preparation: the deposited structure had no crystallographic waters inside the docking box, so none were removed from the site during preparation."
+                },
+                {
+                  "code": null,
+                  "severity": "legacy",
+                  "message": "Ligand efficiency LE=0.53. With 13 heavy atoms, the 0.45 threshold is crossed by any affinity better than -5.9 kcal/mol, so exceeding it does not distinguish good binding from mediocre binding. In this mass range (< 300 Da, Rule of Three), efficiency per atom is high by construction: it can compare molecules of the same size, but cannot serve as a verdict."
+                },
+                {
+                  "code": "ESPECIE_ACOPLADA_DISTINTA",
+                  "severity": "precaucion",
+                  "message": "The docked species differs from the input: CC(=O)Oc1ccccc1C(=O)O → CC(=O)Oc1ccccc1C(=O)[O-]. Unevaluated alternatives remain a source of chemical uncertainty."
+                }
+              ],
+              "species": {
+                "input_smiles": "CC(=O)Oc1ccccc1C(=O)O",
+                "docked_smiles_3d": "CC(=O)Oc1ccccc1C(=O)[O-]",
+                "protonation": {
+                  "applied": true,
+                  "ph": 7.4,
+                  "alternatives": 1,
+                  "reason": null
+                },
+                "tautomer": {
+                  "applied": false,
+                  "alternatives": null,
+                  "reason": "se respeta el tautómero de la entrada (tautomero=entrada)"
+                },
+                "stereo": {
+                  "unassigned_centers": 0,
+                  "unassigned_double_bonds": 0,
+                  "declared_by_user": true,
+                  "lost_in_docked_species": {
+                    "centros": 0,
+                    "dobles": 0
+                  }
+                }
+              },
+              "receptor_calibration": {
+                "advertencia": "",
+                "motivo": "",
+                "nivel": "calibrado",
+                "requiere_advertencia": false,
+                "respaldo": {
+                  "endpoint": "Ki",
+                  "ic95": [
+                    0.216,
+                    0.5404
+                  ],
+                  "n": 89,
+                  "panel": "US11718618B2 Example 11",
+                  "protocolo": {
+                    "exhaustiveness": 8,
+                    "num_poses": 9,
+                    "semilla": 42
+                  },
+                  "receptor_sha256": "8fc027cae876631f30518b27823ce175e844bbe9e7bc10554653a7766e21468d",
+                  "rho": 0.3918
+                },
+                "resumen": "Calibrated for this receptor (measured Spearman ρ)",
+                "rho_registrada_sin_respaldo": null,
+                "spearman_rho": 0.3918,
+                "structural_family": "transporter",
+                "tiene_pipeline_de_familia": false
+              }
+            }
+          }
+        },
+        {
+          "type": "workflow",
+          "event": "molecule_started",
+          "index": 2,
+          "name": "ketanserin"
+        },
+        {
+          "type": "case_status",
+          "request_id": "944aa6c863cd4cf6a00178b03d2eacd5",
+          "case_name": "benchmark-release-345856a"
+        },
+        {
+          "type": "case_smiles",
+          "request_id": "192a4d407b0549288fa8797417015b95",
+          "case_name": "benchmark-release-345856a",
+          "smiles": "C1CN(CCC1C(=O)C2=CC=C(C=C2)F)CCN3C(=O)C4=CC=CC=C4NC3=O"
+        },
+        {
+          "type": "case_evaluation",
+          "request_id": "01069f064b12401293ad67ff4193ebb3",
+          "case_name": "benchmark-release-345856a"
+        },
+        {
+          "type": "workflow",
+          "event": "molecule",
+          "record": {
+            "index": 2,
+            "name": "ketanserin",
+            "smiles": "C1CN(CCC1C(=O)C2=CC=C(C=C2)F)CCN3C(=O)C4=CC=CC=C4NC3=O",
+            "status": "evaluated",
+            "outcome": "qualifies",
+            "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+            "molecule_id": "09a2521f-fa91-4438-acce-109fc9187439",
+            "affinity_kcal": -11.2,
+            "physical_status": "passed",
+            "reason": "Vina -11.2 kcal/mol and physical checks passed.",
+            "seconds": 36.3,
+            "seconds_waiting_case": 0,
+            "case_state_before": "idle",
+            "seconds_to_start": 3,
+            "seconds_to_result": 33.2,
+            "source": {
+              "database": "PubChem",
+              "cid": 3822,
+              "name": "Ketanserin",
+              "url": "https://pubchem.ncbi.nlm.nih.gov/compound/3822",
+              "query": "ketanserin",
+              "match": "exact",
+              "pubchem_smiles": "C1CN(CCC1C(=O)C2=CC=C(C=C2)F)CCN3C(=O)C4=CC=CC=C4NC3=O"
+            },
+            "run": {
+              "source": "MolDesign GET /evaluation/status",
+              "vina_version": "1.2.7",
+              "receptor_sha256": "8fc027cae876631f30518b27823ce175e844bbe9e7bc10554653a7766e21468d",
+              "protocol": {
+                "engine": "vina",
+                "exhaustiveness": 8,
+                "num_poses": 9,
+                "seed": 42,
+                "conformers": 1,
+                "requested": null,
+                "box_center": [
+                  127.862,
+                  123.474,
+                  104.225
+                ],
+                "box_size": [
+                  30,
+                  30,
+                  30
+                ]
+              },
+              "warnings": [
+                {
+                  "code": "RECEPTOR_PROTONACION_DECLARADA",
+                  "severity": "precaucion",
+                  "message": "Meeko-assigned histidine templates: A:353=HIE, A:414=HIE. The assignment is template-based and does not validate the experimental microstate or a specific pH."
+                },
+                {
+                  "code": "SITIO_DESOLVATADO",
+                  "severity": "info",
+                  "message": "Desolvated preparation: the deposited structure had no crystallographic waters inside the docking box, so none were removed from the site during preparation."
+                },
+                {
+                  "code": null,
+                  "severity": "legacy",
+                  "message": "⚠️ Molecule with 29 heavy atoms and 5 rotatable bonds — docking may take longer than usual. To reduce run time, review the box and Vina exhaustiveness; a smaller search may change the poses."
+                },
+                {
+                  "code": "ESPECIE_ACOPLADA_DISTINTA",
+                  "severity": "precaucion",
+                  "message": "The docked species differs from the input: O=C(c1ccc(F)cc1)C1CCN(CCn2c(=O)[nH]c3ccccc3c2=O)CC1 → O=C(c1ccc(F)cc1)C1CC[NH+](CCn2c(=O)[nH]c3ccccc3c2=O)CC1. Unevaluated alternatives remain a source of chemical uncertainty."
+                }
+              ],
+              "species": {
+                "input_smiles": "O=C(c1ccc(F)cc1)C1CCN(CCn2c(=O)[nH]c3ccccc3c2=O)CC1",
+                "docked_smiles_3d": "O=c1[nH]c2ccccc2c(=O)n1CC[N@H+]1CC[C@@H](C(=O)c2ccc(F)cc2)CC1",
+                "protonation": {
+                  "applied": true,
+                  "ph": 7.4,
+                  "alternatives": 4,
+                  "reason": null
+                },
+                "tautomer": {
+                  "applied": false,
+                  "alternatives": null,
+                  "reason": "se respeta el tautómero de la entrada (tautomero=entrada)"
+                },
+                "stereo": {
+                  "unassigned_centers": 0,
+                  "unassigned_double_bonds": 0,
+                  "declared_by_user": true,
+                  "lost_in_docked_species": {
+                    "centros": 0,
+                    "dobles": 0
+                  }
+                }
+              },
+              "receptor_calibration": {
+                "advertencia": "",
+                "motivo": "",
+                "nivel": "calibrado",
+                "requiere_advertencia": false,
+                "respaldo": {
+                  "endpoint": "Ki",
+                  "ic95": [
+                    0.216,
+                    0.5404
+                  ],
+                  "n": 89,
+                  "panel": "US11718618B2 Example 11",
+                  "protocolo": {
+                    "exhaustiveness": 8,
+                    "num_poses": 9,
+                    "semilla": 42
+                  },
+                  "receptor_sha256": "8fc027cae876631f30518b27823ce175e844bbe9e7bc10554653a7766e21468d",
+                  "rho": 0.3918
+                },
+                "resumen": "Calibrated for this receptor (measured Spearman ρ)",
+                "rho_registrada_sin_respaldo": null,
+                "spearman_rho": 0.3918,
+                "structural_family": "transporter",
+                "tiene_pipeline_de_familia": false
+              }
+            }
+          }
+        },
+        {
+          "type": "workflow",
+          "event": "molecule",
+          "record": {
+            "index": 3,
+            "name": "valbenazine",
+            "smiles": "CC(C)C[C@@H]1CN2CCC3=CC(=C(C=C3[C@H]2C[C@H]1OC(=O)[C@H](C(C)C)N)OC)OC",
+            "status": "skipped",
+            "outcome": null,
+            "task_id": null,
+            "molecule_id": null,
+            "affinity_kcal": null,
+            "physical_status": null,
+            "reason": "The stop rule was already met.",
+            "seconds": null,
+            "seconds_waiting_case": null,
+            "case_state_before": null,
+            "seconds_to_start": null,
+            "seconds_to_result": null,
+            "source": {
+              "database": "PubChem",
+              "cid": 24795069,
+              "name": "Valbenazine",
+              "url": "https://pubchem.ncbi.nlm.nih.gov/compound/24795069",
+              "query": "valbenazine",
+              "match": "exact",
+              "pubchem_smiles": "CC(C)C[C@@H]1CN2CCC3=CC(=C(C=C3[C@H]2C[C@H]1OC(=O)[C@H](C(C)C)N)OC)OC"
+            },
+            "run": null
+          }
+        },
+        {
+          "type": "workflow",
+          "event": "saved",
+          "result": {
+            "status": "saved",
+            "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+            "name": "ketanserin",
+            "message": "Run saved to Moldex."
+          }
+        },
+        {
+          "type": "workflow",
+          "event": "phase",
+          "message": "Setting up the video in the Molcy tab."
+        },
+        {
+          "type": "case_molcy",
+          "request_id": "a777a34b10a1455bb26185b23c0e581d",
+          "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+          "scene": "busqueda",
+          "format": "previsualizacion",
+          "presentation": "{\"color_receptor\":null,\"color_residuos\":null,\"colores_lineas\":{\"apolar\":null,\"polar\":null},\"contactos\":true,\"ensamble_variante\":\"lenta\",\"etiquetas\":true,\"muestra_anterior\":true,\"receptor\":\"automatico\",\"schema\":\"moldesign.presentacion/1\",\"titulo\":null}"
+        },
+        {
+          "type": "workflow",
+          "event": "video",
+          "result": {
+            "status": "started",
+            "job_id": "2d659f98-6c8b-4405-b37b-3ddb58db2ae8",
+            "message": "Video queued in Molcy (started from its tab).",
+            "final": null
+          }
+        },
+        {
+          "type": "workflow",
+          "event": "finished",
+          "state": "completed"
+        },
+        {
+          "type": "workflow",
+          "event": "phase",
+          "phase": "video",
+          "message": "Molcy renders the video in the background; the plan goes on meanwhile."
+        },
+        {
+          "type": "workflow",
+          "event": "phase",
+          "phase": "preparation",
+          "message": "Auditing the run in Preparation."
+        },
+        {
+          "type": "case_preparation",
+          "request_id": "a56cc8975d144bb2ab30c288f93b5473",
+          "case_name": "benchmark-release-345856a",
+          "task_id": "80680042-8847-4c82-a518-0fed8e5327d8"
+        },
+        {
+          "type": "workflow",
+          "event": "done",
+          "summary": {
+            "state": "completed",
+            "counts": {
+              "evaluated": 2,
+              "skipped": 1
+            },
+            "selected": {
+              "name": "ketanserin",
+              "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+              "vina_kcal_mol": -11.2,
+              "physical_status": "passed"
+            },
+            "saved": "saved",
+            "video": "started",
+            "preparation": "REVIEW",
+            "video_pending": true,
+            "video_progress": null,
+            "files": {
+              "cuaderno.md": 7451,
+              "cuaderno.json": 43668,
+              "cuaderno.pdf": 80563,
+              "entrega.zip": 369855
+            },
+            "notes": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "/v1/workflows/89350439f7684e4bae537a3c0872eb6a",
+      "status": 200,
+      "body": {
+        "id": "89350439f7684e4bae537a3c0872eb6a",
+        "state": "done",
+        "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+        "summary": {
+          "state": "completed",
+          "counts": {
+            "evaluated": 2,
+            "skipped": 1
+          },
+          "selected": {
+            "name": "ketanserin",
+            "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+            "vina_kcal_mol": -11.2,
+            "physical_status": "passed"
+          },
+          "saved": "saved",
+          "video": "started",
+          "preparation": "REVIEW",
+          "video_pending": true,
+          "video_progress": null,
+          "files": {
+            "cuaderno.md": 7451,
+            "cuaderno.json": 43668,
+            "cuaderno.pdf": 80563,
+            "entrega.zip": 369855
+          },
+          "notes": []
+        },
+        "view": {
+          "id": "89350439f7684e4bae537a3c0872eb6a",
+          "kind": "iteration",
+          "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+          "title": "Molecule iteration",
+          "lines": [
+            "Case “benchmark-release-345856a” · receptor 8T69",
+            "3 molecules, one after another in this same case: aspirin, ketanserin, valbenazine",
+            "Stops at the first one that meets it: Vina ≤ -10.5 kcal/mol and the best pose passes the physical checks",
+            "If a molecule fails, it is noted and the next one goes on.",
+            "The one that meets it is saved to Moldex.",
+            "Molcy video (GPU only): scene Search, format test (short preview); MolDesign's closing is always added.",
+            "Presentation: Molcy's automatic one.",
+            "The run is audited in Preparation; if it needs review, that is declared, not decided.",
+            "At the end everything goes into a single ZIP.",
+            "Limit: 3 min per molecule and 10 min in total."
+          ],
+          "molecules": [
+            "aspirin",
+            "ketanserin",
+            "valbenazine"
+          ],
+          "steps": [
+            "case",
+            "receptor",
+            "molecules",
+            "moldex",
+            "video",
+            "preparation",
+            "deliverable"
+          ]
+        }
+      }
+    },
+    {
+      "path": "/v1/workflows/89350439f7684e4bae537a3c0872eb6a",
+      "status": 200,
+      "body": {
+        "id": "89350439f7684e4bae537a3c0872eb6a",
+        "state": "done",
+        "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+        "summary": {
+          "state": "completed",
+          "counts": {
+            "evaluated": 2,
+            "skipped": 1
+          },
+          "selected": {
+            "name": "ketanserin",
+            "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+            "vina_kcal_mol": -11.2,
+            "physical_status": "passed"
+          },
+          "saved": "saved",
+          "video": "started",
+          "preparation": "REVIEW",
+          "video_pending": true,
+          "video_progress": null,
+          "files": {
+            "cuaderno.md": 7451,
+            "cuaderno.json": 43668,
+            "cuaderno.pdf": 80563,
+            "entrega.zip": 369855
+          },
+          "notes": []
+        },
+        "view": {
+          "id": "89350439f7684e4bae537a3c0872eb6a",
+          "kind": "iteration",
+          "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+          "title": "Molecule iteration",
+          "lines": [
+            "Case “benchmark-release-345856a” · receptor 8T69",
+            "3 molecules, one after another in this same case: aspirin, ketanserin, valbenazine",
+            "Stops at the first one that meets it: Vina ≤ -10.5 kcal/mol and the best pose passes the physical checks",
+            "If a molecule fails, it is noted and the next one goes on.",
+            "The one that meets it is saved to Moldex.",
+            "Molcy video (GPU only): scene Search, format test (short preview); MolDesign's closing is always added.",
+            "Presentation: Molcy's automatic one.",
+            "The run is audited in Preparation; if it needs review, that is declared, not decided.",
+            "At the end everything goes into a single ZIP.",
+            "Limit: 3 min per molecule and 10 min in total."
+          ],
+          "molecules": [
+            "aspirin",
+            "ketanserin",
+            "valbenazine"
+          ],
+          "steps": [
+            "case",
+            "receptor",
+            "molecules",
+            "moldex",
+            "video",
+            "preparation",
+            "deliverable"
+          ]
+        }
+      }
+    },
+    {
+      "path": "/v1/workflows/89350439f7684e4bae537a3c0872eb6a",
+      "status": 200,
+      "body": {
+        "id": "89350439f7684e4bae537a3c0872eb6a",
+        "state": "done",
+        "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+        "summary": {
+          "state": "completed",
+          "counts": {
+            "evaluated": 2,
+            "skipped": 1
+          },
+          "selected": {
+            "name": "ketanserin",
+            "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+            "vina_kcal_mol": -11.2,
+            "physical_status": "passed"
+          },
+          "saved": "saved",
+          "video": "started",
+          "preparation": "REVIEW",
+          "video_pending": true,
+          "video_progress": null,
+          "files": {
+            "cuaderno.md": 7451,
+            "cuaderno.json": 43668,
+            "cuaderno.pdf": 80563,
+            "entrega.zip": 369855
+          },
+          "notes": []
+        },
+        "view": {
+          "id": "89350439f7684e4bae537a3c0872eb6a",
+          "kind": "iteration",
+          "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+          "title": "Molecule iteration",
+          "lines": [
+            "Case “benchmark-release-345856a” · receptor 8T69",
+            "3 molecules, one after another in this same case: aspirin, ketanserin, valbenazine",
+            "Stops at the first one that meets it: Vina ≤ -10.5 kcal/mol and the best pose passes the physical checks",
+            "If a molecule fails, it is noted and the next one goes on.",
+            "The one that meets it is saved to Moldex.",
+            "Molcy video (GPU only): scene Search, format test (short preview); MolDesign's closing is always added.",
+            "Presentation: Molcy's automatic one.",
+            "The run is audited in Preparation; if it needs review, that is declared, not decided.",
+            "At the end everything goes into a single ZIP.",
+            "Limit: 3 min per molecule and 10 min in total."
+          ],
+          "molecules": [
+            "aspirin",
+            "ketanserin",
+            "valbenazine"
+          ],
+          "steps": [
+            "case",
+            "receptor",
+            "molecules",
+            "moldex",
+            "video",
+            "preparation",
+            "deliverable"
+          ]
+        }
+      }
+    },
+    {
+      "path": "/v1/workflows/89350439f7684e4bae537a3c0872eb6a",
+      "status": 200,
+      "body": {
+        "id": "89350439f7684e4bae537a3c0872eb6a",
+        "state": "done",
+        "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+        "summary": {
+          "state": "completed",
+          "counts": {
+            "evaluated": 2,
+            "skipped": 1
+          },
+          "selected": {
+            "name": "ketanserin",
+            "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+            "vina_kcal_mol": -11.2,
+            "physical_status": "passed"
+          },
+          "saved": "saved",
+          "video": "started",
+          "preparation": "REVIEW",
+          "video_pending": true,
+          "video_progress": {
+            "frames": 6,
+            "total": 90
+          },
+          "files": {
+            "cuaderno.md": 7451,
+            "cuaderno.json": 43668,
+            "cuaderno.pdf": 80563,
+            "entrega.zip": 369855
+          },
+          "notes": []
+        },
+        "view": {
+          "id": "89350439f7684e4bae537a3c0872eb6a",
+          "kind": "iteration",
+          "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+          "title": "Molecule iteration",
+          "lines": [
+            "Case “benchmark-release-345856a” · receptor 8T69",
+            "3 molecules, one after another in this same case: aspirin, ketanserin, valbenazine",
+            "Stops at the first one that meets it: Vina ≤ -10.5 kcal/mol and the best pose passes the physical checks",
+            "If a molecule fails, it is noted and the next one goes on.",
+            "The one that meets it is saved to Moldex.",
+            "Molcy video (GPU only): scene Search, format test (short preview); MolDesign's closing is always added.",
+            "Presentation: Molcy's automatic one.",
+            "The run is audited in Preparation; if it needs review, that is declared, not decided.",
+            "At the end everything goes into a single ZIP.",
+            "Limit: 3 min per molecule and 10 min in total."
+          ],
+          "molecules": [
+            "aspirin",
+            "ketanserin",
+            "valbenazine"
+          ],
+          "steps": [
+            "case",
+            "receptor",
+            "molecules",
+            "moldex",
+            "video",
+            "preparation",
+            "deliverable"
+          ]
+        }
+      }
+    },
+    {
+      "path": "/v1/workflows/89350439f7684e4bae537a3c0872eb6a",
+      "status": 200,
+      "body": {
+        "id": "89350439f7684e4bae537a3c0872eb6a",
+        "state": "done",
+        "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+        "summary": {
+          "state": "completed",
+          "counts": {
+            "evaluated": 2,
+            "skipped": 1
+          },
+          "selected": {
+            "name": "ketanserin",
+            "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+            "vina_kcal_mol": -11.2,
+            "physical_status": "passed"
+          },
+          "saved": "saved",
+          "video": "started",
+          "preparation": "REVIEW",
+          "video_pending": true,
+          "video_progress": {
+            "frames": 11,
+            "total": 90
+          },
+          "files": {
+            "cuaderno.md": 7451,
+            "cuaderno.json": 43668,
+            "cuaderno.pdf": 80563,
+            "entrega.zip": 369855
+          },
+          "notes": []
+        },
+        "view": {
+          "id": "89350439f7684e4bae537a3c0872eb6a",
+          "kind": "iteration",
+          "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+          "title": "Molecule iteration",
+          "lines": [
+            "Case “benchmark-release-345856a” · receptor 8T69",
+            "3 molecules, one after another in this same case: aspirin, ketanserin, valbenazine",
+            "Stops at the first one that meets it: Vina ≤ -10.5 kcal/mol and the best pose passes the physical checks",
+            "If a molecule fails, it is noted and the next one goes on.",
+            "The one that meets it is saved to Moldex.",
+            "Molcy video (GPU only): scene Search, format test (short preview); MolDesign's closing is always added.",
+            "Presentation: Molcy's automatic one.",
+            "The run is audited in Preparation; if it needs review, that is declared, not decided.",
+            "At the end everything goes into a single ZIP.",
+            "Limit: 3 min per molecule and 10 min in total."
+          ],
+          "molecules": [
+            "aspirin",
+            "ketanserin",
+            "valbenazine"
+          ],
+          "steps": [
+            "case",
+            "receptor",
+            "molecules",
+            "moldex",
+            "video",
+            "preparation",
+            "deliverable"
+          ]
+        }
+      }
+    },
+    {
+      "path": "/v1/workflows/89350439f7684e4bae537a3c0872eb6a",
+      "status": 200,
+      "body": {
+        "id": "89350439f7684e4bae537a3c0872eb6a",
+        "state": "done",
+        "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+        "summary": {
+          "state": "completed",
+          "counts": {
+            "evaluated": 2,
+            "skipped": 1
+          },
+          "selected": {
+            "name": "ketanserin",
+            "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+            "vina_kcal_mol": -11.2,
+            "physical_status": "passed"
+          },
+          "saved": "saved",
+          "video": "started",
+          "preparation": "REVIEW",
+          "video_pending": true,
+          "video_progress": {
+            "frames": 18,
+            "total": 90
+          },
+          "files": {
+            "cuaderno.md": 7451,
+            "cuaderno.json": 43668,
+            "cuaderno.pdf": 80563,
+            "entrega.zip": 369855
+          },
+          "notes": []
+        },
+        "view": {
+          "id": "89350439f7684e4bae537a3c0872eb6a",
+          "kind": "iteration",
+          "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+          "title": "Molecule iteration",
+          "lines": [
+            "Case “benchmark-release-345856a” · receptor 8T69",
+            "3 molecules, one after another in this same case: aspirin, ketanserin, valbenazine",
+            "Stops at the first one that meets it: Vina ≤ -10.5 kcal/mol and the best pose passes the physical checks",
+            "If a molecule fails, it is noted and the next one goes on.",
+            "The one that meets it is saved to Moldex.",
+            "Molcy video (GPU only): scene Search, format test (short preview); MolDesign's closing is always added.",
+            "Presentation: Molcy's automatic one.",
+            "The run is audited in Preparation; if it needs review, that is declared, not decided.",
+            "At the end everything goes into a single ZIP.",
+            "Limit: 3 min per molecule and 10 min in total."
+          ],
+          "molecules": [
+            "aspirin",
+            "ketanserin",
+            "valbenazine"
+          ],
+          "steps": [
+            "case",
+            "receptor",
+            "molecules",
+            "moldex",
+            "video",
+            "preparation",
+            "deliverable"
+          ]
+        }
+      }
+    },
+    {
+      "path": "/v1/workflows/89350439f7684e4bae537a3c0872eb6a",
+      "status": 200,
+      "body": {
+        "id": "89350439f7684e4bae537a3c0872eb6a",
+        "state": "done",
+        "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+        "summary": {
+          "state": "completed",
+          "counts": {
+            "evaluated": 2,
+            "skipped": 1
+          },
+          "selected": {
+            "name": "ketanserin",
+            "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+            "vina_kcal_mol": -11.2,
+            "physical_status": "passed"
+          },
+          "saved": "saved",
+          "video": "started",
+          "preparation": "REVIEW",
+          "video_pending": true,
+          "video_progress": {
+            "frames": 29,
+            "total": 90
+          },
+          "files": {
+            "cuaderno.md": 7451,
+            "cuaderno.json": 43668,
+            "cuaderno.pdf": 80563,
+            "entrega.zip": 369855
+          },
+          "notes": []
+        },
+        "view": {
+          "id": "89350439f7684e4bae537a3c0872eb6a",
+          "kind": "iteration",
+          "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+          "title": "Molecule iteration",
+          "lines": [
+            "Case “benchmark-release-345856a” · receptor 8T69",
+            "3 molecules, one after another in this same case: aspirin, ketanserin, valbenazine",
+            "Stops at the first one that meets it: Vina ≤ -10.5 kcal/mol and the best pose passes the physical checks",
+            "If a molecule fails, it is noted and the next one goes on.",
+            "The one that meets it is saved to Moldex.",
+            "Molcy video (GPU only): scene Search, format test (short preview); MolDesign's closing is always added.",
+            "Presentation: Molcy's automatic one.",
+            "The run is audited in Preparation; if it needs review, that is declared, not decided.",
+            "At the end everything goes into a single ZIP.",
+            "Limit: 3 min per molecule and 10 min in total."
+          ],
+          "molecules": [
+            "aspirin",
+            "ketanserin",
+            "valbenazine"
+          ],
+          "steps": [
+            "case",
+            "receptor",
+            "molecules",
+            "moldex",
+            "video",
+            "preparation",
+            "deliverable"
+          ]
+        }
+      }
+    },
+    {
+      "path": "/v1/workflows/89350439f7684e4bae537a3c0872eb6a",
+      "status": 200,
+      "body": {
+        "id": "89350439f7684e4bae537a3c0872eb6a",
+        "state": "done",
+        "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+        "summary": {
+          "state": "completed",
+          "counts": {
+            "evaluated": 2,
+            "skipped": 1
+          },
+          "selected": {
+            "name": "ketanserin",
+            "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+            "vina_kcal_mol": -11.2,
+            "physical_status": "passed"
+          },
+          "saved": "saved",
+          "video": "started",
+          "preparation": "REVIEW",
+          "video_pending": true,
+          "video_progress": {
+            "frames": 35,
+            "total": 90
+          },
+          "files": {
+            "cuaderno.md": 7451,
+            "cuaderno.json": 43668,
+            "cuaderno.pdf": 80563,
+            "entrega.zip": 369855
+          },
+          "notes": []
+        },
+        "view": {
+          "id": "89350439f7684e4bae537a3c0872eb6a",
+          "kind": "iteration",
+          "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+          "title": "Molecule iteration",
+          "lines": [
+            "Case “benchmark-release-345856a” · receptor 8T69",
+            "3 molecules, one after another in this same case: aspirin, ketanserin, valbenazine",
+            "Stops at the first one that meets it: Vina ≤ -10.5 kcal/mol and the best pose passes the physical checks",
+            "If a molecule fails, it is noted and the next one goes on.",
+            "The one that meets it is saved to Moldex.",
+            "Molcy video (GPU only): scene Search, format test (short preview); MolDesign's closing is always added.",
+            "Presentation: Molcy's automatic one.",
+            "The run is audited in Preparation; if it needs review, that is declared, not decided.",
+            "At the end everything goes into a single ZIP.",
+            "Limit: 3 min per molecule and 10 min in total."
+          ],
+          "molecules": [
+            "aspirin",
+            "ketanserin",
+            "valbenazine"
+          ],
+          "steps": [
+            "case",
+            "receptor",
+            "molecules",
+            "moldex",
+            "video",
+            "preparation",
+            "deliverable"
+          ]
+        }
+      }
+    },
+    {
+      "path": "/v1/workflows/89350439f7684e4bae537a3c0872eb6a",
+      "status": 200,
+      "body": {
+        "id": "89350439f7684e4bae537a3c0872eb6a",
+        "state": "done",
+        "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+        "summary": {
+          "state": "completed",
+          "counts": {
+            "evaluated": 2,
+            "skipped": 1
+          },
+          "selected": {
+            "name": "ketanserin",
+            "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+            "vina_kcal_mol": -11.2,
+            "physical_status": "passed"
+          },
+          "saved": "saved",
+          "video": "started",
+          "preparation": "REVIEW",
+          "video_pending": true,
+          "video_progress": {
+            "frames": 40,
+            "total": 90
+          },
+          "files": {
+            "cuaderno.md": 7451,
+            "cuaderno.json": 43668,
+            "cuaderno.pdf": 80563,
+            "entrega.zip": 369855
+          },
+          "notes": []
+        },
+        "view": {
+          "id": "89350439f7684e4bae537a3c0872eb6a",
+          "kind": "iteration",
+          "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+          "title": "Molecule iteration",
+          "lines": [
+            "Case “benchmark-release-345856a” · receptor 8T69",
+            "3 molecules, one after another in this same case: aspirin, ketanserin, valbenazine",
+            "Stops at the first one that meets it: Vina ≤ -10.5 kcal/mol and the best pose passes the physical checks",
+            "If a molecule fails, it is noted and the next one goes on.",
+            "The one that meets it is saved to Moldex.",
+            "Molcy video (GPU only): scene Search, format test (short preview); MolDesign's closing is always added.",
+            "Presentation: Molcy's automatic one.",
+            "The run is audited in Preparation; if it needs review, that is declared, not decided.",
+            "At the end everything goes into a single ZIP.",
+            "Limit: 3 min per molecule and 10 min in total."
+          ],
+          "molecules": [
+            "aspirin",
+            "ketanserin",
+            "valbenazine"
+          ],
+          "steps": [
+            "case",
+            "receptor",
+            "molecules",
+            "moldex",
+            "video",
+            "preparation",
+            "deliverable"
+          ]
+        }
+      }
+    },
+    {
+      "path": "/v1/workflows/89350439f7684e4bae537a3c0872eb6a",
+      "status": 200,
+      "body": {
+        "id": "89350439f7684e4bae537a3c0872eb6a",
+        "state": "done",
+        "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+        "summary": {
+          "state": "completed",
+          "counts": {
+            "evaluated": 2,
+            "skipped": 1
+          },
+          "selected": {
+            "name": "ketanserin",
+            "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+            "vina_kcal_mol": -11.2,
+            "physical_status": "passed"
+          },
+          "saved": "saved",
+          "video": "started",
+          "preparation": "REVIEW",
+          "video_pending": true,
+          "video_progress": {
+            "frames": 50,
+            "total": 90
+          },
+          "files": {
+            "cuaderno.md": 7451,
+            "cuaderno.json": 43668,
+            "cuaderno.pdf": 80563,
+            "entrega.zip": 369855
+          },
+          "notes": []
+        },
+        "view": {
+          "id": "89350439f7684e4bae537a3c0872eb6a",
+          "kind": "iteration",
+          "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+          "title": "Molecule iteration",
+          "lines": [
+            "Case “benchmark-release-345856a” · receptor 8T69",
+            "3 molecules, one after another in this same case: aspirin, ketanserin, valbenazine",
+            "Stops at the first one that meets it: Vina ≤ -10.5 kcal/mol and the best pose passes the physical checks",
+            "If a molecule fails, it is noted and the next one goes on.",
+            "The one that meets it is saved to Moldex.",
+            "Molcy video (GPU only): scene Search, format test (short preview); MolDesign's closing is always added.",
+            "Presentation: Molcy's automatic one.",
+            "The run is audited in Preparation; if it needs review, that is declared, not decided.",
+            "At the end everything goes into a single ZIP.",
+            "Limit: 3 min per molecule and 10 min in total."
+          ],
+          "molecules": [
+            "aspirin",
+            "ketanserin",
+            "valbenazine"
+          ],
+          "steps": [
+            "case",
+            "receptor",
+            "molecules",
+            "moldex",
+            "video",
+            "preparation",
+            "deliverable"
+          ]
+        }
+      }
+    },
+    {
+      "path": "/v1/workflows/89350439f7684e4bae537a3c0872eb6a",
+      "status": 200,
+      "body": {
+        "id": "89350439f7684e4bae537a3c0872eb6a",
+        "state": "done",
+        "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+        "summary": {
+          "state": "completed",
+          "counts": {
+            "evaluated": 2,
+            "skipped": 1
+          },
+          "selected": {
+            "name": "ketanserin",
+            "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+            "vina_kcal_mol": -11.2,
+            "physical_status": "passed"
+          },
+          "saved": "saved",
+          "video": "started",
+          "preparation": "REVIEW",
+          "video_pending": true,
+          "video_progress": {
+            "frames": 55,
+            "total": 90
+          },
+          "files": {
+            "cuaderno.md": 7451,
+            "cuaderno.json": 43668,
+            "cuaderno.pdf": 80563,
+            "entrega.zip": 369855
+          },
+          "notes": []
+        },
+        "view": {
+          "id": "89350439f7684e4bae537a3c0872eb6a",
+          "kind": "iteration",
+          "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+          "title": "Molecule iteration",
+          "lines": [
+            "Case “benchmark-release-345856a” · receptor 8T69",
+            "3 molecules, one after another in this same case: aspirin, ketanserin, valbenazine",
+            "Stops at the first one that meets it: Vina ≤ -10.5 kcal/mol and the best pose passes the physical checks",
+            "If a molecule fails, it is noted and the next one goes on.",
+            "The one that meets it is saved to Moldex.",
+            "Molcy video (GPU only): scene Search, format test (short preview); MolDesign's closing is always added.",
+            "Presentation: Molcy's automatic one.",
+            "The run is audited in Preparation; if it needs review, that is declared, not decided.",
+            "At the end everything goes into a single ZIP.",
+            "Limit: 3 min per molecule and 10 min in total."
+          ],
+          "molecules": [
+            "aspirin",
+            "ketanserin",
+            "valbenazine"
+          ],
+          "steps": [
+            "case",
+            "receptor",
+            "molecules",
+            "moldex",
+            "video",
+            "preparation",
+            "deliverable"
+          ]
+        }
+      }
+    },
+    {
+      "path": "/v1/workflows/89350439f7684e4bae537a3c0872eb6a",
+      "status": 200,
+      "body": {
+        "id": "89350439f7684e4bae537a3c0872eb6a",
+        "state": "done",
+        "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+        "summary": {
+          "state": "completed",
+          "counts": {
+            "evaluated": 2,
+            "skipped": 1
+          },
+          "selected": {
+            "name": "ketanserin",
+            "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+            "vina_kcal_mol": -11.2,
+            "physical_status": "passed"
+          },
+          "saved": "saved",
+          "video": "started",
+          "preparation": "REVIEW",
+          "video_pending": true,
+          "video_progress": {
+            "frames": 60,
+            "total": 90
+          },
+          "files": {
+            "cuaderno.md": 7451,
+            "cuaderno.json": 43668,
+            "cuaderno.pdf": 80563,
+            "entrega.zip": 369855
+          },
+          "notes": []
+        },
+        "view": {
+          "id": "89350439f7684e4bae537a3c0872eb6a",
+          "kind": "iteration",
+          "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+          "title": "Molecule iteration",
+          "lines": [
+            "Case “benchmark-release-345856a” · receptor 8T69",
+            "3 molecules, one after another in this same case: aspirin, ketanserin, valbenazine",
+            "Stops at the first one that meets it: Vina ≤ -10.5 kcal/mol and the best pose passes the physical checks",
+            "If a molecule fails, it is noted and the next one goes on.",
+            "The one that meets it is saved to Moldex.",
+            "Molcy video (GPU only): scene Search, format test (short preview); MolDesign's closing is always added.",
+            "Presentation: Molcy's automatic one.",
+            "The run is audited in Preparation; if it needs review, that is declared, not decided.",
+            "At the end everything goes into a single ZIP.",
+            "Limit: 3 min per molecule and 10 min in total."
+          ],
+          "molecules": [
+            "aspirin",
+            "ketanserin",
+            "valbenazine"
+          ],
+          "steps": [
+            "case",
+            "receptor",
+            "molecules",
+            "moldex",
+            "video",
+            "preparation",
+            "deliverable"
+          ]
+        }
+      }
+    },
+    {
+      "path": "/v1/workflows/89350439f7684e4bae537a3c0872eb6a",
+      "status": 200,
+      "body": {
+        "id": "89350439f7684e4bae537a3c0872eb6a",
+        "state": "done",
+        "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+        "summary": {
+          "state": "completed",
+          "counts": {
+            "evaluated": 2,
+            "skipped": 1
+          },
+          "selected": {
+            "name": "ketanserin",
+            "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+            "vina_kcal_mol": -11.2,
+            "physical_status": "passed"
+          },
+          "saved": "saved",
+          "video": "started",
+          "preparation": "REVIEW",
+          "video_pending": true,
+          "video_progress": {
+            "frames": 69,
+            "total": 90
+          },
+          "files": {
+            "cuaderno.md": 7451,
+            "cuaderno.json": 43668,
+            "cuaderno.pdf": 80563,
+            "entrega.zip": 369855
+          },
+          "notes": []
+        },
+        "view": {
+          "id": "89350439f7684e4bae537a3c0872eb6a",
+          "kind": "iteration",
+          "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+          "title": "Molecule iteration",
+          "lines": [
+            "Case “benchmark-release-345856a” · receptor 8T69",
+            "3 molecules, one after another in this same case: aspirin, ketanserin, valbenazine",
+            "Stops at the first one that meets it: Vina ≤ -10.5 kcal/mol and the best pose passes the physical checks",
+            "If a molecule fails, it is noted and the next one goes on.",
+            "The one that meets it is saved to Moldex.",
+            "Molcy video (GPU only): scene Search, format test (short preview); MolDesign's closing is always added.",
+            "Presentation: Molcy's automatic one.",
+            "The run is audited in Preparation; if it needs review, that is declared, not decided.",
+            "At the end everything goes into a single ZIP.",
+            "Limit: 3 min per molecule and 10 min in total."
+          ],
+          "molecules": [
+            "aspirin",
+            "ketanserin",
+            "valbenazine"
+          ],
+          "steps": [
+            "case",
+            "receptor",
+            "molecules",
+            "moldex",
+            "video",
+            "preparation",
+            "deliverable"
+          ]
+        }
+      }
+    },
+    {
+      "path": "/v1/workflows/89350439f7684e4bae537a3c0872eb6a",
+      "status": 200,
+      "body": {
+        "id": "89350439f7684e4bae537a3c0872eb6a",
+        "state": "done",
+        "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+        "summary": {
+          "state": "completed",
+          "counts": {
+            "evaluated": 2,
+            "skipped": 1
+          },
+          "selected": {
+            "name": "ketanserin",
+            "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+            "vina_kcal_mol": -11.2,
+            "physical_status": "passed"
+          },
+          "saved": "saved",
+          "video": "started",
+          "preparation": "REVIEW",
+          "video_pending": true,
+          "video_progress": {
+            "frames": 74,
+            "total": 90
+          },
+          "files": {
+            "cuaderno.md": 7451,
+            "cuaderno.json": 43668,
+            "cuaderno.pdf": 80563,
+            "entrega.zip": 369855
+          },
+          "notes": []
+        },
+        "view": {
+          "id": "89350439f7684e4bae537a3c0872eb6a",
+          "kind": "iteration",
+          "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+          "title": "Molecule iteration",
+          "lines": [
+            "Case “benchmark-release-345856a” · receptor 8T69",
+            "3 molecules, one after another in this same case: aspirin, ketanserin, valbenazine",
+            "Stops at the first one that meets it: Vina ≤ -10.5 kcal/mol and the best pose passes the physical checks",
+            "If a molecule fails, it is noted and the next one goes on.",
+            "The one that meets it is saved to Moldex.",
+            "Molcy video (GPU only): scene Search, format test (short preview); MolDesign's closing is always added.",
+            "Presentation: Molcy's automatic one.",
+            "The run is audited in Preparation; if it needs review, that is declared, not decided.",
+            "At the end everything goes into a single ZIP.",
+            "Limit: 3 min per molecule and 10 min in total."
+          ],
+          "molecules": [
+            "aspirin",
+            "ketanserin",
+            "valbenazine"
+          ],
+          "steps": [
+            "case",
+            "receptor",
+            "molecules",
+            "moldex",
+            "video",
+            "preparation",
+            "deliverable"
+          ]
+        }
+      }
+    },
+    {
+      "path": "/v1/workflows/89350439f7684e4bae537a3c0872eb6a",
+      "status": 200,
+      "body": {
+        "id": "89350439f7684e4bae537a3c0872eb6a",
+        "state": "done",
+        "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+        "summary": {
+          "state": "completed",
+          "counts": {
+            "evaluated": 2,
+            "skipped": 1
+          },
+          "selected": {
+            "name": "ketanserin",
+            "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+            "vina_kcal_mol": -11.2,
+            "physical_status": "passed"
+          },
+          "saved": "saved",
+          "video": "started",
+          "preparation": "REVIEW",
+          "video_pending": true,
+          "video_progress": {
+            "frames": 80,
+            "total": 90
+          },
+          "files": {
+            "cuaderno.md": 7451,
+            "cuaderno.json": 43668,
+            "cuaderno.pdf": 80563,
+            "entrega.zip": 369855
+          },
+          "notes": []
+        },
+        "view": {
+          "id": "89350439f7684e4bae537a3c0872eb6a",
+          "kind": "iteration",
+          "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+          "title": "Molecule iteration",
+          "lines": [
+            "Case “benchmark-release-345856a” · receptor 8T69",
+            "3 molecules, one after another in this same case: aspirin, ketanserin, valbenazine",
+            "Stops at the first one that meets it: Vina ≤ -10.5 kcal/mol and the best pose passes the physical checks",
+            "If a molecule fails, it is noted and the next one goes on.",
+            "The one that meets it is saved to Moldex.",
+            "Molcy video (GPU only): scene Search, format test (short preview); MolDesign's closing is always added.",
+            "Presentation: Molcy's automatic one.",
+            "The run is audited in Preparation; if it needs review, that is declared, not decided.",
+            "At the end everything goes into a single ZIP.",
+            "Limit: 3 min per molecule and 10 min in total."
+          ],
+          "molecules": [
+            "aspirin",
+            "ketanserin",
+            "valbenazine"
+          ],
+          "steps": [
+            "case",
+            "receptor",
+            "molecules",
+            "moldex",
+            "video",
+            "preparation",
+            "deliverable"
+          ]
+        }
+      }
+    },
+    {
+      "path": "/v1/workflows/89350439f7684e4bae537a3c0872eb6a",
+      "status": 200,
+      "body": {
+        "id": "89350439f7684e4bae537a3c0872eb6a",
+        "state": "done",
+        "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+        "summary": {
+          "state": "completed",
+          "counts": {
+            "evaluated": 2,
+            "skipped": 1
+          },
+          "selected": {
+            "name": "ketanserin",
+            "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+            "vina_kcal_mol": -11.2,
+            "physical_status": "passed"
+          },
+          "saved": "saved",
+          "video": "started",
+          "preparation": "REVIEW",
+          "video_pending": true,
+          "video_progress": {
+            "frames": 90,
+            "total": 90
+          },
+          "files": {
+            "cuaderno.md": 7451,
+            "cuaderno.json": 43668,
+            "cuaderno.pdf": 80563,
+            "entrega.zip": 369855
+          },
+          "notes": []
+        },
+        "view": {
+          "id": "89350439f7684e4bae537a3c0872eb6a",
+          "kind": "iteration",
+          "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+          "title": "Molecule iteration",
+          "lines": [
+            "Case “benchmark-release-345856a” · receptor 8T69",
+            "3 molecules, one after another in this same case: aspirin, ketanserin, valbenazine",
+            "Stops at the first one that meets it: Vina ≤ -10.5 kcal/mol and the best pose passes the physical checks",
+            "If a molecule fails, it is noted and the next one goes on.",
+            "The one that meets it is saved to Moldex.",
+            "Molcy video (GPU only): scene Search, format test (short preview); MolDesign's closing is always added.",
+            "Presentation: Molcy's automatic one.",
+            "The run is audited in Preparation; if it needs review, that is declared, not decided.",
+            "At the end everything goes into a single ZIP.",
+            "Limit: 3 min per molecule and 10 min in total."
+          ],
+          "molecules": [
+            "aspirin",
+            "ketanserin",
+            "valbenazine"
+          ],
+          "steps": [
+            "case",
+            "receptor",
+            "molecules",
+            "moldex",
+            "video",
+            "preparation",
+            "deliverable"
+          ]
+        }
+      }
+    },
+    {
+      "path": "/v1/workflows/89350439f7684e4bae537a3c0872eb6a",
+      "status": 200,
+      "body": {
+        "id": "89350439f7684e4bae537a3c0872eb6a",
+        "state": "done",
+        "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+        "summary": {
+          "state": "completed",
+          "counts": {
+            "evaluated": 2,
+            "skipped": 1
+          },
+          "selected": {
+            "name": "ketanserin",
+            "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+            "vina_kcal_mol": -11.2,
+            "physical_status": "passed"
+          },
+          "saved": "saved",
+          "video": "started",
+          "preparation": "REVIEW",
+          "video_pending": true,
+          "video_progress": {
+            "frames": 90,
+            "total": 90
+          },
+          "files": {
+            "cuaderno.md": 7451,
+            "cuaderno.json": 43668,
+            "cuaderno.pdf": 80563,
+            "entrega.zip": 369855
+          },
+          "notes": []
+        },
+        "view": {
+          "id": "89350439f7684e4bae537a3c0872eb6a",
+          "kind": "iteration",
+          "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+          "title": "Molecule iteration",
+          "lines": [
+            "Case “benchmark-release-345856a” · receptor 8T69",
+            "3 molecules, one after another in this same case: aspirin, ketanserin, valbenazine",
+            "Stops at the first one that meets it: Vina ≤ -10.5 kcal/mol and the best pose passes the physical checks",
+            "If a molecule fails, it is noted and the next one goes on.",
+            "The one that meets it is saved to Moldex.",
+            "Molcy video (GPU only): scene Search, format test (short preview); MolDesign's closing is always added.",
+            "Presentation: Molcy's automatic one.",
+            "The run is audited in Preparation; if it needs review, that is declared, not decided.",
+            "At the end everything goes into a single ZIP.",
+            "Limit: 3 min per molecule and 10 min in total."
+          ],
+          "molecules": [
+            "aspirin",
+            "ketanserin",
+            "valbenazine"
+          ],
+          "steps": [
+            "case",
+            "receptor",
+            "molecules",
+            "moldex",
+            "video",
+            "preparation",
+            "deliverable"
+          ]
+        }
+      }
+    }
+  ],
+  "assertions": [
+    {
+      "name": "sidecar uses the expected published commit",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "name": "exactly one workflow card",
+      "actual": 1,
+      "expected": 1,
+      "passed": true
+    },
+    {
+      "name": "approval card preserves requested time limits",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "name": "candidate order",
+      "actual": [
+        "aspirin",
+        "ketanserin",
+        "valbenazine"
+      ],
+      "expected": [
+        "aspirin",
+        "ketanserin",
+        "valbenazine"
+      ],
+      "passed": true
+    },
+    {
+      "name": "no host mutation before approval",
+      "actual": 0,
+      "expected": 0,
+      "passed": true
+    },
+    {
+      "name": "wrong digest rejected",
+      "actual": 409,
+      "expected": 409,
+      "passed": true
+    },
+    {
+      "name": "workflow finished",
+      "actual": "done",
+      "expected": "done",
+      "passed": true
+    },
+    {
+      "name": "video finished",
+      "actual": "completo",
+      "expected": "completo",
+      "passed": true
+    },
+    {
+      "name": "stopping counts",
+      "actual": {
+        "evaluated": 2,
+        "skipped": 1
+      },
+      "expected": {
+        "evaluated": 2,
+        "skipped": 1
+      },
+      "passed": true
+    },
+    {
+      "name": "selected candidate",
+      "actual": "ketanserin",
+      "expected": "ketanserin",
+      "passed": true
+    },
+    {
+      "name": "selected physical checks",
+      "actual": "passed",
+      "expected": "passed",
+      "passed": true
+    },
+    {
+      "name": "Moldex saved",
+      "actual": "saved",
+      "expected": "saved",
+      "passed": true
+    },
+    {
+      "name": "Preparation verdict preserved",
+      "actual": "REVIEW",
+      "expected": "REVIEW",
+      "passed": true
+    },
+    {
+      "name": "skipped candidate is shown as not evaluated",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "name": "repeat approval is a result read",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "name": "repeat approval dispatches no extra evaluation",
+      "actual": 2,
+      "expected": 2,
+      "passed": true
+    }
+  ],
+  "sidecar": {
+    "disponible": true,
+    "motivo": "ok",
+    "en_marcha": true,
+    "url": "http://127.0.0.1:62948",
+    "version": "0.1.0",
+    "commit": "345856ae940e",
+    "contrato": "moldesign.molchat/1",
+    "externa": true,
+    "oficial": false,
+    "repositorio": ""
+  },
+  "card": {
+    "id": "89350439f7684e4bae537a3c0872eb6a",
+    "kind": "iteration",
+    "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+    "title": "Molecule iteration",
+    "lines": [
+      "Case “benchmark-release-345856a” · receptor 8T69",
+      "3 molecules, one after another in this same case: aspirin, ketanserin, valbenazine",
+      "Stops at the first one that meets it: Vina ≤ -10.5 kcal/mol and the best pose passes the physical checks",
+      "If a molecule fails, it is noted and the next one goes on.",
+      "The one that meets it is saved to Moldex.",
+      "Molcy video (GPU only): scene Search, format test (short preview); MolDesign's closing is always added.",
+      "Presentation: Molcy's automatic one.",
+      "The run is audited in Preparation; if it needs review, that is declared, not decided.",
+      "At the end everything goes into a single ZIP.",
+      "Limit: 3 min per molecule and 10 min in total."
+    ],
+    "molecules": [
+      "aspirin",
+      "ketanserin",
+      "valbenazine"
+    ],
+    "steps": [
+      "case",
+      "receptor",
+      "molecules",
+      "moldex",
+      "video",
+      "preparation",
+      "deliverable"
+    ]
+  },
+  "requested_limits": {
+    "per_molecule_timeout_s": 180,
+    "budget_s": 600
+  },
+  "approved_at_utc": "2026-11-04T05:01:41.818Z",
+  "latest": {
+    "id": "89350439f7684e4bae537a3c0872eb6a",
+    "state": "done",
+    "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+    "summary": {
+      "state": "completed",
+      "counts": {
+        "evaluated": 2,
+        "skipped": 1
+      },
+      "selected": {
+        "name": "ketanserin",
+        "task_id": "80680042-8847-4c82-a518-0fed8e5327d8",
+        "vina_kcal_mol": -11.2,
+        "physical_status": "passed"
+      },
+      "saved": "saved",
+      "video": "completo",
+      "preparation": "REVIEW",
+      "video_pending": false,
+      "video_progress": null,
+      "files": {
+        "cuaderno.md": 7479,
+        "cuaderno.json": 43778,
+        "cuaderno.pdf": 80588,
+        "entrega.zip": 3724284
+      },
+      "notes": []
+    },
+    "view": {
+      "id": "89350439f7684e4bae537a3c0872eb6a",
+      "kind": "iteration",
+      "digest": "sha256:855fb6c7f9a1cc34e4b4cae0957a824726fd3767ed222d21a2eb0287a5f358ed",
+      "title": "Molecule iteration",
+      "lines": [
+        "Case “benchmark-release-345856a” · receptor 8T69",
+        "3 molecules, one after another in this same case: aspirin, ketanserin, valbenazine",
+        "Stops at the first one that meets it: Vina ≤ -10.5 kcal/mol and the best pose passes the physical checks",
+        "If a molecule fails, it is noted and the next one goes on.",
+        "The one that meets it is saved to Moldex.",
+        "Molcy video (GPU only): scene Search, format test (short preview); MolDesign's closing is always added.",
+        "Presentation: Molcy's automatic one.",
+        "The run is audited in Preparation; if it needs review, that is declared, not decided.",
+        "At the end everything goes into a single ZIP.",
+        "Limit: 3 min per molecule and 10 min in total."
+      ],
+      "molecules": [
+        "aspirin",
+        "ketanserin",
+        "valbenazine"
+      ],
+      "steps": [
+        "case",
+        "receptor",
+        "molecules",
+        "moldex",
+        "video",
+        "preparation",
+        "deliverable"
+      ]
+    }
+  },
+  "skipped_row_text": "not evaluated",
+  "finished_at_utc": "2026-11-04T05:05:21.920Z",
+  "passed": true
+}

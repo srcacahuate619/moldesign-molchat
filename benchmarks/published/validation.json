@@ -79,5 +79,22 @@
     "text_members_scanned": 68,
     "findings": 0,
     "patterns": "Session tokens, known credential prefixes and private-key blocks; scans nested original ZIPs."
+  },
+  "release_guard_regressions": {
+    "source_commit": "345856ae940e5db54016e55de32391afb2d54e5f",
+    "selected_tests_passed": 105,
+    "additional_after_card_test_passed": 1,
+    "new_adversarial_cases": 5,
+    "full_suite_at_this_revision": "Validated by the closing CI run; the earlier full-suite count above remains historical."
+  },
+  "final_integration": {
+    "source": "release-check/execution.json",
+    "assertions_passed": 16,
+    "stage_files_verified": 82,
+    "requested_time_limits_seconds": [
+      180,
+      600
+    ],
+    "prior_failed_attempt_retained": true
   }
 }

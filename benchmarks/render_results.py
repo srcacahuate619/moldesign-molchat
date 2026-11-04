@@ -167,7 +167,7 @@ def render(published: Path):
         summary['live_followup'] = {'source': 'published/followup/results.json',
             'trials': len(followup['records']), 'passed': sum(r['passed'] for r in followup['records']),
             'oracle_revision': followup['oracle_revision'], 'not_merged_with_initial_score': True}
-    for folder in ('capsule', 'capsule-reproduction'):
+    for folder in ('capsule', 'capsule-reproduction', 'release-check'):
         notebook_file = published / folder / 'notebook.json'
         if not notebook_file.exists():
             continue
@@ -177,6 +177,10 @@ def render(published: Path):
             'delivery': f'published/{folder}/delivery.zip', 'delivery_sha256': hashlib.sha256(archive.read_bytes()).hexdigest(),
             'molecules': [{'name': m['name'], 'status': m['status_code'], 'vina_kcal_mol': m['vina_kcal_mol'],
                            'physical_controls': m['physical_controls']} for m in nb['molecules']]})
+    release_attempt = published / 'release-attempt-49df407/execution.json'
+    if release_attempt.exists():
+        summary['release_attempt_before_fix'] = {'source': 'published/release-attempt-49df407/execution.json',
+            'passed': False, 'finding': 'One case creation occurred before approval; no docking was approved or started.'}
     (HERE / 'results.json').write_text(json.dumps(summary, indent=2) + '\n', encoding='utf-8')
     manifest = {'schema': 'molchat.benchmark-artifacts/1', 'files': []}
     for file in sorted(published.rglob('*')):
