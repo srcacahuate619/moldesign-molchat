@@ -6,10 +6,23 @@ not get to rewrite what was asked) and leaves a card. Nothing is evaluated until
 from __future__ import annotations
 
 from collections.abc import Callable
+import re
 from typing import Any
 
 from ..conversation.tool_loop import Tool
 from .iteration import ENSEMBLE_VARIANTS, FORMATS, MAX_MOLECULES, RECEPTOR_VIEWS, SCENES, IterationSpec, SpecError
+
+
+def requires_workflow_approval(text: str) -> bool:
+    """Keep explicit plan/approval requests and threshold campaigns free of direct host writes.
+
+    This conservative English/Spanish routing guard removes the direct mutation
+    tools; it does not infer scientific inputs or replace the approved workflow.
+    """
+    if re.search(r"\b(?:plan|plans|planifica\w*|approval|approve\w*|aprob\w*|aprueb\w*|tarjeta)\b", text, re.I):
+        return True
+    campaign = re.search(r"\b(?:iteration|iteraci[oó]n|candidates|candidatos|lista|list|molecules|mol[eé]culas)\b|one by one|una por una", text, re.I)
+    return bool(campaign and re.search(r"\b(?:threshold|umbral|kcal)\b", text, re.I))
 
 ITERATION_GUIDANCE = (
     "Cuando el usuario pida, en una sola petición, evaluar UNA LISTA de moléculas una por una, en un mismo caso, contra un "

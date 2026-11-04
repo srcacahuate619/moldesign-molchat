@@ -94,6 +94,43 @@ async def test_asking_for_a_chain_leaves_one_card_and_runs_nothing(tmp_path, mon
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("text", [
+    "Prepare a plan only and wait for approval. Case hipotesis-8T69, receptor 8T69.",
+    "Prepara solo la tarjeta del plan y espera mi aprobación; caso hipotesis-8T69, receptor 8T69.",
+])
+@pytest.mark.parametrize("proposal_first", [False, True])
+async def test_planning_turn_rejects_model_requested_host_writes_before_or_after_the_card(tmp_path, monkeypatch, text, proposal_first):
+    md = fake()
+    writes = [call("create_case", {"name": "hipotesis-8T69"}, "case"),
+              call("load_case_smiles", {"case_name": "hipotesis-8T69", "smiles": "CCO"}, "smiles"),
+              call("assign_case_receptor", {"case_name": "hipotesis-8T69", "pdb_id": "8T69"}, "receptor"),
+              call("evaluate_case", {"case_name": "hipotesis-8T69"}, "evaluation")]
+    plan = [call("propose_iteration", ITERATION, "plan")]
+    async with Chat(tmp_path, monkeypatch, md) as chat:
+        result = await asyncio.wait_for(chat.say(text, plan + writes if proposal_first else writes + plan), 5)
+        assert len(result["workflow_proposals"]) == 1
+        assert not {"create_case", "load_case_smiles", "assign_case_receptor", "evaluate_case"} & chat.seen_tools
+        assert md.writes() == []
+        assert all(not getattr(chat.state, attribute) for attribute, _ in REGISTRIES)
+        assert all(workflow.state == "pending" for workflow in chat.state.workflows.values())
+
+
+@pytest.mark.asyncio
+async def test_a_proposed_workflow_blocks_subsequent_direct_writes_even_without_a_planning_keyword(tmp_path, monkeypatch):
+    md = fake()
+    script = [call("propose_iteration", ITERATION, "plan"),
+              call("create_case", {"name": "hipotesis-8T69"}, "case"),
+              call("load_case_smiles", {"case_name": "hipotesis-8T69", "smiles": "CCO"}, "smiles"),
+              call("assign_case_receptor", {"case_name": "hipotesis-8T69", "pdb_id": "8T69"}, "receptor"),
+              call("evaluate_case", {"case_name": "hipotesis-8T69"}, "evaluation")]
+    async with Chat(tmp_path, monkeypatch, md) as chat:
+        result = await asyncio.wait_for(chat.say("Investiga estos compuestos.", script), 5)
+        assert "create_case" in chat.seen_tools  # available initially, but disabled once the card exists
+        assert len(result["workflow_proposals"]) == 1 and md.writes() == []
+        assert all(not getattr(chat.state, attribute) for attribute, _ in REGISTRIES)
+
+
+@pytest.mark.asyncio
 async def test_an_invalid_plan_is_refused_to_the_model_and_no_card_exists(tmp_path, monkeypatch):
     async with Chat(tmp_path, monkeypatch, fake()) as chat:
         result = await propose(chat, args={**ITERATION, "threshold_kcal": 0})

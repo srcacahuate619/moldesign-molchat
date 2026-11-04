@@ -49,7 +49,7 @@ from ..workflows.run_record import molecule_source
 from ..workflows.service import (HostRelay, PlatformHttp, WorkflowProposal, complete_video, execute as execute_workflow, new_workflow,
                                  video_pending,
                                  workflow_answer, workflow_outcome_text)
-from ..workflows.tool import ITERATION_GUIDANCE, propose_iteration_tool
+from ..workflows.tool import ITERATION_GUIDANCE, propose_iteration_tool, requires_workflow_approval
 from ..conversation.tools import PlatformBackend
 from ..plan import Plan
 from ..providers.base import ProviderDisabled, ProviderError
@@ -1069,6 +1069,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
 
     async def request_smiles(case_name: str, smiles: str) -> dict[str, Any]:
         nonlocal smiles_started
+        if new_workflows:
+            return {"status": "unknown", "message": "El plan requiere aprobación antes de modificar el caso."}
         if smiles_started:
             return {"status": "unknown"}
         smiles_started = True
@@ -1100,6 +1102,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
 
     async def request_evaluation(case_name: str) -> dict[str, Any]:
         nonlocal evaluation_started
+        if new_workflows:
+            return {"status": "unknown", "message": "El plan requiere aprobación antes de evaluar."}
         if evaluation_started:
             return {"status": "unknown"}
         evaluation_started = True
@@ -1117,6 +1121,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
 
     async def request_receptor(case_name: str, pdb_id: str) -> dict[str, Any]:
         nonlocal receptor_started
+        if new_workflows:
+            return {"status": "unknown", "message": "El plan requiere aprobación antes de asignar un receptor."}
         if receptor_started:
             return {"status": "unknown"}
         explicit_id = re.search(r"(?<![\w-])" + re.escape(pdb_id) + r"(?![\w-])", text, re.I) is not None
@@ -1144,6 +1150,8 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
 
     async def request_case(name: str) -> dict[str, Any]:
         nonlocal case_started, case_status
+        if new_workflows:
+            return {"status": "unknown", "message": "El plan requiere aprobación antes de crear un caso."}
         if case_started:
             return {"status": "unknown", "message": "Ya se solicitó un caso; verifica el estado."}
         case_started = True
@@ -1526,6 +1534,9 @@ async def _harness_turn(state: ServerState, registro: Any, provider: Any, owner:
             return workflow.view()
 
         tools.append(propose_iteration_tool(text, propose_workflow))
+    if requires_workflow_approval(text):
+        direct_writes = {"create_case", "load_case_smiles", "assign_case_receptor", "evaluate_case"}
+        tools = [tool for tool in tools if tool.name not in direct_writes]
     if not registro.content_granted(provider.id):
         tools = []
     task = asyncio.create_task(run_tool_loop(provider, messages, tools, max_steps=10, observe=observe_tool))
