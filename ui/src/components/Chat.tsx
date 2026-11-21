@@ -467,14 +467,16 @@ export default function Chat({
             send(input);
           }}
         >
-          <VoiceButton
-            token={token}
-            lang={lang}
-            t={t}
-            disabled={streaming}
-            onTranscript={(text) => setPendingVoice(text)}
-            onError={(message) => { setLastText(null); setError(message); }}
-          />
+          {window.parent === window && (
+            <VoiceButton
+              token={token}
+              lang={lang}
+              t={t}
+              disabled={streaming}
+              onTranscript={(text) => setPendingVoice(text)}
+              onError={(message) => { setLastText(null); setError(message); }}
+            />
+          )}
           <label>
             <span className="visually-hidden">{t("chat.input")}</span>
             <textarea
